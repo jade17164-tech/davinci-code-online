@@ -124,6 +124,40 @@ button:disabled { background: #4a4a4a !important; color: #8a8a8a !important; bor
 .btn-kick { background: radial-gradient(circle at 30% 25%, #e07a70, var(--ruby) 65%, var(--ruby-dark)); border-bottom: 2px solid #4a120d; color: #fff0ee; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
 .btn-lobby-return { background: radial-gradient(circle at 30% 25%, #5be08a, var(--emerald) 65%, var(--emerald-dark)); border-bottom: 4px solid #062815; color: #eafff0; font-size: 14px; width: 100%; padding: 13px; margin-top: 10px; display: none; }
 
+/* 구글 로그인 버튼은 구글 브랜드 가이드에 맞춰 흰 바탕 + 회색 테두리로 둔다 */
+.btn-google {
+  background: #fff;
+  color: #3c4043;
+  border: 1px solid #dadce0;
+  border-bottom: 4px solid #bdc1c6;
+  font-size: 14px;
+  width: 100%;
+  padding: 11px;
+  margin-top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-shadow: none;
+}
+.btn-google svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 80%;
+  margin: 14px auto 10px;
+  color: #aaa;
+  font-size: 12px;
+}
+.auth-divider::before, .auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,.18);
+}
+
 .hand {
   display: flex;
   justify-content: flex-start;
@@ -431,6 +465,31 @@ button:disabled { background: #4a4a4a !important; color: #8a8a8a !important; bor
       <button id="btn-auth-submit" class="btn-start" style="margin-top:0;">로그인</button>
     </div>
     <p id="auth-toggle-text" style="font-size:12px; color:#ccc; margin-top:10px; cursor:pointer; text-decoration:underline;">계정이 없으신가요? 회원가입</p>
+
+    <div class="auth-divider">또는</div>
+
+    <div class="btn-group">
+      <button id="btn-google-login" class="btn-google">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        </svg>
+        Google 계정으로 계속하기
+      </button>
+    </div>
+  </div>
+
+  <!-- 0-1. 구글 등 소셜 계정으로 처음 로그인했을 때의 닉네임 설정 화면 -->
+  <div id="nickname-setup-screen" class="card hidden">
+    <h3 style="margin-top:0;">닉네임 설정</h3>
+    <p style="font-size:13px; color:#ccc; margin:0 0 4px;">처음 오셨네요! 게임에서 사용할 닉네임을 정해주세요.</p>
+    <input type="text" id="setup-nickname-input" placeholder="닉네임" maxlength="12">
+    <div class="btn-group">
+      <button id="btn-nickname-submit" class="btn-start" style="margin-top:0;">시작하기</button>
+    </div>
+    <p id="btn-setup-cancel" style="font-size:12px; color:#ccc; margin-top:10px; cursor:pointer; text-decoration:underline;">취소하고 로그아웃</p>
   </div>
 
   <!-- 1. 메인 로비 -->
@@ -694,7 +753,7 @@ button:disabled { background: #4a4a4a !important; color: #8a8a8a !important; bor
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getDatabase, ref, set, onValue, update, get, remove, push, onDisconnect, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD3uKIUUrGIYHZkpxD2QUjLcAJRmU8N0vo",
@@ -879,6 +938,9 @@ function loginErrorMessage(err) {
   if (code.includes('invalid-credential') || code.includes('wrong-password') || code.includes('user-not-found')) return '[오류] 아이디 또는 비밀번호가 올바르지 않습니다.';
   if (code.includes('weak-password')) return '[오류] 비밀번호는 6자 이상이어야 합니다.';
   if (code.includes('too-many-requests')) return '[오류] 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.';
+  if (code.includes('account-exists-with-different-credential')) return '[오류] 같은 이메일로 이미 가입된 계정이 있습니다. 기존 방식으로 로그인해주세요.';
+  if (code.includes('unauthorized-domain')) return '[오류] 이 주소에서는 구글 로그인이 허용되어 있지 않습니다. (Firebase 승인된 도메인 설정을 확인해주세요)';
+  if (code.includes('network-request-failed')) return '[오류] 네트워크 연결을 확인해주세요.';
   return '[오류] ' + (err && err.message ? err.message : '알 수 없는 오류가 발생했습니다.');
 }
 
@@ -927,6 +989,82 @@ document.getElementById('btn-auth-submit').addEventListener('click', () => {
       alert(loginErrorMessage(err));
     });
   }
+});
+
+// ---- 구글 로그인 ----
+// 이메일/비밀번호 가입과 달리 구글 로그인은 "계정 생성"과 "프로필(닉네임) 작성" 시점이 분리된다.
+// 구글 인증 자체는 성공했지만 users/{uid}에 프로필이 아직 없는 상태가 되므로,
+// 그 경우 onAuthStateChanged가 닉네임 설정 화면으로 보내고 거기서 프로필을 만든다.
+const googleProvider = new GoogleAuthProvider();
+let pendingNewUser = null; // 구글 인증은 끝났지만 아직 프로필이 없는 사용자
+
+document.getElementById('btn-google-login').addEventListener('click', () => {
+  signInWithPopup(auth, googleProvider).catch((err) => {
+    const code = err && err.code ? err.code : '';
+    if (code.includes('popup-closed-by-user') || code.includes('cancelled-popup-request')) return; // 사용자가 창을 닫은 것은 오류가 아니다
+    // 팝업이 막히거나 카카오톡 인앱 브라우저처럼 팝업을 못 여는 환경이면 리디렉션 방식으로 대신 시도한다
+    if (code.includes('popup-blocked') || code.includes('operation-not-supported')) {
+      signInWithRedirect(auth, googleProvider).catch((e) => alert(loginErrorMessage(e)));
+      return;
+    }
+    if (code.includes('operation-not-allowed')) {
+      alert('[오류] 구글 로그인이 아직 활성화되지 않았습니다. (Firebase 콘솔 > Authentication > 로그인 방법에서 Google을 사용 설정해주세요)');
+      return;
+    }
+    alert(loginErrorMessage(err));
+  });
+});
+
+// 리디렉션 방식으로 로그인한 경우 로그인 성공 자체는 onAuthStateChanged가 처리한다.
+// 다만 실패했을 때의 오류는 이렇게 직접 꺼내보지 않으면 조용히 묻혀서
+// "아무 일도 안 일어나고 로그인 화면만 다시 뜨는" 상태가 되므로 여기서 확인해 알려준다.
+getRedirectResult(auth).catch((err) => {
+  const code = err && err.code ? err.code : '';
+  if (code.includes('operation-not-allowed')) {
+    alert('[오류] 구글 로그인이 아직 활성화되지 않았습니다. (Firebase 콘솔 > Authentication > 로그인 방법에서 Google을 사용 설정해주세요)');
+    return;
+  }
+  alert(loginErrorMessage(err));
+});
+
+// 구글 계정에는 우리 게임의 "아이디" 개념이 없으므로 이메일 앞부분에서 만들어 붙인다.
+// 화면에 보이는 것은 닉네임뿐이고 이 값은 내부 식별용으로만 쓰인다.
+function usernameFromSocialUser(user) {
+  const base = (user.email || '').split('@')[0].replace(/[^a-zA-Z0-9_]/g, '').slice(0, 8);
+  return `${base || 'user'}_${user.uid.slice(0, 6)}`;
+}
+
+function showNicknameSetup(user) {
+  pendingNewUser = user;
+  document.getElementById('auth-screen').classList.add('hidden');
+  const input = document.getElementById('setup-nickname-input');
+  input.value = getSuggestedNickname();
+  document.getElementById('nickname-setup-screen').classList.remove('hidden');
+  input.focus();
+}
+
+document.getElementById('btn-nickname-submit').addEventListener('click', () => {
+  const user = pendingNewUser;
+  if (!user) return;
+  const nickname = document.getElementById('setup-nickname-input').value.trim() || getSuggestedNickname();
+
+  const profile = { username: usernameFromSocialUser(user), nickname, wins: 0, totalGames: 0, createdAt: Date.now() };
+  isRegistering = true; // 프로필 저장이 끝나기 전에 onAuthStateChanged가 "프로필 없음"으로 오판하지 않도록 막는다
+  set(ref(db, `users/${user.uid}`), profile).then(() => {
+    isRegistering = false;
+    pendingNewUser = null;
+    document.getElementById('nickname-setup-screen').classList.add('hidden');
+    enterAppAsUser(user.uid, profile);
+  }).catch((err) => {
+    isRegistering = false;
+    alert(loginErrorMessage(err));
+  });
+});
+
+document.getElementById('btn-setup-cancel').addEventListener('click', () => {
+  pendingNewUser = null;
+  document.getElementById('nickname-setup-screen').classList.add('hidden');
+  signOut(auth);
 });
 
 document.getElementById('btn-logout').addEventListener('click', () => {
@@ -1116,8 +1254,15 @@ onAuthStateChanged(auth, (user) => {
 
     get(ref(db, `users/${user.uid}`)).then((snap) => {
       if (!snap.exists()) {
-        alert('[오류] 계정 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
-        signOut(auth);
+        // 이메일/비밀번호 계정인데 프로필이 없다면 비정상 상태이므로 로그아웃시킨다.
+        // 반면 구글 등 소셜 계정은 첫 로그인이라 프로필이 없는 것이 정상이므로 닉네임 설정으로 보낸다.
+        const isPasswordAccount = (user.providerData || []).some(p => p.providerId === 'password');
+        if (isPasswordAccount) {
+          alert('[오류] 계정 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
+          signOut(auth);
+        } else {
+          showNicknameSetup(user);
+        }
         return;
       }
       enterAppAsUser(user.uid, snap.val());
@@ -1126,6 +1271,8 @@ onAuthStateChanged(auth, (user) => {
     myAccountId = null;
     myProfile = null;
     myNickname = '';
+    pendingNewUser = null;
+    document.getElementById('nickname-setup-screen').classList.add('hidden');
     document.getElementById('auth-screen').classList.remove('hidden');
     document.getElementById('lobby-screen').classList.add('hidden');
     document.getElementById('waiting-screen').classList.add('hidden');
