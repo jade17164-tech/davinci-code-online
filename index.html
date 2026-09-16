@@ -1,0 +1,2569 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>다빈치 코드 온라인 (모드 및 타일 분배 방식별 방 분리)</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap');
+
+:root {
+  --felt: #0b5e3f;
+  --felt-light: #167a53;
+  --felt-dark: #063d29;
+  --wood-dark: #2b1810;
+  --wood: #5c3319;
+  --wood-mid: #6b4226;
+  --wood-light: #8a5a2e;
+  --wood-highlight: #b98342;
+  --gold: #d4af37;
+  --gold-light: #f0d78c;
+  --parchment: #f2e8d0;
+  --parchment-dark: #e3d5ae;
+  --ink: #2b1810;
+  --ruby: #c0392b;
+  --ruby-dark: #7a1f18;
+  --emerald: #1f7a45;
+  --emerald-dark: #0c4a29;
+  --sapphire: #2563a8;
+  --sapphire-dark: #123a5c;
+}
+
+* { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+
+body {
+  background-color: var(--wood);
+  background-image:
+    repeating-linear-gradient(95deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 4px),
+    repeating-linear-gradient(95deg, rgba(0,0,0,0.07) 0px, rgba(0,0,0,0.07) 2px, transparent 2px, transparent 46px),
+    radial-gradient(ellipse at 50% -10%, var(--wood-highlight) 0%, transparent 55%),
+    linear-gradient(165deg, var(--wood-mid) 0%, var(--wood-dark) 85%);
+  background-attachment: fixed;
+  color: var(--gold-light);
+  font-family: 'Nunito', -apple-system, sans-serif;
+  padding: 10px;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.game-container { width: 100%; max-width: 420px; text-align: center; display: flex; flex-direction: column; min-height: 100dvh; }
+
+h1 {
+  font-family: 'Cinzel', serif;
+  font-size: 19px;
+  font-weight: 800;
+  margin: 4px 0 14px 0;
+  letter-spacing: 1px;
+  color: var(--gold-light);
+  background: linear-gradient(180deg, #3d2110, #1c0f08);
+  border: 2px solid var(--gold);
+  border-radius: 6px;
+  padding: 10px 12px;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.7), 0 0 14px rgba(212,175,55,0.35);
+  box-shadow: 0 5px 12px rgba(0,0,0,.5), inset 0 0 0 1px rgba(212,175,55,0.25), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.card {
+  background: radial-gradient(ellipse at 50% -15%, var(--felt-light), var(--felt) 55%, var(--felt-dark) 100%);
+  padding: 16px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  border: 5px solid var(--wood);
+  box-shadow: 0 10px 24px rgba(0,0,0,.5), inset 0 0 26px rgba(0,0,0,.45), inset 0 0 0 2px rgba(212,175,55,.15), 0 0 0 2px var(--wood-dark);
+  position: relative;
+}
+
+.hidden { display: none !important; }
+
+input, select {
+  width: 80%;
+  padding: 11px;
+  margin: 5px 0;
+  border-radius: 6px;
+  border: 2px solid var(--wood-dark);
+  background: var(--parchment);
+  color: var(--ink);
+  font-size: 14px;
+  text-align: center;
+  box-sizing: border-box;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  outline: none;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.25);
+  transition: box-shadow .15s, transform .1s;
+}
+input:focus, select:focus { box-shadow: inset 0 2px 4px rgba(0,0,0,.25), 0 0 0 3px rgba(212,175,55,0.45); }
+select { cursor: pointer; }
+select option { background: var(--parchment); color: var(--ink); }
+
+.btn-group { margin-top: 10px; display: flex; gap: 8px; justify-content: center; }
+
+button {
+  background: linear-gradient(180deg, var(--wood-highlight), var(--wood-mid) 55%, var(--wood-dark));
+  color: var(--gold-light);
+  border: 1px solid var(--wood-dark);
+  border-bottom: 4px solid var(--wood-dark);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 800;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.08s ease, border-bottom-width 0.08s ease, filter .1s;
+  font-family: 'Nunito', sans-serif;
+  box-shadow: 0 4px 10px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.12);
+  text-shadow: 0 1px 1px rgba(0,0,0,.5);
+}
+button:hover:not(:disabled) { filter: brightness(1.08); }
+button:active:not(:disabled) { transform: translateY(3px); border-bottom-width: 1px; }
+button:disabled { background: #4a4a4a !important; color: #8a8a8a !important; border-bottom-color: #2c2c2c !important; cursor: not-allowed; box-shadow: none; text-shadow: none; }
+
+.btn-start { background: radial-gradient(circle at 30% 25%, #5be08a, var(--emerald) 65%, var(--emerald-dark)); border-bottom: 4px solid #062815; color: #eafff0; font-size: 15px; width: 100%; padding: 13px; margin-top: 10px; }
+.btn-reset { background: radial-gradient(circle at 30% 25%, #e07a70, var(--ruby) 65%, var(--ruby-dark)); border-bottom: 3px solid #4a120d; color: #fff0ee; font-size: 11px; padding: 4px 8px; border-radius: 5px; float: right; margin-bottom: 8px; margin-left: 4px; }
+.btn-rules { background: radial-gradient(circle at 30% 25%, #6fb0e6, var(--sapphire) 65%, var(--sapphire-dark)); border-bottom: 3px solid #0a2438; color: #eaf5ff; font-size: 11px; padding: 4px 8px; border-radius: 5px; float: right; margin-bottom: 8px; }
+.btn-kick { background: radial-gradient(circle at 30% 25%, #e07a70, var(--ruby) 65%, var(--ruby-dark)); border-bottom: 2px solid #4a120d; color: #fff0ee; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+.btn-lobby-return { background: radial-gradient(circle at 30% 25%, #5be08a, var(--emerald) 65%, var(--emerald-dark)); border-bottom: 4px solid #062815; color: #eafff0; font-size: 14px; width: 100%; padding: 13px; margin-top: 10px; display: none; }
+
+.hand {
+  display: flex;
+  justify-content: flex-start;
+  gap: 5px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  min-height: 82px;
+  margin: 8px 0;
+  align-items: center;
+  padding: 10px 8px 6px;
+  background: linear-gradient(180deg, #241309, #150b05);
+  border-radius: 8px;
+  border: 2px solid var(--wood-dark);
+  box-shadow: inset 0 6px 10px rgba(0,0,0,.65), inset 0 -1px 0 rgba(255,255,255,.05);
+}
+.hand::-webkit-scrollbar { height: 6px; }
+.hand::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); border-radius: 4px; }
+.hand::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 4px; }
+
+.slot-insert-btn { width: 18px; height: 62px; background: rgba(0,0,0,.35); border: 1px dashed var(--gold); color: var(--gold); font-size: 13px; font-weight: 800; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
+.slot-insert-btn:hover { background: var(--gold); color: var(--wood-dark); transform: scale(1.05); }
+
+.tile-wrapper { display: flex; flex-direction: column; align-items: center; position: relative; flex-shrink: 0; }
+
+.tile {
+  width: 42px;
+  height: 62px;
+  line-height: 62px;
+  font-size: 20px;
+  font-weight: 800;
+  font-family: 'Baloo 2', sans-serif;
+  border-radius: 5px;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  display: inline-block;
+  text-align: center;
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+.tile:hover { transform: translateY(-4px); }
+.tile.black { background: radial-gradient(circle at 30% 22%, #4d5058, #1c1d22 62%, #0a0a0c); color: #fbfbfb; border: 1px solid #050506; box-shadow: 0 4px 0 #000, 0 8px 12px rgba(0,0,0,.6), inset 0 2px 3px rgba(255,255,255,.15); }
+.tile.white { background: radial-gradient(circle at 30% 22%, #ffffff, #e9e2cc 62%, #cfc4a3); color: #1a1a1a; border: 1px solid #b9ae8c; box-shadow: 0 4px 0 #a8987a, 0 8px 12px rgba(0,0,0,.4), inset 0 2px 3px rgba(255,255,255,.85); }
+.tile.cover-black { background: radial-gradient(circle at 50% 35%, #34210f 0%, #180d05 75%); color: var(--gold-light); border: 1px solid var(--gold); font-size: 21px; box-shadow: 0 4px 0 #0a0603, 0 8px 12px rgba(0,0,0,.6), inset 0 0 0 3px rgba(212,175,55,.18); }
+.tile.cover-white { background: radial-gradient(circle at 50% 35%, #e2d4ab 0%, #b6905a 75%); color: var(--wood-dark); border: 1px solid var(--wood-dark); font-size: 21px; box-shadow: 0 4px 0 #7a5a2c, 0 8px 12px rgba(0,0,0,.45), inset 0 0 0 3px rgba(43,24,16,.25); }
+
+.tile.revealed { border: 2px solid var(--ruby) !important; box-shadow: 0 0 14px rgba(192,57,43,.8), 0 4px 0 rgba(0,0,0,.5) !important; }
+.revealed-badge { position: absolute; top: -6px; right: -6px; background: var(--ruby); color: #fff0ee; font-size: 10px; border-radius: 50%; width: 18px; height: 18px; line-height: 18px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,.5); border: 2px solid var(--wood-dark); }
+
+.draw-choice-box { background: rgba(0,0,0,.28); border: 2px dashed var(--gold); padding: 12px; border-radius: 8px; margin: 10px 0; text-align: center; }
+
+.status {
+  background: linear-gradient(180deg, var(--gold-light), var(--wood-highlight) 55%, #8a611f);
+  color: var(--wood-dark);
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin: 8px 0;
+  font-weight: 800;
+  clear: both;
+  border: 1px solid var(--wood-dark);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.5), inset 0 -3px 5px rgba(0,0,0,.25), 0 3px 6px rgba(0,0,0,.4);
+  text-shadow: 0 1px 0 rgba(255,255,255,.25);
+}
+
+#log-history-container { margin: 6px 0 10px 0; }
+.log-history {
+  max-height: 130px;
+  overflow-y: auto;
+  background: repeating-linear-gradient(var(--parchment) 0px, var(--parchment) 20px, var(--parchment-dark) 21px);
+  border: 1px dashed var(--wood);
+  border-radius: 6px;
+  padding: 6px 10px;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,.25);
+}
+.log-history::-webkit-scrollbar { width: 6px; }
+.log-history::-webkit-scrollbar-track { background: rgba(0,0,0,0.08); border-radius: 4px; }
+.log-history::-webkit-scrollbar-thumb { background: var(--wood); border-radius: 4px; }
+.log-entry {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 0;
+  border-bottom: 1px dashed rgba(43,24,16,.2);
+  word-break: keep-all;
+}
+.log-entry:last-child { border-bottom: none; }
+.log-entry-index {
+  flex-shrink: 0;
+  background: var(--wood);
+  color: var(--gold-light);
+  font-size: 10px;
+  font-weight: 800;
+  border-radius: 50%;
+  width: 17px;
+  height: 17px;
+  line-height: 17px;
+  text-align: center;
+}
+
+.badge { display: inline-block; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 9px; letter-spacing: .2px; vertical-align: middle; }
+.badge-host { background: linear-gradient(180deg, var(--gold-light), var(--gold)); color: var(--wood-dark); }
+.badge-dead { background: var(--ruby); color: #fff0ee; }
+
+/* 칭호 배지: 색/그라데이션은 칭호마다 JS에서 인라인으로 지정(30종 전부 다른 색), 여기서는 애니메이션 종류만 정의 */
+.badge-title {
+  color: #fff8ef;
+  border: 1px solid rgba(255,255,255,.4);
+  text-shadow: 0 1px 1px rgba(0,0,0,.45);
+  background-size: 220% 100%;
+}
+.badge-title.badge-title-sm { font-size: 9px; padding: 1px 6px; }
+.badge-title.badge-title-equipped { box-shadow: 0 0 0 2px rgba(255,255,255,.6), 0 0 10px rgba(255,255,255,.55); }
+
+.badge-title-anim-shine { animation-name: titleShine; animation-timing-function: linear; animation-iteration-count: infinite; }
+.badge-title-anim-pulse { animation-name: titlePulse; animation-timing-function: ease-in-out; animation-iteration-count: infinite; box-shadow: 0 0 6px var(--tglow, rgba(255,255,255,.6)), inset 0 1px 0 rgba(255,255,255,.3); }
+.badge-title-anim-flicker { animation-name: titleFlicker; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+.badge-title-anim-holo { animation-name: titleHolo; animation-timing-function: linear; animation-iteration-count: infinite; }
+
+@keyframes titleShine {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 220% 50%; }
+}
+@keyframes titlePulse {
+  0%, 100% { box-shadow: 0 0 4px var(--tglow, rgba(255,255,255,.5)), inset 0 1px 0 rgba(255,255,255,.3); transform: scale(1); }
+  50% { box-shadow: 0 0 11px var(--tglow, rgba(255,255,255,.95)), inset 0 1px 0 rgba(255,255,255,.5); transform: scale(1.05); }
+}
+@keyframes titleFlicker {
+  0%, 100% { opacity: 1; filter: brightness(1); }
+  45% { opacity: .8; filter: brightness(.8); }
+  50% { opacity: 1; filter: brightness(1.2); }
+  57% { opacity: .88; filter: brightness(.88); }
+}
+@keyframes titleHolo {
+  0% { filter: hue-rotate(0deg) saturate(1.3); background-position: 0% 50%; }
+  100% { filter: hue-rotate(360deg) saturate(1.3); background-position: 200% 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .badge-title-anim-shine, .badge-title-anim-pulse, .badge-title-anim-flicker, .badge-title-anim-holo { animation: none; }
+}
+
+.room-list {
+  max-height: 210px;
+  overflow-y: auto;
+  background: rgba(0,0,0,.28);
+  border: 2px solid var(--wood);
+  border-radius: 8px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+.room-list::-webkit-scrollbar { width: 6px; }
+.room-list::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; }
+.room-list::-webkit-scrollbar-thumb { background: var(--wood-light); border-radius: 4px; }
+.room-list-empty { color: #aaa; font-size: 12px; text-align: center; padding: 16px 4px; }
+
+.room-row {
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.room-row-info { flex: 1; min-width: 0; }
+.room-row-main { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.room-code-tag { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; color: var(--gold-light); }
+.room-tag { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 8px; background: rgba(255,255,255,.12); color: #ddd; white-space: nowrap; }
+.room-tag.room-state-waiting { background: rgba(31,122,69,.4); color: #8fecab; }
+.room-tag.room-state-playing { background: rgba(192,57,43,.35); color: #ffaba2; }
+.room-tag.room-state-full { background: rgba(212,175,55,.3); color: var(--gold-light); }
+.room-row-sub { font-size: 11px; color: #bbb; margin-top: 3px; }
+.btn-room-join { flex-shrink: 0; font-size: 11px; padding: 8px 12px; }
+
+.other-player-box { background: rgba(0,0,0,.3); padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 2px solid var(--wood); transition: border-color .2s, box-shadow .2s; }
+.active-turn { border: 2px solid var(--gold) !important; box-shadow: 0 0 0 1px var(--gold), 0 0 16px rgba(212,175,55,0.5); animation: turnGlow 1.6s ease-in-out infinite; }
+@keyframes turnGlow {
+  0%, 100% { box-shadow: 0 0 0 1px var(--gold), 0 0 10px rgba(212,175,55,0.35); }
+  50% { box-shadow: 0 0 0 1px var(--gold), 0 0 22px rgba(212,175,55,0.7); }
+}
+.player-list { text-align: left; background: rgba(0,0,0,.3); padding: 10px; border-radius: 8px; margin: 10px 0; font-size: 14px; border: 1px solid var(--wood); }
+
+.chat-container {
+  background: repeating-linear-gradient(var(--parchment) 0px, var(--parchment) 22px, var(--parchment-dark) 23px);
+  border: 3px solid var(--wood);
+  border-radius: 8px;
+  padding: 8px;
+  margin-top: 10px;
+  text-align: left;
+  max-height: 70dvh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.25);
+}
+.chat-tab-group { display: flex; gap: 4px; margin-bottom: 6px; }
+.chat-tab { background: var(--wood-mid); color: var(--gold-light); border: 1px solid var(--wood-dark); padding: 4px 10px; font-size: 11px; border-radius: 4px 4px 0 0; cursor: pointer; font-weight: 700; }
+.chat-tab.active { background: var(--gold); color: var(--wood-dark); font-weight: 800; }
+.chat-messages { max-height: 150px; flex: 1; overflow-y: auto; font-size: 12px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 4px; }
+.chat-messages::-webkit-scrollbar { width: 6px; }
+.chat-messages::-webkit-scrollbar-track { background: rgba(0,0,0,0.08); border-radius: 4px; }
+.chat-messages::-webkit-scrollbar-thumb { background: var(--wood); border-radius: 4px; }
+.chat-msg { background: rgba(255,255,255,.5); color: var(--ink); padding: 4px 8px; border-radius: 4px; word-break: break-all; }
+.chat-msg.team-chat { background: rgba(37,99,168,.18); border-left: 3px solid var(--sapphire); }
+.chat-input-row { display: flex; gap: 4px; }
+.chat-input-row input { width: 100%; margin: 0; padding: 6px; font-size: 12px; }
+.chat-input-row button { padding: 6px 10px; font-size: 12px; }
+
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 6, 3, 0.85); display: flex; justify-content: center; align-items: flex-start; padding-top: 6vh; z-index: 1000; overflow-y: auto; backdrop-filter: blur(3px); }
+.modal-content {
+  background: linear-gradient(180deg, var(--parchment), var(--parchment-dark));
+  border: 6px solid var(--wood);
+  width: 90%;
+  max-width: 380px;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink);
+  box-shadow: 0 20px 45px rgba(0,0,0,0.6), inset 0 0 0 2px rgba(212,175,55,.3);
+  animation: modalIn .18s ease;
+}
+@keyframes modalIn { from { opacity: 0; transform: translateY(-8px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.modal-content::-webkit-scrollbar { width: 6px; }
+.modal-content::-webkit-scrollbar-thumb { background: var(--wood); border-radius: 4px; }
+.modal-content h2 { font-family: 'Cinzel', serif; font-size: 17px; color: var(--wood-dark); margin-top: 0; border-bottom: 2px solid var(--gold); padding-bottom: 8px; }
+.modal-content h3 { font-family: 'Cinzel', serif; font-size: 14px; color: var(--sapphire-dark); margin: 12px 0 4px 0; }
+.modal-content ul { padding-left: 18px; margin: 4px 0; }
+.close-btn { width: 100%; background: linear-gradient(180deg, var(--wood-highlight), var(--wood-mid) 55%, var(--wood-dark)); border-bottom: 4px solid var(--wood-dark); margin-top: 15px; padding: 11px; font-size: 14px; }
+
+/* 가로모드: 화면이 옆으로 넓고 세로가 짧은 환경(휴대폰 가로/태블릿)에서 인게임 화면을 2단으로 재배치 */
+@media (orientation: landscape) and (min-width: 640px) {
+  body { padding: 8px; }
+  .game-container { max-width: 900px; }
+
+  h1 { font-size: 16px; padding: 8px 12px; margin: 2px 0 8px 0; }
+
+  .card { padding: 12px 16px; }
+
+  #game-columns {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    clear: both;
+  }
+  #game-main-column { flex: 1.5 1 0; min-width: 0; }
+  #game-columns .chat-container {
+    flex: 1 1 0;
+    min-width: 220px;
+    max-width: 320px;
+    margin-top: 0;
+    max-height: 82vh;
+    align-self: stretch;
+  }
+  #game-columns .chat-messages { max-height: none; flex: 1; }
+
+  #other-players {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    max-height: 46vh;
+    overflow-y: auto;
+    padding-right: 2px;
+    align-content: start;
+  }
+  #other-players .other-player-box { margin-bottom: 0; }
+  #other-players::-webkit-scrollbar { width: 6px; }
+  #other-players::-webkit-scrollbar-thumb { background: var(--wood); border-radius: 4px; }
+
+  .hand { min-height: 68px; }
+  .tile { width: 38px; height: 56px; line-height: 56px; font-size: 17px; }
+  .tile.cover-black, .tile.cover-white { font-size: 18px; }
+
+  .log-history { max-height: 90px; }
+}
+
+/* 대기실/로비도 가로모드에서 너무 좁게 눌리지 않도록 폭만 살짝 확장 */
+@media (orientation: landscape) and (min-width: 640px) and (max-height: 480px) {
+  .modal-content { max-height: 92vh; padding-top: 4vh; }
+  .modal-overlay { padding-top: 3vh; }
+}
+  </style>
+</head>
+<body>
+
+<div class="game-container">
+  <h1>다빈치 코드</h1>
+
+  <!-- 0. 로그인 / 회원가입 화면 -->
+  <div id="auth-screen" class="card">
+    <h3 id="auth-title" style="margin-top:0;">로그인</h3>
+    <input type="text" id="auth-username-input" placeholder="아이디 (영문/숫자/밑줄 3~16자)" maxlength="16" autocomplete="username">
+    <input type="password" id="auth-password-input" placeholder="비밀번호 (6자 이상)" autocomplete="current-password">
+    <input type="text" id="auth-nickname-input" placeholder="닉네임" maxlength="12" class="hidden">
+    <div class="btn-group">
+      <button id="btn-auth-submit" class="btn-start" style="margin-top:0;">로그인</button>
+    </div>
+    <p id="auth-toggle-text" style="font-size:12px; color:#ccc; margin-top:10px; cursor:pointer; text-decoration:underline;">계정이 없으신가요? 회원가입</p>
+  </div>
+
+  <!-- 1. 메인 로비 -->
+  <div id="lobby-screen" class="card hidden">
+    <button id="open-rules-lobby" class="btn-rules">게임 방법</button>
+    <button id="btn-logout" class="btn-kick" style="float:right; margin-bottom:8px;">로그아웃</button>
+    <h3 style="clear:both;">게임 입장하기</h3>
+    <div id="account-bar" style="font-size:13px; color:#f1c40f; margin-bottom:6px;"></div>
+    <input type="text" id="room-input" placeholder="방 코드 (숫자 4자리, 예: 1234)" maxlength="4" inputmode="numeric" pattern="[0-9]*">
+
+    <div style="margin: 8px 0; font-size: 13px; color: #f1c40f; background: #252525; padding: 8px; border-radius: 8px; display: inline-block; width: 80%;">
+      <label style="cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+        <input type="checkbox" id="spectator-mode-checkbox" style="width: 16px; height: 16px; margin: 0; cursor: pointer;">
+        관전 모드로 참여하기
+      </label>
+    </div>
+
+    <h3 style="clear:both; margin-top: 14px;">새 방 만들기 옵션</h3>
+    <div style="margin-top: 6px; font-size: 12px; color: #aaa; text-align: left; padding-left: 10%;">게임 모드:</div>
+    <select id="game-mode-select">
+      <option value="solo">개인전 (2~6인)</option>
+      <option value="team">2:2 팀전 (4인 전용)</option>
+    </select>
+
+    <div style="margin-top: 6px; font-size: 12px; color: #aaa; text-align: left; padding-left: 10%;">타일 분배 방식:</div>
+    <select id="tile-count-select">
+      <option value="auto">인원수별 자동 조절 (2~4인: 4장 / 5~6인: 3장)</option>
+      <option value="3">무조건 3장씩 시작</option>
+      <option value="4">무조건 4장씩 시작</option>
+      <option value="5">무조건 5장씩 시작</option>
+    </select>
+
+    <div style="margin-top: 6px; font-size: 12px; color: #aaa; text-align: left; padding-left: 10%;">난이도 (로그 표시 방식):</div>
+    <select id="difficulty-select">
+      <option value="default">기본 모드 (로그를 모달 알림으로만 표시)</option>
+      <option value="beginner">초보자 모드 (로그 기록이 목록으로 누적 표시)</option>
+    </select>
+
+    <div class="btn-group">
+      <button id="btn-open-room-list">방 목록</button>
+      <button id="btn-create-room">방 만들기</button>
+      <button id="btn-join-room">방 참가하기</button>
+    </div>
+  </div>
+
+  <!-- 2. 대기실 화면 -->
+  <div id="waiting-screen" class="card hidden">
+    <button id="reset-waiting-btn" class="btn-reset">나가기</button>
+    <button id="open-rules-waiting" class="btn-rules">게임 방법</button>
+    <h3 style="clear:both;">대기실 (방 코드: <span id="waiting-room-code" style="color:#f1c40f;">-</span>)</h3>
+    <p id="room-mode-info" style="font-size:13px; color:#f39c12; margin:4px 0;"></p>
+    <p id="room-tile-info" style="font-size:12px; color:#e67e22; margin:2px 0;"></p>
+    <div class="player-list">
+      <b>참가자 목록 (<span id="player-count">0</span>명):</b>
+      <ul id="waiting-player-list" style="margin: 5px 0 0 0; padding-left: 20px;"></ul>
+      <div id="spectator-list-container" class="hidden" style="margin-top: 8px; border-top: 1px dashed #444; padding-top: 6px;">
+        <span style="color: #3498db; font-size: 12px;">관전자 목록:</span>
+        <span id="waiting-spectator-list" style="font-size: 12px; color: #aaa;"></span>
+      </div>
+    </div>
+    <div id="team-change-box" class="hidden" style="margin: 8px 0;">
+      <button id="btn-switch-team" style="background: #3498db; width: 100%; padding: 8px; font-size: 12px;">팀 변경하기 (A/B 전환)</button>
+    </div>
+    <div style="margin: 8px 0;">
+      <button id="btn-toggle-spectator" style="background: #8e44ad; width: 100%; padding: 8px; font-size: 12px;">관전자로 전환하기</button>
+    </div>
+    <button id="start-game-btn" class="btn-start hidden">게임 시작하기</button>
+
+    <div class="chat-container">
+      <div id="waiting-chat-tabs" class="chat-tab-group hidden">
+        <button class="chat-tab active" data-target="all">전체 채팅</button>
+        <button class="chat-tab" data-target="team">팀 채팅</button>
+      </div>
+      <div id="chat-messages-waiting" class="chat-messages"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-input-waiting" placeholder="대화 입력..." maxlength="50">
+        <button id="chat-send-waiting">전송</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 인게임 화면 -->
+  <div id="game-screen" class="card hidden">
+    <button id="reset-game-btn" class="btn-reset">나가기</button>
+    <button id="open-rules-game" class="btn-rules">게임 방법</button>
+    <div style="font-size:13px; text-align:left; float:left; line-height:24px;">방 코드: <b id="display-room-code" style="color:#f1c40f;">-</b></div>
+
+    <div id="game-columns">
+      <div id="game-main-column">
+        <div id="status-message" class="status">게임 준비 중...</div>
+
+        <div id="log-history-container" class="hidden">
+          <div id="log-history" class="log-history"></div>
+        </div>
+
+        <div id="other-players"></div>
+
+        <hr style="border-color: #333; margin: 12px 0;">
+
+        <div id="draw-choice-container" class="hidden">
+          <div class="draw-choice-box">
+            <span style="font-size:13px; color:#f1c40f; display:block; margin-bottom:8px;">가져올 타일의 색상을 선택하세요:</span>
+            <div style="display: flex; gap: 8px; justify-content: center;">
+              <button id="draw-black-btn" style="background: #2b2b2b; border: 2px solid #555; flex: 1; padding: 10px;">검은색 타일 뽑기 (<span id="deck-black-count">0</span>)</button>
+              <button id="draw-white-btn" style="background: #f0f0f0; color: #111; border: 2px solid #ccc; flex: 1; padding: 10px;">흰색 타일 뽑기 (<span id="deck-white-count">0</span>)</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="drawn-preview-container" class="hidden">
+          <div style="background: #252525; border: 2px dashed #f1c40f; padding: 10px; border-radius: 8px; margin: 8px 0; display: flex; align-items: center; justify-content: center; gap: 10px;">
+            <span style="font-size:12px; color:#f1c40f;" id="preview-label">배치할 타일:</span>
+            <div id="drawn-tile-preview"></div>
+            <span style="font-size:11px; color:#aaa;">(내 패 사이 [ + ]를 눌러 배치)</span>
+          </div>
+        </div>
+
+        <div id="my-section-container">
+          <h3 style="font-size:14px; margin:4px 0;" id="my-hand-title">내 타일 (수동 배치 시스템)</h3>
+          <div id="my-hand" class="hand"></div>
+        </div>
+
+        <div id="action-buttons-container" style="margin-top: 12px;">
+          <div class="btn-group">
+            <button id="end-turn-btn" disabled style="width:100%; background:#27ae60; padding:12px; font-size:14px;">턴 넘기기 (종료)</button>
+          </div>
+        </div>
+
+        <button id="btn-return-lobby" class="btn-lobby-return">대기실로 돌아가기</button>
+      </div>
+
+      <div class="chat-container">
+        <div id="game-chat-tabs" class="chat-tab-group hidden">
+          <button class="chat-tab active" data-target="all">전체 채팅</button>
+          <button class="chat-tab" data-target="team">팀 채팅</button>
+        </div>
+        <div id="chat-messages-game" class="chat-messages"></div>
+        <div class="chat-input-row">
+          <input type="text" id="chat-input-game" placeholder="채팅 입력..." maxlength="50">
+          <button id="chat-send-game">전송</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 설명서 모달 -->
+<div id="rules-modal" class="modal-overlay hidden">
+  <div class="modal-content">
+    <h2>다빈치 코드 게임 규칙</h2>
+
+    <h3>게임 목적</h3>
+    <p style="margin: 4px 0;">상대방의 타일 숫자 정보를 추리하여 모두 공개시키고, 마지막까지 살아남는 1인(또는 팀)이 승리합니다!</p>
+
+    <h3>1. 타일 구성 및 정석 배치 규칙</h3>
+    <ul>
+      <li>타일 구성: 검은색(0~11, 조커 -) 13개, 흰색(0~11, 조커 -) 13개로 총 26개의 타일이 있습니다.</li>
+      <li>오름차순 정렬: 타일은 무조건 왼쪽이 작은 숫자, 오른쪽이 큰 숫자 순서대로 정렬해야 합니다.</li>
+      <li>[중요] 가장 중요한 규칙 (같은 숫자 정렬): 숫자가 같을 경우, <b>검은색 타일이 흰색 타일보다 무조건 왼쪽에 위치</b>해야 합니다.</li>
+      <li>조커(-) 타일 규칙: 조커는 원하는 어느 위치(맨 왼쪽, 맨 오른쪽, 사이)나 배치가 가능하지만 오름차순 순서 규칙은 유지해야 합니다.</li>
+      <li>조커(-) 타일은 흰색과 검은색 순서에 상관없이 놓을 수 있습니다.</li>
+    </ul>
+
+    <h3>2. 턴 진행 순서</h3>
+    <ul>
+      <li><b>1단계 [타일 뽑기]</b>: 내 턴이 되면 검은색 타일 또는 흰색 타일 중 하나를 직접 고르고 뽑아서 내 패 사이에 있는 <b>[ + ]</b> 버튼을 눌러 자리에 배치합니다. (단, 남은 타일이 0개인 색상은 뽑을 수 없습니다.)</li>
+      <li><b>2단계 [추리하기 (최소 1회 필수)]</b>: 내 턴일 때만 상대방의 숨겨진 타일 하나를 누르고 숫자를 맞힙니다.</li>
+      <li>정답 시: 추리한 상대 타일이 공개됩니다. 이후 계속해서 다른 타일을 추리하거나 <b>[턴 넘기기]</b>를 눌러 안전하게 턴을 종료할 수 있습니다.</li>
+      <li>오답 시: 이번 턴에 내가 뽑아온 타일이 공개되고 즉시 턴이 다음 사람에게 넘어갑니다.</li>
+    </ul>
+
+    <h3>3. 탈락 규칙 및 관전 모드</h3>
+    <ul>
+      <li>내 손에 있는 모든 타일이 공개되면 탈락하지만, 게임이 끝날 때까지 관전 모드로 흥미진진하게 관전하실 수 있습니다.</li>
+    </ul>
+
+    <h3>4. 난이도 (로그 표시 방식)</h3>
+    <ul>
+      <li>기본 모드: 새로운 사건이 발생할 때마다 화면 중앙에 알림 모달이 뜨고 닫으면 사라집니다. 진행 상황을 스스로 기억해야 합니다.</li>
+      <li>초보자 모드: 알림이 목록 형태로 화면에 계속 쌓여서, 몇 번째 타일을 누가 추리했는지 되짚어볼 수 있습니다.</li>
+    </ul>
+
+    <button id="close-rules-btn" class="close-btn">닫기</button>
+  </div>
+</div>
+
+<!-- 로그 알림 모달 (기본 모드) -->
+<div id="log-modal" class="modal-overlay hidden">
+  <div class="modal-content" style="text-align: center;">
+    <h2>알림</h2>
+    <p id="log-modal-text" style="font-size: 14px; color: #444; margin-bottom: 20px; line-height: 1.5;"></p>
+    <button id="log-modal-close-btn" class="close-btn">확인</button>
+  </div>
+</div>
+
+<!-- 실시간 방 목록 모달 -->
+<div id="room-list-modal" class="modal-overlay hidden">
+  <div class="modal-content">
+    <h2>실시간 방 목록</h2>
+    <p style="font-size: 12px; color: #6b4226; margin: -6px 0 10px 0;">방 코드는 앞 두 글자만 보여줍니다. 참가하려면 전체 코드를 알고 있어야 합니다.</p>
+    <div id="room-list" class="room-list">
+      <div class="room-list-empty">방 목록을 불러오는 중...</div>
+    </div>
+    <button id="room-list-close-btn" class="close-btn">닫기</button>
+  </div>
+</div>
+
+<!-- 방 목록에서 참가 시 전체 코드 확인용 모달 -->
+<div id="room-code-verify-modal" class="modal-overlay hidden">
+  <div class="modal-content" style="text-align: center;">
+    <h2>방 코드 확인</h2>
+    <p id="room-code-verify-subtitle" style="font-size: 13px; color: #444; margin-bottom: 15px;">이 방의 전체 코드를 입력하세요</p>
+    <input type="text" id="room-code-verify-input" placeholder="방 코드 전체 입력 (4자리)" maxlength="4" inputmode="numeric" pattern="[0-9]*" style="font-size: 18px; font-weight: bold; width: 70%; margin-bottom: 15px;">
+    <div class="btn-group">
+      <button id="room-code-verify-cancel-btn" style="background: #7f8c8d; flex: 1;">취소</button>
+      <button id="room-code-verify-submit-btn" style="background: #2ecc71; flex: 1;">참가하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 프로필 조회 모달 -->
+<div id="profile-modal" class="modal-overlay hidden">
+  <div class="modal-content" style="text-align: center;">
+    <h2 id="profile-modal-nickname">닉네임</h2>
+    <p style="font-size: 14px; color: #444; margin: 10px 0;">총 게임 수: <b id="profile-modal-total">0</b>판</p>
+    <p style="font-size: 14px; color: #444; margin: 10px 0;">승수: <b id="profile-modal-wins">0</b>승</p>
+    <p style="font-size: 14px; color: #444; margin: 10px 0;">승률: <b id="profile-modal-winrate">0%</b></p>
+    <div id="profile-modal-titles"></div>
+    <button id="profile-modal-close-btn" class="close-btn">닫기</button>
+  </div>
+</div>
+
+<!-- 추리 입력용 커스텀 모달 -->
+<div id="guess-modal" class="modal-overlay hidden">
+  <div class="modal-content" style="text-align: center;">
+    <h2 id="guess-modal-title">타일 추리하기</h2>
+    <p id="guess-modal-subtitle" style="font-size: 13px; color: #aaa; margin-bottom: 15px;"></p>
+
+    <input type="text" id="guess-input-field" placeholder="숫자 0~11 또는 -" maxlength="2" style="font-size: 20px; font-weight: bold; width: 60%; margin-bottom: 15px;">
+
+    <div class="btn-group">
+      <button id="guess-cancel-btn" style="background: #7f8c8d; flex: 1;">취소</button>
+      <button id="guess-submit-btn" style="background: #2ecc71; flex: 1;">확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- 확인/취소 커스텀 모달 (방 폭파, 나가기, 강퇴 등) -->
+<div id="confirm-modal" class="modal-overlay hidden">
+  <div class="modal-content" style="text-align: center;">
+    <h2 id="confirm-modal-title" style="color: #e74c3c;">알림</h2>
+    <p id="confirm-modal-text" style="font-size: 14px; color: #ddd; margin-bottom: 20px; line-height: 1.5;"></p>
+
+    <div class="btn-group">
+      <button id="confirm-cancel-btn" style="background: #7f8c8d; flex: 1; padding: 12px;">취소</button>
+      <button id="confirm-ok-btn" style="background: #e74c3c; flex: 1; padding: 12px;">확인</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, set, onValue, update, get, remove, push, onDisconnect, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD3uKIUUrGIYHZkpxD2QUjLcAJRmU8N0vo",
+  authDomain: "davinci-code-26825.firebaseapp.com",
+  databaseURL: "https://davinci-code-26825-default-rtdb.firebaseio.com/",
+  projectId: "davinci-code-26825",
+  storageBucket: "davinci-code-26825.firebasestorage.app",
+  messagingSenderId: "276138786492",
+  appId: "1:276138786492:web:4c022a3518f56f110a5ab9"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
+
+// 아이디/비밀번호 로그인은 Firebase Authentication의 이메일 방식을 내부적으로 이용한다
+// (아이디를 "아이디@davinci.local" 형식의 가짜 이메일로 변환해서 로그인/회원가입에 사용)
+function usernameToEmail(username) {
+  return `${username.trim().toLowerCase()}@davinci.local`;
+}
+function isValidUsername(u) {
+  return /^[a-zA-Z0-9_]{3,16}$/.test(u);
+}
+
+let currentRoomKey = "";
+let rawRoomCode = "";
+let myPlayerId = "";
+let myNickname = "";
+let isHost = false;
+let isSpectator = false;
+let roomRef = null;
+let hasDrawnThisTurn = false;
+let hasGuessedSuccessThisTurn = false;
+let lastDrawnTileId = null;
+let isGameOverHandled = false;
+let isKickedHandled = false;
+// 이번 게임 결과에 대해 내 계정 통계(승수/칭호 등)를 이미 반영했는지 - 게임마다 1회만 반영
+let myStatsApplied = false;
+// 내가 직접 나가기/방 폭파를 누른 경우, 방금 지운 내 자리를 "끊김 복구" 로직이 되살리지 못하도록 막는 플래그
+let isLeavingRoom = false;
+
+let pendingPlacementTile = null;
+let activeChatTab = 'all';
+
+let currentGuessTarget = { pid: null, idx: null };
+let confirmCallback = null;
+
+// 난이도(로그 표시 방식) 설정: 기본 모드는 모달 알림, 초보자 모드는 누적 기록 목록
+let logMode = localStorage.getItem('davinci_log_mode') || 'default';
+let lastSeenLog = null;
+let logHistoryList = [];
+
+const difficultySelect = document.getElementById('difficulty-select');
+if (difficultySelect) {
+  difficultySelect.value = logMode;
+  difficultySelect.addEventListener('change', (e) => {
+    logMode = e.target.value;
+    localStorage.setItem('davinci_log_mode', logMode);
+  });
+}
+
+// 닉네임 자동 추천: "~하는" 수식어 30개 + 동물 이름 30개를 조합해서 세션마다 하나로 고정 추천
+const NICKNAME_ADJECTIVES = [
+  "사랑하는", "노력하는", "생각하는", "공부하는", "운동하는",
+  "요리하는", "여행하는", "산책하는", "청소하는", "노래하는",
+  "낚시하는", "등산하는", "수영하는", "독서하는", "게임하는",
+  "코딩하는", "캠핑하는", "요가하는", "명상하는", "도전하는",
+  "모험하는", "탐험하는", "상상하는", "연구하는", "발명하는",
+  "촬영하는", "방황하는", "질주하는", "추리하는", "응원하는"
+];
+const NICKNAME_ANIMALS = [
+  "사자", "호랑이", "여우", "늑대", "곰",
+  "토끼", "다람쥐", "고양이", "강아지", "판다",
+  "코알라", "캥거루", "펭귄", "부엉이", "독수리",
+  "매", "앵무새", "거북이", "악어", "상어",
+  "돌고래", "고래", "문어", "오징어", "나비",
+  "고슴도치", "수달", "비버", "사슴", "기린"
+];
+
+function getSuggestedNickname() {
+  const cached = sessionStorage.getItem('davinci_suggested_nickname');
+  if (cached) return cached;
+
+  const adjective = NICKNAME_ADJECTIVES[Math.floor(Math.random() * NICKNAME_ADJECTIVES.length)];
+  const animal = NICKNAME_ANIMALS[Math.floor(Math.random() * NICKNAME_ANIMALS.length)];
+  const suggested = `${adjective} ${animal}`;
+
+  sessionStorage.setItem('davinci_suggested_nickname', suggested);
+  return suggested;
+}
+
+// ---- 세션 저장/복구 (모바일에서 백그라운드 갔다 왔을 때 튕기지 않도록) ----
+// iOS/Android 브라우저는 백그라운드에 오래 머문 탭을 메모리 확보를 위해 통째로 새로고침시키는 경우가 많음.
+// sessionStorage에 최소한의 세션 정보를 남겨뒀다가, 스크립트가 다시 시작될 때 로비로 돌아가지 않고
+// 있던 방으로 바로 재접속하도록 한다. (탭을 완전히 닫으면 sessionStorage도 같이 사라지므로 안전함)
+let myLastKnownRecord = null;
+
+// 게임 중 튕기거나(연결 끊김) 패배 후 나가는 플레이어의 패는 삭제하지 않고 전부 공개된 상태로 남겨둔다
+function revealedHandOf(hand) {
+  return (hand || []).map(t => ({ ...t, revealed: true }));
+}
+
+function saveSession() {
+  try {
+    sessionStorage.setItem('davinci_session', JSON.stringify({
+      currentRoomKey, rawRoomCode, myPlayerId, myNickname, isHost, isSpectator, accountId: myAccountId
+    }));
+  } catch (e) {}
+}
+function clearSession() {
+  try { sessionStorage.removeItem('davinci_session'); } catch (e) {}
+}
+
+// 로그인된 계정(myAccountId)과 세션에 저장된 계정이 다르면(다른 계정으로 로그인) 절대 재접속하지 않는다
+function tryResumeSession() {
+  let saved = null;
+  try {
+    const raw = sessionStorage.getItem('davinci_session');
+    saved = raw ? JSON.parse(raw) : null;
+  } catch (e) {}
+
+  if (saved && saved.currentRoomKey && saved.myPlayerId && saved.accountId === myAccountId) {
+    currentRoomKey = saved.currentRoomKey;
+    rawRoomCode = saved.rawRoomCode;
+    myPlayerId = saved.myPlayerId;
+    myNickname = saved.myNickname;
+    isHost = saved.isHost;
+    isSpectator = saved.isSpectator;
+    roomRef = ref(db, 'rooms/' + currentRoomKey);
+
+    // 새로고침으로 재접속한 이 연결에도 onDisconnect 정리 규칙을 다시 걸어준다
+    const myOwnPath = isSpectator
+      ? `rooms/${currentRoomKey}/spectators/${myPlayerId}`
+      : `rooms/${currentRoomKey}/players/${myPlayerId}`;
+    onDisconnect(ref(db, myOwnPath)).remove();
+
+    listenToRoom();
+  } else {
+    clearSession();
+    document.getElementById('lobby-screen').classList.remove('hidden');
+    updateAccountBar();
+  }
+}
+
+// ---- 로그인 / 회원가입 ----
+let authMode = 'login'; // 'login' | 'register'
+let myAccountId = null;
+let myProfile = null;
+const profileCache = {};
+const subscribedProfileIds = new Set();
+let lastRoomSnapshotData = null;
+
+function renderAuthMode() {
+  const nicknameField = document.getElementById('auth-nickname-input');
+  const title = document.getElementById('auth-title');
+  const submitBtn = document.getElementById('btn-auth-submit');
+  const toggleText = document.getElementById('auth-toggle-text');
+
+  if (authMode === 'login') {
+    nicknameField.classList.add('hidden');
+    title.innerText = '로그인';
+    submitBtn.innerText = '로그인';
+    toggleText.innerText = '계정이 없으신가요? 회원가입';
+  } else {
+    nicknameField.classList.remove('hidden');
+    if (!nicknameField.value.trim()) nicknameField.value = getSuggestedNickname();
+    title.innerText = '회원가입';
+    submitBtn.innerText = '회원가입';
+    toggleText.innerText = '이미 계정이 있으신가요? 로그인';
+  }
+}
+renderAuthMode();
+
+document.getElementById('auth-toggle-text').addEventListener('click', () => {
+  authMode = authMode === 'login' ? 'register' : 'login';
+  renderAuthMode();
+});
+
+function loginErrorMessage(err) {
+  const code = err && err.code ? err.code : '';
+  if (code.includes('email-already-in-use')) return '[오류] 이미 사용 중인 아이디입니다.';
+  if (code.includes('invalid-credential') || code.includes('wrong-password') || code.includes('user-not-found')) return '[오류] 아이디 또는 비밀번호가 올바르지 않습니다.';
+  if (code.includes('weak-password')) return '[오류] 비밀번호는 6자 이상이어야 합니다.';
+  if (code.includes('too-many-requests')) return '[오류] 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.';
+  return '[오류] ' + (err && err.message ? err.message : '알 수 없는 오류가 발생했습니다.');
+}
+
+// 회원가입은 (계정 생성) -> (프로필 DB 저장)까지 이 흐름이 직접 책임지고 앱에 진입시킨다.
+// 그 사이에도 onAuthStateChanged가 곧바로 발동하는데, 이때는 아직 프로필이 DB에 없을 수 있으므로
+// isRegistering 플래그가 켜져있는 동안은 onAuthStateChanged가 끼어들어 "프로필 없음"으로 오판하고
+// 로그아웃시켜버리지 않도록 막는다.
+let isRegistering = false;
+
+function enterAppAsUser(uid, profile) {
+  myAccountId = uid;
+  myProfile = profile;
+  myNickname = profile.nickname;
+  ensureProfileSubscribed(uid);
+  document.getElementById('auth-screen').classList.add('hidden');
+  updateAccountBar();
+  subscribeRoomList();
+  tryResumeSession();
+}
+
+document.getElementById('btn-auth-submit').addEventListener('click', () => {
+  const username = document.getElementById('auth-username-input').value.trim();
+  const password = document.getElementById('auth-password-input').value;
+
+  if (!isValidUsername(username)) return alert('[오류] 아이디는 영문/숫자/밑줄 3~16자로 입력해주세요.');
+  if (password.length < 6) return alert('[오류] 비밀번호는 6자 이상이어야 합니다.');
+
+  const email = usernameToEmail(username);
+
+  if (authMode === 'login') {
+    signInWithEmailAndPassword(auth, email, password).catch((err) => alert(loginErrorMessage(err)));
+  } else {
+    const nickname = document.getElementById('auth-nickname-input').value.trim() || getSuggestedNickname();
+    isRegistering = true;
+    let createdCred = null;
+    createUserWithEmailAndPassword(auth, email, password).then((cred) => {
+      createdCred = cred;
+      const profile = { username, nickname, wins: 0, totalGames: 0, createdAt: Date.now() };
+      return set(ref(db, `users/${cred.user.uid}`), profile).then(() => {
+        isRegistering = false;
+        enterAppAsUser(cred.user.uid, profile);
+      });
+    }).catch((err) => {
+      isRegistering = false;
+      if (createdCred) createdCred.user.delete().catch(() => {});
+      alert(loginErrorMessage(err));
+    });
+  }
+});
+
+document.getElementById('btn-logout').addEventListener('click', () => {
+  showCustomConfirm('로그아웃', '로그아웃 하시겠습니까?', false, () => {
+    clearSession();
+    signOut(auth);
+  });
+});
+
+// ---- 칭호 카탈로그 (총 30종) ----
+const TITLE_LIST = [
+  { id: 'win_streak_3', name: '떠오르는 별', desc: '3연승을 달성했습니다.' },
+  { id: 'win_streak_5', name: '물오른 실력', desc: '5연승을 달성했습니다.' },
+  { id: 'win_streak_10', name: '무패행진', desc: '10연승을 달성했습니다.' },
+  { id: 'lose_streak_3', name: '슬럼프 진입', desc: '3연패를 기록했습니다.' },
+  { id: 'lose_streak_5', name: '액운의 소유자', desc: '5연패를 기록했습니다.' },
+  { id: 'lose_streak_10', name: '우주의 저주', desc: '10연패를 기록했습니다.' },
+  { id: 'phoenix_comeback', name: '불사조', desc: '5연패 이상의 늪에서 탈출하며 승리했습니다.' },
+  { id: 'speed_win_fast', name: '전광석화', desc: '덱을 거의 소모하지 않고 초고속으로 승리했습니다.' },
+  { id: 'speed_win_normal', name: '순삭의 신', desc: '게임 초반에 승부를 끝냈습니다.' },
+  { id: 'speed_win_relative', name: '속전속결', desc: '빠르게 승부를 마무리했습니다.' },
+  { id: 'drew_one_joker', name: '조커의 은총', desc: '조커 타일을 뽑았습니다.' },
+  { id: 'drew_both_jokers', name: '두 조커의 주인', desc: '검은 조커와 흰 조커를 모두 뽑았습니다.' },
+  { id: 'start_with_joker', name: '태초의 패', desc: '시작 패에 조커가 포함되어 있었습니다.' },
+  { id: 'start_all_same_color', name: '흑백의 경계', desc: '시작 패가 전부 한 가지 색이었습니다.' },
+  { id: 'start_all_extremes', name: '극과 극', desc: '시작 패에 0과 11이 동시에 있었습니다.' },
+  { id: 'guess_streak_3', name: '예리한 통찰', desc: '오답 없이 3연속으로 상대 타일을 맞혔습니다.' },
+  { id: 'guess_streak_5', name: '독심술사', desc: '오답 없이 5연속으로 상대 타일을 맞혔습니다.' },
+  { id: 'flawless_win', name: '퍼펙트 게임', desc: '단 한 번의 오답도 없이 승리했습니다.' },
+  { id: 'guess_total_10', name: '명탐정', desc: '한 게임에서 정답을 10회 이상 맞혔습니다.' },
+  { id: 'ice_thin_win', name: '살얼음 위의 승리', desc: '내 타일이 1장만 남은 상태에서 승리했습니다.' },
+  { id: 'flawless_defense', name: '무혈입성', desc: '내 타일이 단 한 장도 공개되지 않고 승리했습니다.' },
+  { id: 'carried_team', name: '최후의 생존자', desc: '팀원이 모두 탈락한 후 혼자 팀을 승리로 이끌었습니다.' },
+  { id: 'zero_correct_guess', name: '존재감 제로', desc: '이 게임에서 정답을 단 한 번도 맞히지 못했습니다.' },
+  { id: 'many_wrong_guesses', name: '삼중고', desc: '이 게임에서 오답을 3회 이상 기록했습니다.' },
+  { id: 'very_many_wrong_guesses', name: '고집불통', desc: '이 게임에서 오답을 5회 이상 기록했습니다.' },
+  { id: 'games_10', name: '다빈치 견습생', desc: '누적 10판을 플레이했습니다.' },
+  { id: 'games_50', name: '다빈치 숙련가', desc: '누적 50판을 플레이했습니다.' },
+  { id: 'games_100', name: '다빈치 마스터', desc: '누적 100판을 플레이했습니다.' },
+  { id: 'wins_10', name: '믿음직한 해결사', desc: '누적 10승을 달성했습니다.' },
+  { id: 'wins_50', name: '전설의 추리가', desc: '누적 50승을 달성했습니다.' }
+];
+const TITLES = {};
+TITLE_LIST.forEach(t => { TITLES[t.id] = t; });
+
+// 칭호마다 아이콘/색/움직임을 전부 다르게 지정 (30종 전부 고유 디자인).
+// anim: shine(빛줄기 스치는 느낌) / pulse(맥동하는 빛) / flicker(불안정하게 깜빡임, 불운 계열) / holo(무지개빛 홀로그램, 희귀 계열)
+const TITLE_STYLE = {
+  win_streak_3:            { icon: '🔥', colors: ['#ff9a3c', '#ff6b6b'], anim: 'pulse', dur: '2.2s' },
+  win_streak_5:             { icon: '⚡', colors: ['#ffd452', '#ff7a3c'], anim: 'pulse', dur: '1.8s' },
+  win_streak_10:            { icon: '👑', colors: ['#fff1b8', '#d4af37', '#8a6a12'], anim: 'shine', dur: '2.4s' },
+  lose_streak_3:            { icon: '🌧️', colors: ['#8a94a6', '#4b5563'], anim: 'flicker', dur: '2.6s' },
+  lose_streak_5:            { icon: '💀', colors: ['#6d4b9e', '#2c1f45'], anim: 'flicker', dur: '2.1s' },
+  lose_streak_10:           { icon: '☠️', colors: ['#4a4a52', '#151518'], anim: 'flicker', dur: '1.6s' },
+  phoenix_comeback:         { icon: '🌅', colors: ['#ff5f6d', '#ffc371', '#ff5f6d'], anim: 'shine', dur: '2.8s' },
+  speed_win_fast:           { icon: '⚡', colors: ['#00d2ff', '#3a7bd5'], anim: 'shine', dur: '0.9s' },
+  speed_win_normal:         { icon: '💨', colors: ['#43e97b', '#38f9d7'], anim: 'shine', dur: '1.3s' },
+  speed_win_relative:       { icon: '🏃', colors: ['#5eead4', '#0ea5e9'], anim: 'shine', dur: '1.7s' },
+  drew_one_joker:           { icon: '🃏', colors: ['#a855f7', '#ec4899'], anim: 'holo', dur: '3.5s' },
+  drew_both_jokers:         { icon: '🎭', colors: ['#f472b6', '#a78bfa', '#60a5fa'], anim: 'holo', dur: '3s' },
+  start_with_joker:         { icon: '🌌', colors: ['#7c3aed', '#c026d3'], anim: 'holo', dur: '4s' },
+  start_all_same_color:     { icon: '⚖️', colors: ['#1f2937', '#e5e7eb', '#1f2937'], anim: 'shine', dur: '3s' },
+  start_all_extremes:       { icon: '↔️', colors: ['#0ea5e9', '#f97316'], anim: 'shine', dur: '2.5s' },
+  guess_streak_3:           { icon: '🔍', colors: ['#34d399', '#059669'], anim: 'pulse', dur: '2s' },
+  guess_streak_5:           { icon: '🧠', colors: ['#22d3ee', '#0891b2'], anim: 'pulse', dur: '1.6s' },
+  flawless_win:             { icon: '💎', colors: ['#bfe3ff', '#3b82f6'], anim: 'shine', dur: '2.2s' },
+  guess_total_10:           { icon: '🕵️', colors: ['#4ade80', '#16a34a'], anim: 'pulse', dur: '2.4s' },
+  ice_thin_win:             { icon: '🧊', colors: ['#e0f2fe', '#0284c7'], anim: 'flicker', dur: '1.9s' },
+  flawless_defense:         { icon: '🛡️', colors: ['#fde68a', '#f59e0b'], anim: 'shine', dur: '2.6s' },
+  carried_team:             { icon: '🦸', colors: ['#f87171', '#dc2626'], anim: 'pulse', dur: '2.1s' },
+  zero_correct_guess:       { icon: '🌀', colors: ['#9ca3af', '#4b5563'], anim: 'flicker', dur: '2.9s' },
+  many_wrong_guesses:       { icon: '🎯', colors: ['#fca5a5', '#b91c1c'], anim: 'flicker', dur: '2.3s' },
+  very_many_wrong_guesses:  { icon: '🤦', colors: ['#f87171', '#7f1d1d'], anim: 'flicker', dur: '1.8s' },
+  games_10:                 { icon: '🥉', colors: ['#e0a370', '#8c5a2b'], anim: 'shine', dur: '2.8s' },
+  games_50:                 { icon: '🥈', colors: ['#e6e6ea', '#8e8e93'], anim: 'shine', dur: '2.5s' },
+  games_100:                { icon: '🥇', colors: ['#fff1b8', '#b8860b'], anim: 'shine', dur: '2.2s' },
+  wins_10:                  { icon: '🏆', colors: ['#fbbf24', '#d97706'], anim: 'pulse', dur: '2s' },
+  wins_50:                  { icon: '🌟', colors: ['#a78bfa', '#f472b6', '#facc15'], anim: 'holo', dur: '3.2s' }
+};
+
+// 칭호 배지: 방장 배지처럼 한눈에 띄도록 칭호마다 고유한 색/아이콘/움직임을 준다
+function titleBadgeHtml(equippedTitleId, extraClass) {
+  if (!equippedTitleId || !TITLES[equippedTitleId]) return '';
+  const style = TITLE_STYLE[equippedTitleId] || { icon: '🏅', colors: ['#8e44ad', '#a35ee0'], anim: 'shine', dur: '3s' };
+  const gradient = `linear-gradient(120deg, ${style.colors.join(', ')})`;
+  const animClass = `badge-title-anim-${style.anim}`;
+  const glow = style.colors[style.colors.length - 1];
+  const cls = ` ${animClass}${extraClass ? ' ' + extraClass : ''}`;
+  const inlineStyle = `background-image:${gradient}; animation-duration:${style.dur}; --tglow:${glow};`;
+  return `<span class="badge badge-title${cls}" style="${inlineStyle}">${style.icon} ${TITLES[equippedTitleId].name}</span>`;
+}
+
+function updateAccountBar() {
+  const bar = document.getElementById('account-bar');
+  if (!bar) return;
+  const prof = (myAccountId && profileCache[myAccountId]) || myProfile;
+  if (!prof) { bar.innerHTML = ''; return; }
+  bar.innerHTML = `${prof.nickname} ${titleBadgeHtml(prof.equippedTitle)} - 승 ${prof.wins || 0} / 총 ${prof.totalGames || 0}판`;
+}
+
+// 대기실/인게임에 표시되는 상대 닉네임 옆 칭호·승수, 프로필 모달 내용은 users/{accountId}를 실시간 구독해서 갱신한다
+function ensureProfileSubscribed(accountId) {
+  if (!accountId || subscribedProfileIds.has(accountId)) return;
+  subscribedProfileIds.add(accountId);
+  onValue(ref(db, `users/${accountId}`), (snap) => {
+    profileCache[accountId] = snap.val();
+    if (accountId === myAccountId) {
+      myProfile = profileCache[accountId];
+      updateAccountBar();
+    }
+    if (lastRoomSnapshotData) {
+      if (lastRoomSnapshotData.gameState === 'waiting') updateWaitingRoomUI(lastRoomSnapshotData);
+      else if (lastRoomSnapshotData.gameState === 'playing') updateGameUI(lastRoomSnapshotData);
+      updateChatUI(lastRoomSnapshotData);
+    }
+  });
+}
+
+// 대기실/인게임 표시 순서: 닉네임 - 칭호 - 승수
+function profileLineFor(accountId, displayName) {
+  const nameSpan = `<span onclick="window.showProfile('${accountId || ''}')" style="cursor:pointer; text-decoration:underline dotted;">${displayName}</span>`;
+  if (!accountId) return nameSpan;
+  ensureProfileSubscribed(accountId);
+  const prof = profileCache[accountId];
+  if (!prof) return nameSpan;
+
+  const parts = [nameSpan];
+  const titleBadge = titleBadgeHtml(prof.equippedTitle, 'badge-title-sm');
+  if (titleBadge) parts.push(titleBadge);
+  parts.push(`<span style="font-size:10px; color:#f1c40f;">승 ${prof.wins || 0}</span>`);
+  return parts.join(' <span style="color:#888;">-</span> ');
+}
+
+function renderTitleList(prof, isOwnProfile) {
+  const owned = (prof && prof.titles) || {};
+  const equipped = prof && prof.equippedTitle;
+  const ownedCount = Object.keys(owned).filter(k => owned[k]).length;
+
+  const chips = TITLE_LIST.map(t => {
+    const has = !!owned[t.id];
+    const isEquipped = equipped === t.id;
+    const clickAttr = (has && isOwnProfile) ? `onclick="window.equipTitle('${t.id}')"` : '';
+
+    if (has) {
+      const badge = titleBadgeHtml(t.id, isEquipped ? 'badge-title-equipped' : '');
+      return `<span ${clickAttr} title="${t.desc}" style="display:inline-block; margin:3px; cursor:${isOwnProfile ? 'pointer' : 'default'};">${badge}</span>`;
+    }
+    return `<span title="${t.desc}" style="display:inline-block; margin:3px; padding:5px 9px; border-radius:14px; font-size:11px; font-weight:700; background:#ddd; color:#999; opacity:0.55;">${t.name}</span>`;
+  }).join('');
+
+  const hint = isOwnProfile ? '<p style="font-size:11px; color:#888; margin:6px 0;">보유한 칭호를 클릭하면 닉네임 옆에 장착/해제할 수 있습니다.</p>' : '';
+  return `<p style="font-size:12px; color:#666; margin:10px 0 4px;">보유 칭호 (${ownedCount}/${TITLE_LIST.length})</p>${hint}<div>${chips}</div>`;
+}
+
+window.equipTitle = function(titleId) {
+  if (!myAccountId) return;
+  const current = profileCache[myAccountId] && profileCache[myAccountId].equippedTitle;
+  const newValue = current === titleId ? null : titleId;
+  set(ref(db, `users/${myAccountId}/equippedTitle`), newValue).then(() => {
+    window.showProfile(myAccountId);
+  });
+};
+
+window.showProfile = function(accountId) {
+  if (!accountId) return;
+  get(ref(db, `users/${accountId}`)).then((snap) => {
+    if (!snap.exists()) return alert('[오류] 프로필 정보를 찾을 수 없습니다.');
+    const prof = snap.val();
+    const wins = prof.wins || 0;
+    const totalGames = prof.totalGames || 0;
+    document.getElementById('profile-modal-nickname').innerText = prof.nickname;
+    document.getElementById('profile-modal-wins').innerText = wins;
+    document.getElementById('profile-modal-total').innerText = totalGames;
+    document.getElementById('profile-modal-winrate').innerText = totalGames > 0 ? Math.round(wins / totalGames * 100) + '%' : '0%';
+    document.getElementById('profile-modal-titles').innerHTML = renderTitleList(prof, accountId === myAccountId);
+    document.getElementById('profile-modal').classList.remove('hidden');
+  });
+};
+document.getElementById('profile-modal-close-btn').addEventListener('click', () => {
+  document.getElementById('profile-modal').classList.add('hidden');
+});
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    if (isRegistering) return; // 회원가입 흐름이 프로필 저장까지 직접 처리하므로 여기서는 관여하지 않음
+    if (myAccountId === user.uid && myProfile) return; // 이미 처리됨 (중복 방지)
+
+    get(ref(db, `users/${user.uid}`)).then((snap) => {
+      if (!snap.exists()) {
+        alert('[오류] 계정 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
+        signOut(auth);
+        return;
+      }
+      enterAppAsUser(user.uid, snap.val());
+    });
+  } else {
+    myAccountId = null;
+    myProfile = null;
+    myNickname = '';
+    document.getElementById('auth-screen').classList.remove('hidden');
+    document.getElementById('lobby-screen').classList.add('hidden');
+    document.getElementById('waiting-screen').classList.add('hidden');
+    document.getElementById('game-screen').classList.add('hidden');
+  }
+});
+
+// 방에 아무도 남아있지 않은데(모두 나가기 대신 그냥 탭을 닫는 등) 방 자체는 안 지워지는 경우를 위한 청소 로직.
+// 서버(Cloud Functions) 없이 클라이언트만으로 동작하므로, 로그인된 클라이언트가 방 목록을 구독하고 있는 동안
+// "아무도 없는" 방을 발견하면 그 자리에서 바로 지운다. (waiting 상태면 players/spectators가 모두 비어야 하고,
+// playing 상태면 관전자가 없고 남아있는 플레이어 전원이 이미 나간(left) 상태여야 청소 대상으로 본다)
+function isZombieRoom(room) {
+  const spectators = room.spectators || {};
+  if (Object.keys(spectators).length > 0) return false;
+  const players = room.players || {};
+  const playerIds = Object.keys(players);
+  if (playerIds.length === 0) return true;
+  return playerIds.every(id => players[id] && players[id].left === true);
+}
+
+function cleanupZombieRooms(allRooms) {
+  Object.keys(allRooms).forEach(key => {
+    const room = allRooms[key];
+    if (room && isZombieRoom(room)) {
+      remove(ref(db, 'rooms/' + key));
+    }
+  });
+}
+
+// 실시간 방 목록: 전체 rooms 노드를 구독해서 목록을 계속 갱신 (모달은 닫혀있어도 데이터는 최신 상태 유지)
+// 로그인 이후에만 구독한다 - rooms 읽기 자체가 인증을 요구하는 보안 규칙이기 때문.
+function subscribeRoomList() {
+  onValue(ref(db, 'rooms'), (snapshot) => {
+    const allRooms = snapshot.val() || {};
+    renderRoomList(allRooms);
+    cleanupZombieRooms(allRooms);
+  });
+}
+
+document.getElementById('btn-open-room-list').addEventListener('click', () => {
+  document.getElementById('room-list-modal').classList.remove('hidden');
+});
+document.getElementById('room-list-close-btn').addEventListener('click', () => {
+  document.getElementById('room-list-modal').classList.add('hidden');
+});
+
+// 방 코드는 목록에서 앞 두 글자만 노출하고 나머지는 가림 (참가 시에는 실제 전체 코드가 그대로 사용됨)
+function maskRoomCode(code) {
+  if (code.length <= 2) return code;
+  return code.slice(0, 2) + '••';
+}
+
+function renderRoomList(allRooms) {
+  const listEl = document.getElementById('room-list');
+  if (!listEl) return;
+
+  const keys = Object.keys(allRooms);
+  if (keys.length === 0) {
+    listEl.innerHTML = '<div class="room-list-empty">현재 열려있는 방이 없습니다. 방을 직접 만들어보세요!</div>';
+    return;
+  }
+
+  keys.sort();
+  // 목록 렌더링에 쓰인 실제 방 키를 인덱스로만 기억해둔다 (전체 방 코드는 onclick 속성에 절대 노출하지 않기 위함)
+  currentRoomListKeys = keys;
+
+  listEl.innerHTML = keys.map((key, idx) => {
+    const room = allRooms[key];
+    if (!room) return '';
+
+    const parts = key.split('_');
+    const gameMode = parts[0];
+    const tileSetting = parts[1];
+    const roomCode = parts.slice(2).join('_');
+    if (!roomCode) return '';
+
+    const playerCount = Object.keys(room.players || {}).length;
+    const spectatorCount = Object.keys(room.spectators || {}).length;
+    const maxPlayers = gameMode === 'team' ? 4 : 6;
+    const isPlaying = room.gameState === 'playing';
+    const isFull = !isPlaying && playerCount >= maxPlayers;
+
+    const modeLabel = gameMode === 'team' ? '2:2 팀전' : '개인전';
+    let tileLabel = '자동';
+    if (tileSetting === '3') tileLabel = '3장';
+    else if (tileSetting === '4') tileLabel = '4장';
+    else if (tileSetting === '5') tileLabel = '5장';
+
+    const stateClass = isPlaying ? 'room-state-playing' : (isFull ? 'room-state-full' : 'room-state-waiting');
+    const stateLabel = isPlaying ? '게임중' : (isFull ? '가득참' : '대기중');
+    const btnLabel = isPlaying ? '관전하기' : '참가하기';
+
+    return `
+      <div class="room-row">
+        <div class="room-row-info">
+          <div class="room-row-main">
+            <span class="room-code-tag">${maskRoomCode(roomCode)}</span>
+            <span class="room-tag">${modeLabel}</span>
+            <span class="room-tag">${tileLabel}</span>
+            <span class="room-tag ${stateClass}">${stateLabel}</span>
+          </div>
+          <div class="room-row-sub">인원 ${playerCount}/${maxPlayers}${spectatorCount > 0 ? ` · 관전 ${spectatorCount}` : ''}</div>
+        </div>
+        <button class="btn-room-join" onclick="window.requestJoinFromList(${idx})">${btnLabel}</button>
+      </div>
+    `;
+  }).join('');
+}
+
+// 방 목록에서 "참가하기"를 누르면 바로 들어가지 않고, 전체 방 코드를 직접 입력해야 참가되도록 확인 절차를 거친다.
+let currentRoomListKeys = [];
+let pendingJoinTarget = null;
+
+window.requestJoinFromList = function(idx) {
+  const key = currentRoomListKeys[idx];
+  if (!key) return;
+  const parts = key.split('_');
+  const gameMode = parts[0];
+  const tileSetting = parts[1];
+  const roomCode = parts.slice(2).join('_');
+  if (!roomCode) return;
+
+  pendingJoinTarget = { gameMode, tileSetting, roomCode };
+
+  const input = document.getElementById('room-code-verify-input');
+  input.value = '';
+  document.getElementById('room-code-verify-modal').classList.remove('hidden');
+  setTimeout(() => input.focus(), 100);
+};
+
+function submitRoomCodeVerify() {
+  if (!pendingJoinTarget) return;
+  const typed = document.getElementById('room-code-verify-input').value.trim();
+
+  if (typed !== pendingJoinTarget.roomCode) {
+    alert('[오류] 방 코드가 일치하지 않습니다.');
+    return;
+  }
+
+  const target = pendingJoinTarget;
+  pendingJoinTarget = null;
+  document.getElementById('room-code-verify-modal').classList.add('hidden');
+  document.getElementById('room-list-modal').classList.add('hidden');
+  document.getElementById('game-mode-select').value = target.gameMode;
+  document.getElementById('tile-count-select').value = target.tileSetting;
+  document.getElementById('room-input').value = target.roomCode;
+  handleJoinRoom(false);
+}
+
+document.getElementById('room-code-verify-cancel-btn').addEventListener('click', () => {
+  document.getElementById('room-code-verify-modal').classList.add('hidden');
+  pendingJoinTarget = null;
+});
+document.getElementById('room-code-verify-submit-btn').addEventListener('click', submitRoomCodeVerify);
+document.getElementById('room-code-verify-input').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') submitRoomCodeVerify();
+});
+
+document.getElementById('btn-create-room').addEventListener('click', () => handleJoinRoom(true));
+document.getElementById('btn-join-room').addEventListener('click', () => handleJoinRoom(false));
+document.getElementById('start-game-btn').addEventListener('click', handleStartGame);
+
+document.getElementById('draw-black-btn').addEventListener('click', () => handleDrawTile('black'));
+document.getElementById('draw-white-btn').addEventListener('click', () => handleDrawTile('white'));
+
+document.getElementById('end-turn-btn').addEventListener('click', handlePassTurn);
+document.getElementById('btn-switch-team').addEventListener('click', handleSwitchTeam);
+document.getElementById('btn-toggle-spectator').addEventListener('click', handleToggleSpectator);
+
+document.getElementById('reset-waiting-btn').addEventListener('click', handleExitOrDestroyRoom);
+document.getElementById('reset-game-btn').addEventListener('click', handleExitOrDestroyRoom);
+document.getElementById('btn-return-lobby').addEventListener('click', forceReturnToWaitingRoom);
+
+document.getElementById('guess-cancel-btn').addEventListener('click', () => {
+  document.getElementById('guess-modal').classList.add('hidden');
+});
+document.getElementById('guess-submit-btn').addEventListener('click', processGuessInput);
+document.getElementById('guess-input-field').addEventListener('keypress', (e) => {
+  if(e.key === 'Enter') processGuessInput();
+});
+
+document.getElementById('confirm-cancel-btn').addEventListener('click', () => {
+  document.getElementById('confirm-modal').classList.add('hidden');
+  confirmCallback = null;
+});
+document.getElementById('confirm-ok-btn').addEventListener('click', () => {
+  document.getElementById('confirm-modal').classList.add('hidden');
+  if (confirmCallback) {
+    confirmCallback();
+    confirmCallback = null;
+  }
+});
+
+document.getElementById('log-modal-close-btn').addEventListener('click', () => {
+  document.getElementById('log-modal').classList.add('hidden');
+});
+
+function showCustomConfirm(title, message, isDanger, onOkCallback) {
+  document.getElementById('confirm-modal-title').innerText = title;
+  document.getElementById('confirm-modal-title').style.color = isDanger ? '#e74c3c' : '#f1c40f';
+  document.getElementById('confirm-modal-text').innerText = message;
+  const okBtn = document.getElementById('confirm-ok-btn');
+  okBtn.style.background = isDanger ? '#e74c3c' : '#2ecc71';
+  confirmCallback = onOkCallback;
+  document.getElementById('confirm-modal').classList.remove('hidden');
+}
+
+document.querySelectorAll('.chat-tab').forEach(tab => {
+  tab.addEventListener('click', (e) => {
+    activeChatTab = e.target.getAttribute('data-target');
+    document.querySelectorAll('.chat-tab').forEach(t => {
+      if(t.getAttribute('data-target') === activeChatTab) t.classList.add('active');
+      else t.classList.remove('active');
+    });
+  });
+});
+
+document.getElementById('chat-send-waiting').addEventListener('click', sendChatMessage);
+document.getElementById('chat-input-waiting').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendChatMessage(); });
+document.getElementById('chat-send-game').addEventListener('click', sendChatMessage);
+document.getElementById('chat-input-game').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendChatMessage(); });
+
+const modal = document.getElementById('rules-modal');
+['open-rules-lobby', 'open-rules-waiting', 'open-rules-game'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => modal.classList.remove('hidden'));
+});
+document.getElementById('close-rules-btn').addEventListener('click', () => modal.classList.add('hidden'));
+
+function handleJoinRoom(hostFlag) {
+  rawRoomCode = document.getElementById('room-input').value.trim();
+  const gameMode = document.getElementById('game-mode-select').value;
+  const tileSetting = document.getElementById('tile-count-select').value;
+  const wantSpectate = document.getElementById('spectator-mode-checkbox').checked;
+
+  if (!rawRoomCode) return alert("방 코드를 입력해주세요!");
+  if (!/^\d{4}$/.test(rawRoomCode)) return alert("[오류] 방 코드는 반드시 숫자 4자리여야 합니다! (예: 1234)");
+
+  currentRoomKey = `${gameMode}_${tileSetting}_${rawRoomCode}`;
+
+  isHost = hostFlag;
+  myPlayerId = 'p_' + Math.random().toString(36).substr(2, 5);
+  roomRef = ref(db, 'rooms/' + currentRoomKey);
+
+  get(roomRef).then((snapshot) => {
+    const exists = snapshot.exists();
+    if (isHost) {
+      if (exists) {
+        const oldData = snapshot.val();
+        const pKeys = Object.keys(oldData.players || {});
+        const sKeys = Object.keys(oldData.spectators || {});
+        if (pKeys.length > 0 || sKeys.length > 0) {
+          return alert(`[오류] 이미 해당 모드 및 타일 설정 조합으로 '코드 ${rawRoomCode}' 방이 존재합니다!`);
+        }
+      }
+
+      isSpectator = wantSpectate;
+      let initialData = {
+        gameState: "waiting",
+        hostId: myPlayerId,
+        gameMode: gameMode,
+        tileSetting: tileSetting,
+        logMode: document.getElementById('difficulty-select').value,
+        turnIndex: 0,
+        lastLog: "대기실 생성",
+        players: {},
+        spectators: {},
+        chats: {}
+      };
+
+      if (isSpectator) {
+        initialData.spectators[myPlayerId] = { name: myNickname, accountId: myAccountId };
+      } else {
+        initialData.players[myPlayerId] = { name: myNickname, hand: [], isHost: true, team: 'A', accountId: myAccountId };
+      }
+      set(roomRef, initialData).then(() => listenToRoom());
+    } else {
+      if (!exists) return alert(`[오류] 해당 모드와 타일 설정 조합의 방이 존재하지 않습니다! (설정을 일치시켜주세요)`);
+      const data = snapshot.val();
+
+      if (data.gameState === "playing" || wantSpectate) {
+        isSpectator = true;
+        isHost = false;
+        const specRef = ref(db, `rooms/${currentRoomKey}/spectators/${myPlayerId}`);
+        onDisconnect(specRef).remove();
+        update(specRef, { name: myNickname, accountId: myAccountId }).then(() => listenToRoom());
+        return;
+      }
+
+      const pKeys = Object.keys(data.players || {});
+      if (pKeys.length >= 6) return alert("[오류] 방이 가득 찼습니다 (최대 6인 플레이어)!");
+
+      isSpectator = false;
+      let assignedTeam = 'A';
+      if (data.gameMode === 'team') {
+        let teamACount = pKeys.filter(id => data.players[id].team === 'A').length;
+        let teamBCount = pKeys.filter(id => data.players[id].team === 'B').length;
+        assignedTeam = teamACount <= teamBCount ? 'A' : 'B';
+      }
+
+      const playerRef = ref(db, `rooms/${currentRoomKey}/players/${myPlayerId}`);
+      onDisconnect(playerRef).remove();
+      update(playerRef, {
+        name: myNickname,
+        hand: [],
+        isHost: false,
+        team: assignedTeam,
+        accountId: myAccountId
+      }).then(() => listenToRoom());
+    }
+  });
+}
+
+window.kickPlayer = function(targetPlayerId, isSpec = false) {
+  if (!isHost) return;
+  let path = isSpec ? `spectators/${targetPlayerId}` : `players/${targetPlayerId}`;
+
+  showCustomConfirm("유저 강퇴", "정말 이 유저를 강퇴하시겠습니까?", true, () => {
+    let updates = {};
+    updates[`rooms/${currentRoomKey}/${path}`] = null;
+    updates[`rooms/${currentRoomKey}/kickedList/${targetPlayerId}`] = true;
+    updates[`rooms/${currentRoomKey}/lastLog`] = `방장에 의해 유저가 강퇴당했습니다.`;
+    update(ref(db), updates);
+  });
+};
+
+function handleSwitchTeam() {
+  get(roomRef).then((snapshot) => {
+    if(!snapshot.exists()) return;
+    const data = snapshot.val();
+    if (data.gameMode !== 'team') return;
+    const currentTeam = data.players[myPlayerId].team;
+    const newTeam = currentTeam === 'A' ? 'B' : 'A';
+    set(ref(db, `rooms/${currentRoomKey}/players/${myPlayerId}/team`), newTeam);
+  });
+}
+
+function handleToggleSpectator() {
+  get(roomRef).then((snapshot) => {
+    if (!snapshot.exists()) return;
+    const data = snapshot.val();
+    if (data.gameState !== 'waiting') return alert("[오류] 대기 중일 때만 관전 상태를 변경할 수 있습니다!");
+
+    if (isSpectator) {
+      // 관전자 -> 선수로 전환
+      const pKeys = Object.keys(data.players || {});
+      const maxPlayers = data.gameMode === 'team' ? 4 : 6;
+      if (pKeys.length >= maxPlayers) return alert(`[오류] 방이 가득 찼습니다 (최대 ${maxPlayers}인 플레이어)!`);
+
+      let assignedTeam = 'A';
+      if (data.gameMode === 'team') {
+        let teamACount = pKeys.filter(id => data.players[id].team === 'A').length;
+        let teamBCount = pKeys.filter(id => data.players[id].team === 'B').length;
+        assignedTeam = teamACount <= teamBCount ? 'A' : 'B';
+      }
+
+      let updates = {};
+      updates[`rooms/${currentRoomKey}/spectators/${myPlayerId}`] = null;
+      updates[`rooms/${currentRoomKey}/players/${myPlayerId}`] = { name: myNickname, hand: [], isHost: false, team: assignedTeam, accountId: myAccountId };
+      updates[`rooms/${currentRoomKey}/lastLog`] = `${myNickname} 님이 관전을 종료하고 선수로 참가했습니다.`;
+
+      onDisconnect(ref(db, `rooms/${currentRoomKey}/spectators/${myPlayerId}`)).cancel();
+      onDisconnect(ref(db, `rooms/${currentRoomKey}/players/${myPlayerId}`)).remove();
+      isSpectator = false;
+      saveSession();
+      update(ref(db), updates);
+    } else {
+      // 선수 -> 관전자로 전환
+      let updates = {};
+      updates[`rooms/${currentRoomKey}/players/${myPlayerId}`] = null;
+      updates[`rooms/${currentRoomKey}/spectators/${myPlayerId}`] = { name: myNickname, accountId: myAccountId };
+
+      if (data.hostId === myPlayerId) {
+        const otherIds = Object.keys(data.players || {}).filter(id => id !== myPlayerId);
+        if (otherIds.length > 0) {
+          const nextHostId = otherIds[Math.floor(Math.random() * otherIds.length)];
+          updates[`rooms/${currentRoomKey}/hostId`] = nextHostId;
+          updates[`rooms/${currentRoomKey}/lastLog`] = `${myNickname} 님이 관전자로 전환되어 방장 권한이 위임되었습니다.`;
+        } else {
+          updates[`rooms/${currentRoomKey}/lastLog`] = `${myNickname} 님이 관전자로 전환했습니다.`;
+        }
+      } else {
+        updates[`rooms/${currentRoomKey}/lastLog`] = `${myNickname} 님이 관전자로 전환했습니다.`;
+      }
+
+      onDisconnect(ref(db, `rooms/${currentRoomKey}/players/${myPlayerId}`)).cancel();
+      onDisconnect(ref(db, `rooms/${currentRoomKey}/spectators/${myPlayerId}`)).remove();
+      isSpectator = true;
+      saveSession();
+      update(ref(db), updates);
+    }
+  });
+}
+
+function sendChatMessage() {
+  const inputW = document.getElementById('chat-input-waiting');
+  const inputG = document.getElementById('chat-input-game');
+  const text = (inputW.value || inputG.value).trim();
+  if (!text) return;
+
+  get(roomRef).then((snapshot) => {
+    const data = snapshot.val();
+    if (!data) return;
+    const isTeam = data.gameMode === 'team';
+    const myTeam = data.players && data.players[myPlayerId] ? data.players[myPlayerId].team : 'A';
+
+    const chatRef = ref(db, `rooms/${currentRoomKey}/chats`);
+    push(chatRef, {
+      sender: myNickname,
+      senderId: myPlayerId,
+      accountId: myAccountId,
+      isSpectator: isSpectator,
+      team: myTeam,
+      type: (isTeam && activeChatTab === 'team') ? 'team' : 'all',
+      text: text,
+      time: Date.now()
+    });
+
+    inputW.value = "";
+    inputG.value = "";
+  });
+}
+
+function listenToRoom() {
+  saveSession();
+
+  document.getElementById('lobby-screen').classList.add('hidden');
+  document.getElementById('waiting-screen').classList.remove('hidden');
+  document.getElementById('waiting-room-code').innerText = rawRoomCode;
+
+  onValue(roomRef, (snapshot) => {
+    if (isLeavingRoom) return;
+
+    const data = snapshot.val();
+
+    if (!data) {
+      if (!isKickedHandled) {
+        isKickedHandled = true;
+        clearSession();
+        alert("방이 폭파되었거나 종료되었습니다.");
+        location.reload();
+      }
+      return;
+    }
+
+    const kickedList = data.kickedList || {};
+    if (kickedList[myPlayerId] && !isKickedHandled) {
+      isKickedHandled = true;
+      clearSession();
+      alert("[알림] 방장에 의해 강퇴되었습니다.");
+      location.reload();
+      return;
+    }
+
+    // 모바일 백그라운드 등으로 순간적으로 연결이 끊겨 onDisconnect가 실행되면서
+    // 내 자리가 사라진 경우, 강퇴된 게 아니라면 마지막으로 알고 있던 내 상태로 조용히 복구한다.
+    const myCurrentRecord = isSpectator
+      ? (data.spectators && data.spectators[myPlayerId])
+      : (data.players && data.players[myPlayerId]);
+    if (myCurrentRecord) {
+      myLastKnownRecord = myCurrentRecord;
+    } else if (myLastKnownRecord && !isKickedHandled) {
+      const restorePath = isSpectator
+        ? `rooms/${currentRoomKey}/spectators/${myPlayerId}`
+        : `rooms/${currentRoomKey}/players/${myPlayerId}`;
+      set(ref(db, restorePath), myLastKnownRecord);
+      return;
+    }
+
+    handleHostDelegationIfNeeded(data);
+    updateChatUI(data);
+
+    // 프로필 실시간 구독(승수 등)이 갱신될 때 화면을 다시 그리기 위해 최신 방 데이터를 기억해둔다
+    lastRoomSnapshotData = data;
+
+    // 난이도(로그 표시 방식)는 방장이 방을 만들 때 정한 값이 방 전체에 고정 적용됨 (개인 localStorage 설정은 방 안에서는 무시)
+    logMode = data.logMode || 'default';
+
+    // 게임 중에는 튕기더라도 패를 지우지 않고 전부 공개된 상태로 남기도록, 매 스냅샷마다 최신 패 기준으로
+    // onDisconnect 동작을 다시 등록해둔다. 대기실로 돌아오면 원래대로 완전 제거로 되돌린다.
+    if (!isSpectator && myPlayerId) {
+      const myPlayerPath = `rooms/${currentRoomKey}/players/${myPlayerId}`;
+      if (data.gameState === "playing" && data.players && data.players[myPlayerId]) {
+        onDisconnect(ref(db, myPlayerPath)).update({
+          hand: revealedHandOf(data.players[myPlayerId].hand),
+          left: true
+        });
+      } else if (data.gameState === "waiting") {
+        onDisconnect(ref(db, myPlayerPath)).remove();
+      }
+    }
+
+    if (data.gameState === "waiting") {
+      isGameOverHandled = false;
+      myStatsApplied = false;
+      resetLogTracking();
+      document.getElementById('btn-return-lobby').style.display = 'none';
+      document.getElementById('waiting-screen').classList.remove('hidden');
+      document.getElementById('game-screen').classList.add('hidden');
+      updateWaitingRoomUI(data);
+    } else if (data.gameState === "playing") {
+      document.getElementById('waiting-screen').classList.add('hidden');
+      document.getElementById('game-screen').classList.remove('hidden');
+      document.getElementById('display-room-code').innerText = rawRoomCode;
+      document.getElementById('log-history-container').classList.toggle('hidden', logMode !== 'beginner');
+      updateGameUI(data);
+
+      // 게임 종료 직후, 각자 자기 계정(users/{myAccountId})에만 이번 판 결과를 1회 반영한다
+      if (data.isGameOver && !myStatsApplied) {
+        myStatsApplied = true;
+        applyMyOwnStats(data);
+      }
+    }
+  });
+}
+
+function resetLogTracking() {
+  lastSeenLog = null;
+  logHistoryList = [];
+  const historyEl = document.getElementById('log-history');
+  if (historyEl) historyEl.innerHTML = '';
+  document.getElementById('log-modal').classList.add('hidden');
+}
+
+// 타일 뽑기/배치 안내는 상태창(status-message)에서 이미 실시간으로 보여주고 있으므로
+// 모달이나 기록 목록에는 따로 띄우지 않는다 (정답/오답/턴 종료/승리 등만 모달·기록 대상).
+function isRoutineLog(text) {
+  return /타일을 뽑았습니다/.test(text)
+    || /초기 타일 배치를 완료하고 게임에 참여했습니다/.test(text)
+    || /타일 배치 완료! 다음 타일을 배치하세요/.test(text);
+}
+
+function handleLogUpdate(newLog) {
+  if (!newLog || newLog === lastSeenLog) return;
+  lastSeenLog = newLog;
+
+  if (isRoutineLog(newLog)) return;
+
+  if (logMode === 'beginner') {
+    logHistoryList.push(newLog);
+    renderLogHistory();
+  } else {
+    showLogModal(newLog);
+  }
+}
+
+function renderLogHistory() {
+  const container = document.getElementById('log-history');
+  if (!container) return;
+  container.innerHTML = logHistoryList.map((entry, idx) => `
+    <div class="log-entry"><span class="log-entry-index">${idx + 1}</span>${entry}</div>
+  `).join('');
+  container.scrollTop = container.scrollHeight;
+}
+
+function showLogModal(text) {
+  document.getElementById('log-modal-text').innerText = text;
+  document.getElementById('log-modal').classList.remove('hidden');
+}
+
+function handleHostDelegationIfNeeded(data) {
+  const players = data.players || {};
+  const playerIds = Object.keys(players);
+
+  if (playerIds.length > 0) {
+    let hostExists = playerIds.includes(data.hostId);
+    if (!hostExists) {
+      let randomNewHostId = playerIds[Math.floor(Math.random() * playerIds.length)];
+
+      if (myPlayerId === randomNewHostId) {
+        update(roomRef, {
+          hostId: randomNewHostId,
+          lastLog: `방장이 나가서 [${players[randomNewHostId].name}] 님에게 방장 권한이 위임되었습니다.`
+        });
+      }
+    }
+  }
+}
+
+function updateChatUI(data) {
+  const chatsObj = data.chats || {};
+  const isTeamMode = data.gameMode === 'team';
+  const myTeam = data.players && data.players[myPlayerId] ? data.players[myPlayerId].team : 'A';
+
+  const waitingTabs = document.getElementById('waiting-chat-tabs');
+  const gameTabs = document.getElementById('game-chat-tabs');
+  if (isTeamMode && !isSpectator) {
+    waitingTabs.classList.remove('hidden');
+    gameTabs.classList.remove('hidden');
+  } else {
+    waitingTabs.classList.add('hidden');
+    gameTabs.classList.add('hidden');
+    activeChatTab = 'all';
+  }
+
+  const chatArray = Object.values(chatsObj);
+  chatArray.sort((a, b) => a.time - b.time);
+
+  const filteredChats = chatArray.filter(c => {
+    if (c.type === 'team') return isTeamMode && !isSpectator && c.team === myTeam;
+    return true;
+  });
+
+  const html = filteredChats.map(c => {
+    const isTeamMsg = c.type === 'team';
+    const msgClass = isTeamMsg ? 'chat-msg team-chat' : 'chat-msg';
+    const specTag = c.isSpectator ? '<span style="color:#3498db; font-size:10px; font-weight:800;">(관전자)</span> ' : '';
+    let titleBadge = '';
+    if (c.accountId) {
+      ensureProfileSubscribed(c.accountId);
+      const prof = profileCache[c.accountId];
+      titleBadge = prof ? titleBadgeHtml(prof.equippedTitle, 'badge-title-sm') : '';
+    }
+    return `<div class="${msgClass}">${isTeamMsg ? '<span style="color:#3498db; font-size:10px;">[팀채팅]</span> ' : ''}${specTag}<b>${c.sender}</b>${titleBadge ? ' ' + titleBadge + ' ' : ''}: ${c.text}</div>`;
+  }).join('');
+
+  const boxW = document.getElementById('chat-messages-waiting');
+  const boxG = document.getElementById('chat-messages-game');
+  boxW.innerHTML = html;
+  boxG.innerHTML = html;
+  boxW.scrollTop = boxW.scrollHeight;
+  boxG.scrollTop = boxG.scrollHeight;
+}
+
+function handleExitOrDestroyRoom() {
+  get(roomRef).then((snapshot) => {
+    if (!snapshot.exists()) { location.reload(); return; }
+    const data = snapshot.val();
+    const inGame = data.gameState === "playing";
+
+    if (data.hostId === myPlayerId) {
+      const allOtherIds = Object.keys(data.players || {}).filter(id => id !== myPlayerId);
+      // 방장 위임 대상은 가능하면 아직 게임을 나가지 않은(정상 참여 중인) 플레이어를 우선한다
+      const activeOtherIds = allOtherIds.filter(id => !data.players[id].left);
+      const candidateIds = activeOtherIds.length > 0 ? activeOtherIds : allOtherIds;
+
+      if (candidateIds.length > 0) {
+        showCustomConfirm("방 나가기", "방을 나가시겠습니까?\n(남은 플레이어 중 한 명에게 방장이 위임됩니다)", true, () => {
+          isLeavingRoom = true;
+          let nextHostId = candidateIds[Math.floor(Math.random() * candidateIds.length)];
+          let updates = {};
+          if (inGame) {
+            updates[`players/${myPlayerId}/hand`] = revealedHandOf(data.players[myPlayerId].hand);
+            updates[`players/${myPlayerId}/left`] = true;
+          } else {
+            updates[`players/${myPlayerId}`] = null;
+          }
+          updates[`hostId`] = nextHostId;
+          updates[`lastLog`] = `방장이 나가서 새로운 방장에게 권한이 위임되었습니다.`;
+          update(roomRef, updates).then(() => { clearSession(); location.reload(); });
+        });
+      } else {
+        showCustomConfirm("방 폭파", "정말 방을 폭파하시겠습니까?", true, () => {
+          isLeavingRoom = true;
+          remove(roomRef).then(() => { clearSession(); location.reload(); });
+        });
+      }
+    } else {
+      if (isSpectator) {
+        showCustomConfirm("관전 종료", "관전을 종료하고 나가시겠습니까?", false, () => {
+          isLeavingRoom = true;
+          remove(ref(db, `rooms/${currentRoomKey}/spectators/${myPlayerId}`)).then(() => { clearSession(); location.reload(); });
+        });
+      } else {
+        showCustomConfirm("방 나가기", "정말 방에서 나가시겠습니까?", true, () => {
+          isLeavingRoom = true;
+          if (inGame) {
+            let updates = {};
+            updates[`rooms/${currentRoomKey}/players/${myPlayerId}/hand`] = revealedHandOf(data.players[myPlayerId].hand);
+            updates[`rooms/${currentRoomKey}/players/${myPlayerId}/left`] = true;
+            update(ref(db), updates).then(() => { clearSession(); location.reload(); });
+          } else {
+            remove(ref(db, `rooms/${currentRoomKey}/players/${myPlayerId}`)).then(() => { clearSession(); location.reload(); });
+          }
+        });
+      }
+    }
+  });
+}
+
+function updateWaitingRoomUI(data) {
+  const players = data.players || {};
+  const spectators = data.spectators || {};
+  const playerIds = Object.keys(players);
+  const spectatorIds = Object.keys(spectators);
+  const pCount = playerIds.length;
+  isHost = (data.hostId === myPlayerId);
+  const isTeamMode = data.gameMode === 'team';
+
+  document.getElementById('room-mode-info').innerText = isTeamMode ? "[2:2 팀전 모드 (최대 4인)]" : "[개인전 모드 (최대 6인)]";
+
+  let tileSettingText = "타일 분배: 인원수별 자동 조절";
+  if (data.tileSetting === '3') tileSettingText = "타일 분배: 무조건 3장씩 시작";
+  else if (data.tileSetting === '4') tileSettingText = "타일 분배: 무조건 4장씩 시작";
+  else if (data.tileSetting === '5') tileSettingText = "타일 분배: 무조건 5장씩 시작";
+  document.getElementById('room-tile-info').innerText = tileSettingText;
+
+  document.getElementById('reset-waiting-btn').innerText = isHost ? "방 폭파" : "나가기";
+  document.getElementById('reset-game-btn').innerText = isHost ? "방 폭파" : "나가기";
+  document.getElementById('player-count').innerText = pCount;
+
+  if (isTeamMode && !isSpectator) document.getElementById('team-change-box').classList.remove('hidden');
+  else document.getElementById('team-change-box').classList.add('hidden');
+
+  document.getElementById('btn-toggle-spectator').innerText = isSpectator ? "선수로 참가하기" : "관전자로 전환하기";
+
+  document.getElementById('waiting-player-list').innerHTML = playerIds.map(id => {
+    const p = players[id];
+    const teamBadge = isTeamMode ? ` <b style="color:${p.team === 'A' ? '#3498db' : '#e74c3c'}">[팀 ${p.team}]</b>` : '';
+    const kickBtn = (isHost && id !== myPlayerId) ? `<button class="btn-kick" onclick="window.kickPlayer('${id}', false)">강퇴</button>` : '';
+    const hostBadge = id === data.hostId ? '<span class="badge badge-host">방장</span>' : '';
+    return `<li>${profileLineFor(p.accountId, p.name)}${teamBadge} ${hostBadge} ${id === myPlayerId ? '(나)' : ''} ${kickBtn}</li>`;
+  }).join('');
+
+  const specContainer = document.getElementById('spectator-list-container');
+  const specListEl = document.getElementById('waiting-spectator-list');
+  if (spectatorIds.length > 0) {
+    specContainer.classList.remove('hidden');
+    specListEl.innerHTML = spectatorIds.map(id => {
+      const s = spectators[id];
+      const kickBtn = isHost ? `<button class="btn-kick" onclick="window.kickPlayer('${id}', true)">강퇴</button>` : '';
+      return `${profileLineFor(s.accountId, s.name)} ${id === myPlayerId ? '(나)' : ''}${kickBtn}`;
+    }).join(', ');
+  } else {
+    specContainer.classList.add('hidden');
+  }
+
+  const startBtn = document.getElementById('start-game-btn');
+  if (isHost) {
+    startBtn.classList.remove('hidden');
+    let minPlayers = isTeamMode ? 4 : 2;
+    startBtn.disabled = pCount < minPlayers;
+    startBtn.innerText = isTeamMode && pCount < 4 ? `게임 시작하기 (팀전은 4명 필요, 현재 ${pCount}명)` : `게임 시작하기`;
+  } else {
+    startBtn.classList.add('hidden');
+  }
+}
+
+function handleStartGame() {
+  get(roomRef).then((snapshot) => {
+    const data = snapshot.val();
+    const playerIds = Object.keys(data.players || {});
+    const isTeamMode = data.gameMode === 'team';
+    if (isTeamMode && playerIds.length !== 4) return alert("2:2 팀전은 정확히 4명이 필요합니다!");
+    if (!isTeamMode && playerIds.length < 2) return alert("최소 2명이 필요합니다!");
+
+    let blackDeck = [];
+    let whiteDeck = [];
+    for (let i = 0; i <= 11; i++) {
+      blackDeck.push({ id: 'b_tile_' + i, color: 'black', num: i, revealed: false });
+      whiteDeck.push({ id: 'w_tile_' + i, color: 'white', num: i, revealed: false });
+    }
+    blackDeck.push({ id: 'b_joker', color: 'black', num: -1, revealed: false });
+    whiteDeck.push({ id: 'w_joker', color: 'white', num: -1, revealed: false });
+
+    for (let k = 0; k < 3; k++) {
+      blackDeck.sort(() => Math.random() - 0.5);
+      whiteDeck.sort(() => Math.random() - 0.5);
+    }
+
+    let startTileCount = 4;
+    if (data.tileSetting === '3') startTileCount = 3;
+    else if (data.tileSetting === '4') startTileCount = 4;
+    else if (data.tileSetting === '5') startTileCount = 5;
+    else startTileCount = playerIds.length >= 5 ? 3 : 4;
+
+    let updatedPlayers = {};
+
+    playerIds.forEach(pId => {
+      let initialPool = [];
+      for(let i=0; i<startTileCount; i++) {
+        let pool = (blackDeck.length > 0 && Math.random() < 0.5) ? blackDeck : (whiteDeck.length > 0 ? whiteDeck : blackDeck);
+        if (pool.length > 0) initialPool.push(pool.pop());
+      }
+
+      // 칭호 판정용: 이번 게임 시작 패 전체(dealtTiles)를 기준으로 희귀 조합 여부를 미리 기록해둔다
+      const dealtTiles = [...initialPool];
+      let firstTile = initialPool.shift();
+
+      updatedPlayers[pId] = {
+        ...data.players[pId],
+        hand: [firstTile],
+        unplacedPool: initialPool,
+        drewBlackJoker: false,
+        drewWhiteJoker: false,
+        startHadJoker: dealtTiles.some(t => t.num === -1),
+        startAllSameColor: dealtTiles.length > 0 && dealtTiles.every(t => t.color === dealtTiles[0].color),
+        startAllExtremes: dealtTiles.some(t => t.num === 0) && dealtTiles.some(t => t.num === 11),
+        bestCorrectStreak: 0,
+        correctStreak: 0,
+        correctGuessCount: 0,
+        wrongGuessCount: 0
+      };
+    });
+
+    set(roomRef, {
+      ...data,
+      gameState: "playing",
+      isGameOver: false,
+      blackDeck: blackDeck,
+      whiteDeck: whiteDeck,
+      initialDeckRemaining: blackDeck.length + whiteDeck.length,
+      turnIndex: 0,
+      lastLog: "게임이 시작되었습니다! 모든 플레이어가 처음에 받은 내 타일들을 원하는 위치에 직접 배치합니다!",
+      players: updatedPlayers,
+      spectators: data.spectators || {}
+    });
+  });
+}
+
+function updateGameUI(data) {
+  const players = data.players || {};
+  const playerIds = Object.keys(players);
+  const isTeamMode = data.gameMode === 'team';
+  const myTeam = players[myPlayerId] ? players[myPlayerId].team : 'A';
+
+  handleLogUpdate(data.lastLog);
+
+  if (!isSpectator && players[myPlayerId]) {
+    const myUnplaced = players[myPlayerId].unplacedPool || [];
+    if (myUnplaced.length > 0 && pendingPlacementTile === null) {
+      let pool = [...myUnplaced];
+      pendingPlacementTile = pool.shift();
+      set(ref(db, `rooms/${currentRoomKey}/players/${myPlayerId}/unplacedPool`), pool);
+      return;
+    }
+  }
+
+  let currentTurnPlayerId = playerIds[data.turnIndex];
+  if (players[currentTurnPlayerId]) {
+    const turnHand = players[currentTurnPlayerId].hand || [];
+    const isTurnPlayerDead = turnHand.length > 0 && turnHand.every(t => t.revealed);
+
+    if (isTurnPlayerDead && data.hostId === myPlayerId && !data.isGameOver) {
+      let nextTurnIndex = (data.turnIndex + 1) % playerIds.length;
+      set(ref(db, `rooms/${currentRoomKey}/turnIndex`), nextTurnIndex);
+      return;
+    }
+  }
+
+  const isMyTurn = (!isSpectator && currentTurnPlayerId === myPlayerId);
+  const myHand = (!isSpectator && players[myPlayerId]) ? (players[myPlayerId].hand || []) : [];
+  const isMyAllRevealed = (!isSpectator && myHand.length > 0 && myHand.every(t => t.revealed));
+
+  const statusEl = document.getElementById('status-message');
+  const drawChoiceContainer = document.getElementById('draw-choice-container');
+  const previewContainer = document.getElementById('drawn-preview-container');
+  const previewTileEl = document.getElementById('drawn-tile-preview');
+  const previewLabel = document.getElementById('preview-label');
+
+  const blackLen = (data.blackDeck || []).length;
+  const whiteLen = (data.whiteDeck || []).length;
+  document.getElementById('deck-black-count').innerText = blackLen;
+  document.getElementById('deck-white-count').innerText = whiteLen;
+
+  const targetStartCount = data.tileSetting === '3' ? 3 : data.tileSetting === '4' ? 4 : data.tileSetting === '5' ? 5 : 4;
+  const isInitialPlacing = (pendingPlacementTile !== null && myHand.length < targetStartCount);
+
+  if (pendingPlacementTile !== null) {
+    previewContainer.classList.remove('hidden');
+    previewLabel.innerText = isInitialPlacing ? "시작 타일 배치:" : "뽑은 타일:";
+    let displayVal = pendingPlacementTile.num === -1 ? '-' : pendingPlacementTile.num;
+    previewTileEl.innerHTML = `<div class="tile ${pendingPlacementTile.color}">${displayVal}</div>`;
+  } else {
+    previewContainer.classList.add('hidden');
+  }
+
+  if (data.isGameOver) {
+    statusEl.innerText = "게임 종료! 모든 패가 공개되었습니다.";
+    statusEl.style.color = "#2ecc71";
+    document.getElementById('btn-return-lobby').style.display = 'block';
+    drawChoiceContainer.classList.add('hidden');
+  } else if (isSpectator) {
+    statusEl.innerText = "[관전 모드] 게임을 구경 중입니다.";
+    statusEl.style.color = "#3498db";
+    document.getElementById('my-section-container').classList.add('hidden');
+    document.getElementById('action-buttons-container').classList.add('hidden');
+    drawChoiceContainer.classList.add('hidden');
+  } else if (isMyAllRevealed) {
+    statusEl.innerText = "내 모든 패가 공개되어 탈락하셨습니다! 관전 모드";
+    statusEl.style.color = "#e74c3c";
+    drawChoiceContainer.classList.add('hidden');
+  } else if (pendingPlacementTile !== null) {
+    statusEl.innerText = isInitialPlacing ? "[초기 패 배치] 내 패 사이 [ + ]를 눌러 처음에 받은 타일들을 원하시는 위치에 직접 배치하세요!" : "[타일 배치] 내 패 사이사이에 있는 [ + ] 버튼을 눌러 원하시는 위치에 타일을 배치하세요!";
+    statusEl.style.color = "#f1c40f";
+    drawChoiceContainer.classList.add('hidden');
+  } else if (isMyTurn) {
+    if (!hasDrawnThisTurn && (blackLen > 0 || whiteLen > 0)) {
+      statusEl.innerText = "아래에서 가져올 타일 색상([검은색] 또는 [흰색])을 직접 선택해 뽑으세요!";
+      statusEl.style.color = "#e67e22";
+      drawChoiceContainer.classList.remove('hidden');
+    } else if (!hasGuessedSuccessThisTurn) {
+      statusEl.innerText = "최소 1번 이상 상대방 타일을 추리하세요! (맞혀야 턴 넘기기 가능)";
+      statusEl.style.color = "#f1c40f";
+      drawChoiceContainer.classList.add('hidden');
+    } else {
+      statusEl.innerText = "정답 맞힘! 계속 추리하거나 아래 [턴 넘기기]를 눌러 턴을 종료하세요.";
+      statusEl.style.color = "#2ecc71";
+      drawChoiceContainer.classList.add('hidden');
+    }
+  } else {
+    hasDrawnThisTurn = false;
+    hasGuessedSuccessThisTurn = false;
+    lastDrawnTileId = null;
+    pendingPlacementTile = null;
+    const turnName = players[currentTurnPlayerId] ? players[currentTurnPlayerId].name : "상대방";
+    statusEl.innerText = `${turnName} 님의 턴 진행 중...`;
+    statusEl.style.color = "#f39c12";
+    drawChoiceContainer.classList.add('hidden');
+  }
+
+  if (!isSpectator && !data.isGameOver) {
+    document.getElementById('draw-black-btn').disabled = !isMyTurn || isMyAllRevealed || hasDrawnThisTurn || blackLen === 0 || pendingPlacementTile !== null;
+    document.getElementById('draw-white-btn').disabled = !isMyTurn || isMyAllRevealed || hasDrawnThisTurn || whiteLen === 0 || pendingPlacementTile !== null;
+    document.getElementById('end-turn-btn').disabled = !isMyTurn || isMyAllRevealed || !hasGuessedSuccessThisTurn || pendingPlacementTile !== null;
+
+    const myHandEl = document.getElementById('my-hand');
+    let handHtml = '';
+
+    if (pendingPlacementTile !== null) {
+      handHtml += `<button class="slot-insert-btn" onclick="window.insertTileAt(0)">+</button>`;
+    }
+
+    handHtml += myHand.map((t, idx) => {
+      const revClass = t.revealed ? 'revealed' : '';
+      const badge = t.revealed ? '<span class="revealed-badge"></span>' : '';
+      const displayVal = t.num === -1 ? '-' : t.num;
+
+      let itemHtml = `
+        <div class="tile-wrapper">
+          <div class="tile ${t.color} ${revClass}">${displayVal}${badge}</div>
+        </div>
+      `;
+
+      if (pendingPlacementTile !== null) {
+        itemHtml += `<button class="slot-insert-btn" onclick="window.insertTileAt(${idx + 1})">+</button>`;
+      }
+      return itemHtml;
+    }).join('');
+
+    myHandEl.innerHTML = handHtml;
+  }
+
+  const othersContainer = document.getElementById('other-players');
+  othersContainer.innerHTML = playerIds.map(pId => {
+    const p = players[pId];
+    if (!p) return '';
+    if (!isSpectator && pId === myPlayerId) return ''; // 내 타일은 아래 "내 타일" 섹션에서 이미 실제 값으로 보여주므로 여기서 가려진 채로 중복 표시하지 않음
+    const isTurn = (pId === currentTurnPlayerId);
+    const isTeammate = (!isSpectator && isTeamMode && p.team === myTeam && pId !== myPlayerId);
+    const targetHand = p.hand || [];
+    const isAllRev = targetHand.length > 0 && targetHand.every(t => t.revealed);
+
+  // 1. 원본 인덱스(originalIdx) 포함 배열 생성
+    const targetHandWithIndex = targetHand.map((t, originalIdx) => ({ ...t, originalIdx }));
+
+    // 2. 조커와 일반 타일 분리
+    const jokers = targetHandWithIndex.filter(t => Number(t.num) === -1);
+    const nonJokers = targetHandWithIndex.filter(t => Number(t.num) !== -1);
+
+    // 3. 일반 타일 오름차순 정렬 (숫자 크기 -> 같은 숫자면 검은색 우선)
+    nonJokers.sort((a, b) => {
+      const numA = Number(a.num);
+      const numB = Number(b.num);
+
+      if (numA !== numB) return numA - numB;
+      if (a.color !== b.color) return a.color === 'black' ? -1 : 1;
+      return a.originalIdx - b.originalIdx;
+    });
+
+    // 4. 조커는 originalIdx 비율에 맞춰 일반 숫자들의 오름차순을 깨뜨리지 않고 삽입
+    let sortedHand = [];
+    let nonJokerIdx = 0;
+
+    // 원본 패 전체 길이 기준으로 순회하며 삽입
+    for (let i = 0; i < targetHandWithIndex.length; i++) {
+      const isJokerAtThisOriginalPos = jokers.find(j => j.originalIdx === i);
+      if (isJokerAtThisOriginalPos) {
+        sortedHand.push(isJokerAtThisOriginalPos);
+      } else if (nonJokerIdx < nonJokers.length) {
+        sortedHand.push(nonJokers[nonJokerIdx++]);
+      }
+    }
+
+    // 5. 최종 타일 HTML 생성
+  let tilesHTML = sortedHand.map((t, displayIdx) => {
+    if (isSpectator || t.revealed || isTeammate || data.isGameOver || isMyAllRevealed) {
+      const displayVal = t.num === -1 ? '-' : t.num;
+      const sharedRevClass = t.revealed ? 'revealed' : '';
+      const sharedBadge = t.revealed ? '<span class="revealed-badge"></span>' : (isTeammate ? '<span style="font-size:9px; position:absolute; bottom:2px; left:4px; color:#3498db;">(아군)</span>' : '');
+      return `<div class="tile ${t.color} ${sharedRevClass}" style="${isTeammate && !t.revealed ? 'border:2px dashed #3498db;' : ''}">${displayVal}${sharedBadge}</div>`;
+    } else {
+      const coverClass = t.color === 'black' ? 'cover-black' : 'cover-white';
+      const canClickGuess = isMyTurn && pendingPlacementTile === null && !isMyAllRevealed && (hasDrawnThisTurn || (blackLen === 0 && whiteLen === 0));
+
+      // t.originalIdx 대신 화면에 보이는 위치인 displayIdx 전달
+      const clickAttr = canClickGuess ? `onclick="guessOtherTile('${pId}', ${displayIdx})"` : `onclick="alert('${!isMyTurn ? "내 턴일 때만 추리할 수 있습니다!" : "먼저 타일을 뽑거나 배치를 완료해주세요!"}')"`;
+      return `<div class="tile ${coverClass}" ${clickAttr} style="cursor: ${canClickGuess ? 'pointer' : 'not-allowed'};">?</div>`;
+    }
+  }).join('');
+
+    let kickBtn = (isHost && pId !== myPlayerId) ? `<button class="btn-kick" onclick="window.kickPlayer('${pId}', false)">강퇴</button>` : '';
+    let crown = (pId === data.hostId) ? '<span class="badge badge-host">방장</span> ' : '';
+    let meText = (pId === myPlayerId) ? ' (나)' : '';
+    let teamBadge = isTeamMode ? ` <b style="color:${p.team === 'A' ? '#3498db' : '#e74c3c'}">[팀 ${p.team}]</b>` : '';
+    let deadBadge = p.left ? '<span class="badge badge-dead">나감</span>' : (isAllRev ? '<span class="badge badge-dead">탈락</span>' : '');
+
+    return `
+      <div class="other-player-box ${isTurn ? 'active-turn' : ''}">
+        <div style="font-size:13px; margin-bottom:6px; font-weight:bold; color:${isTurn ? '#f1c40f' : '#fff'};">
+          ${crown}${profileLineFor(p.accountId, p.name)}${teamBadge}${meText} ${deadBadge} ${kickBtn}
+        </div>
+        <div class="hand">${tilesHTML}</div>
+      </div>
+    `;
+  }).join('');
+
+  if (!data.isGameOver) {
+    checkWinner(data);
+  }
+}
+
+window.insertTileAt = function(insertIdx) {
+  if (isSpectator || pendingPlacementTile === null) return;
+
+  get(roomRef).then((snapshot) => {
+    const data = snapshot.val();
+    if (!data) return;
+    let myData = data.players[myPlayerId] || {};
+    let myHand = [...(myData.hand || [])];
+
+    let tempHand = [...myHand];
+    tempHand.splice(insertIdx, 0, pendingPlacementTile);
+
+    // 조커(-1)를 제외한 일반 타일만 추출
+    const nonJokerTiles = tempHand.filter(t => t.num !== -1);
+
+    // 일반 타일들끼리 오름차순 및 색상 규칙 검사
+    for (let i = 0; i < nonJokerTiles.length - 1; i++) {
+      let curr = nonJokerTiles[i];
+      let next = nonJokerTiles[i + 1];
+
+      if (curr.num > next.num) {
+        return alert("[오류] 배치 오류! 숫자는 왼쪽이 작고 오른쪽이 커야 합니다.");
+      }
+      if (curr.num === next.num && curr.color === 'white' && next.color === 'black') {
+        return alert("[오류] 배치 오류! 같은 숫자일 경우 검은색 타일이 왼쪽, 흰색 타일이 오른쪽에 와야 합니다.");
+      }
+    }
+
+    myHand.splice(insertIdx, 0, pendingPlacementTile);
+    let unplacedPool = [...(myData.unplacedPool || [])];
+
+    if (unplacedPool.length > 0) {
+      pendingPlacementTile = unplacedPool.shift();
+    } else {
+      pendingPlacementTile = null;
+    }
+
+    let updates = {};
+    updates[`rooms/${currentRoomKey}/players/${myPlayerId}/hand`] = myHand;
+    updates[`rooms/${currentRoomKey}/players/${myPlayerId}/unplacedPool`] = unplacedPool;
+    updates[`rooms/${currentRoomKey}/lastLog`] = pendingPlacementTile === null
+      ? `${myNickname} 님이 모든 초기 타일 배치를 완료하고 게임에 참여했습니다!`
+      : `${myNickname} 님이 타일 배치 완료! 다음 타일을 배치하세요.`;
+
+    update(ref(db), updates);
+  });
+}
+
+function handleDrawTile(colorType) {
+  if (isSpectator || isGameOverHandled) return;
+  get(roomRef).then((snapshot) => {
+    const data = snapshot.val();
+    if (!data || data.isGameOver) return;
+
+    const myHand = data.players[myPlayerId]?.hand || [];
+    if (myHand.length > 0 && myHand.every(t => t.revealed)) {
+      return alert("모든 패가 공개되어 탈락한 상태입니다!");
+    }
+
+    let blackDeck = [...(data.blackDeck || [])];
+    let whiteDeck = [...(data.whiteDeck || [])];
+
+    let targetDeck = colorType === 'black' ? blackDeck : whiteDeck;
+    if (targetDeck.length === 0) {
+      return alert(`선택하신 [${colorType === 'black' ? '검은색' : '흰색'}] 덱에 남은 타일이 없습니다!`);
+    }
+
+    let drawn = targetDeck.pop();
+    lastDrawnTileId = drawn.id;
+    pendingPlacementTile = drawn;
+    hasDrawnThisTurn = true;
+
+    let updates = {};
+    updates[`rooms/${currentRoomKey}/blackDeck`] = blackDeck;
+    updates[`rooms/${currentRoomKey}/whiteDeck`] = whiteDeck;
+    if (drawn.num === -1) {
+      updates[`rooms/${currentRoomKey}/players/${myPlayerId}/${colorType === 'black' ? 'drewBlackJoker' : 'drewWhiteJoker'}`] = true;
+    }
+    updates[`rooms/${currentRoomKey}/lastLog`] = `${myNickname} 님이 [${colorType === 'black' ? '검은색' : '흰색'}] 타일을 뽑았습니다. 패 사이의 [ + ] 버튼을 눌러 배치하세요.`;
+    update(ref(db), updates);
+  });
+}
+
+window.guessOtherTile = function(targetPlayerId, tileIdx) {
+  get(roomRef).then((snapshot) => {
+    const data = snapshot.val();
+    if (!data) return;
+    const targetName = data.players[targetPlayerId]?.name || "상대방";
+
+    currentGuessTarget = { pid: targetPlayerId, idx: tileIdx };
+    document.getElementById('guess-modal-subtitle').innerText = `${targetName} 님의 ${tileIdx + 1}번째 타일을 맞춰보세요`;
+    const inputField = document.getElementById('guess-input-field');
+    inputField.value = "";
+    document.getElementById('guess-modal').classList.remove('hidden');
+    setTimeout(() => inputField.focus(), 100);
+  });
+}
+
+function processGuessInput() {
+  const inputField = document.getElementById('guess-input-field');
+  let guess = inputField.value.trim();
+
+  if (guess === '-') {
+    guess = -1;
+  } else if (!isNaN(guess) && guess !== "") {
+    guess = parseInt(guess);
+    if (guess < 0 || guess > 11) {
+      alert("[오류] 올바르지 않은 숫자입니다! 0~11 또는 '-'를 입력하세요.");
+      return;
+    }
+  } else {
+    alert("[오류] 올바르지 않은 입력입니다! 0~11 또는 '-'를 입력하세요.");
+    return;
+  }
+
+  document.getElementById('guess-modal').classList.add('hidden');
+  executeGuess(currentGuessTarget.pid, currentGuessTarget.idx, guess);
+}
+
+function executeGuess(targetPlayerId, tileIdx, guessedNum) {
+  get(roomRef).then((snapshot) => {
+    const data = snapshot.val();
+    if (!data || data.isGameOver) return;
+    const playerIds = Object.keys(data.players || {});
+
+    const targetHand = data.players[targetPlayerId]?.hand || [];
+    const actualNum = targetHand[tileIdx]?.num;
+    const targetName = data.players[targetPlayerId]?.name || "상대방";
+    const displayGuessed = guessedNum === -1 ? '-' : guessedNum;
+    const targetTilePositionNum = tileIdx + 1; // 몇 번째 타일인지 표시
+
+    if (guessedNum === actualNum) {
+      hasGuessedSuccessThisTurn = true;
+      const logMsg = `${myNickname} 님이 [${targetName}] 님의 ${targetTilePositionNum}번째 타일을 [${displayGuessed}](으)로 지목했습니다. 결과: 정답`;
+
+      const myGuessData = data.players[myPlayerId] || {};
+      const newCorrectStreak = (myGuessData.correctStreak || 0) + 1;
+      const newBestStreak = Math.max(myGuessData.bestCorrectStreak || 0, newCorrectStreak);
+
+      let updates = {};
+      updates[`players/${targetPlayerId}/hand/${tileIdx}/revealed`] = true;
+      updates[`players/${myPlayerId}/correctStreak`] = newCorrectStreak;
+      updates[`players/${myPlayerId}/bestCorrectStreak`] = newBestStreak;
+      updates[`players/${myPlayerId}/correctGuessCount`] = (myGuessData.correctGuessCount || 0) + 1;
+      updates[`lastLog`] = logMsg;
+
+      update(roomRef, updates).then(() => {
+        get(roomRef).then(snap => {
+          if (snap.exists() && !snap.val().isGameOver) checkWinner(snap.val());
+        });
+      });
+    } else {
+      alert("[오류] 틀렸습니다! 방금 뽑은 내 타일이 공개되고 턴이 넘어갑니다.");
+
+      // [버그 수정] 내 손패에서 방금 뽑은 타일(lastDrawnTileId)을 정확히 찾아 revealed: true로 변경
+      let myHand = data.players[myPlayerId]?.hand || [];
+      if (lastDrawnTileId) {
+        myHand = myHand.map(t => t.id === lastDrawnTileId ? { ...t, revealed: true } : t);
+      } else if (myHand.length > 0) {
+        myHand[myHand.length - 1].revealed = true;
+      }
+
+      let nextTurnIndex = (data.turnIndex + 1) % playerIds.length;
+      hasDrawnThisTurn = false;
+      hasGuessedSuccessThisTurn = false;
+      lastDrawnTileId = null;
+      pendingPlacementTile = null;
+
+      const logMsg = `${myNickname} 님이 [${targetName}] 님의 ${targetTilePositionNum}번째 타일을 [${displayGuessed}](으)로 지목했습니다. 결과: 실패 (턴 종료)`;
+
+      const myGuessData = data.players[myPlayerId] || {};
+
+      let updates = {};
+      updates[`rooms/${currentRoomKey}/players/${myPlayerId}/hand`] = myHand;
+      updates[`rooms/${currentRoomKey}/players/${myPlayerId}/correctStreak`] = 0;
+      updates[`rooms/${currentRoomKey}/players/${myPlayerId}/wrongGuessCount`] = (myGuessData.wrongGuessCount || 0) + 1;
+      updates[`rooms/${currentRoomKey}/turnIndex`] = nextTurnIndex;
+      updates[`rooms/${currentRoomKey}/lastLog`] = logMsg;
+      update(ref(db), updates);
+    }
+  });
+}
+
+function handlePassTurn() {
+  if (isSpectator || isGameOverHandled) return;
+  get(roomRef).then((snapshot) => {
+    const data = snapshot.val();
+    if (!data || data.isGameOver) return;
+    const playerIds = Object.keys(data.players || {});
+    let nextTurnIndex = (data.turnIndex + 1) % playerIds.length;
+    hasDrawnThisTurn = false;
+    hasGuessedSuccessThisTurn = false;
+    lastDrawnTileId = null;
+    pendingPlacementTile = null;
+
+    let updates = {};
+    updates[`rooms/${currentRoomKey}/turnIndex`] = nextTurnIndex;
+    updates[`rooms/${currentRoomKey}/lastLog`]= `${myNickname} 님이 턴을 종료했습니다.`;
+    update(ref(db), updates);
+  });
+}
+
+function checkWinner(data) {
+  if (isGameOverHandled || data.isGameOver) return;
+
+  const players = data.players || {};
+  const playerIds = Object.keys(players);
+  const isTeamMode = data.gameMode === 'team';
+
+  if (!isTeamMode) {
+    let aliveIds = playerIds.filter(pId => {
+      const hand = players[pId].hand || [];
+      return !(hand.length > 0 && hand.every(t => t.revealed));
+    });
+
+    if (aliveIds.length === 1 && playerIds.length >= 2) {
+      isGameOverHandled = true;
+      const winnerName = players[aliveIds[0]].name;
+      revealAllHandsAndTriggerGameOver(`축하합니다! [${winnerName}] 님이 최종 승리하셨습니다!`, data, playerIds, players, aliveIds);
+    }
+  } else {
+    let teamAAlive = playerIds.some(pId => players[pId].team === 'A' && !(players[pId].hand || []).every(t => t.revealed));
+    let teamBAlive = playerIds.some(pId => players[pId].team === 'B' && !(players[pId].hand || []).every(t => t.revealed));
+
+    if (teamAAlive && !teamBAlive) {
+      isGameOverHandled = true;
+      const winningIds = playerIds.filter(pId => players[pId].team === 'A');
+      revealAllHandsAndTriggerGameOver(`[팀 A] 최종 승리!`, data, playerIds, players, winningIds);
+    } else if (!teamAAlive && teamBAlive) {
+      isGameOverHandled = true;
+      const winningIds = playerIds.filter(pId => players[pId].team === 'B');
+      revealAllHandsAndTriggerGameOver(`[팀 B] 최종 승리!`, data, playerIds, players, winningIds);
+    }
+  }
+}
+
+// 칭호 판정에 필요한 이번 게임의 사실들(희귀 시작패, 조커 드로우, 추리 성적, 승리 방식 등)을 모아둔다.
+// 승부 결과가 반영되기 전(revealAllHandsAndTriggerGameOver로 전원 공개되기 전)의 players를 기준으로 계산해야
+// "몇 장이 공개된 상태에서 이겼는지" 같은 판정이 정확해진다.
+function buildTitleRoomFacts(pId, players, data, winningIds) {
+  const p = players[pId] || {};
+  const hand = p.hand || [];
+  const revealedCount = hand.filter(t => t.revealed).length;
+  const handSize = hand.length;
+  const isWinner = winningIds.includes(pId);
+
+  const initialRemaining = data.initialDeckRemaining || 0;
+  const remainingNow = (data.blackDeck || []).length + (data.whiteDeck || []).length;
+  const drawsUsed = Math.max(0, initialRemaining - remainingNow);
+
+  let isTeamCarry = false;
+  if (isWinner && data.gameMode === 'team') {
+    const teammates = Object.keys(players).filter(id => id !== pId && players[id].team === p.team);
+    isTeamCarry = teammates.length > 0 && teammates.every(id => {
+      const th = players[id].hand || [];
+      return th.length > 0 && th.every(t => t.revealed);
+    });
+  }
+
+  return {
+    isWinner,
+    handSize,
+    revealedCountAtWin: revealedCount,
+    drawsUsed,
+    drewBlackJoker: !!p.drewBlackJoker,
+    drewWhiteJoker: !!p.drewWhiteJoker,
+    startHadJoker: !!p.startHadJoker,
+    startAllSameColor: !!p.startAllSameColor,
+    startAllExtremes: !!p.startAllExtremes,
+    bestCorrectStreak: p.bestCorrectStreak || 0,
+    correctGuessCount: p.correctGuessCount || 0,
+    wrongGuessCount: p.wrongGuessCount || 0,
+    isTeamCarry
+  };
+}
+
+// prof는 계정의 최신 통계(연승/연패/누적 판수 등, 이번 판 반영 이후 값)를 담고 있다.
+function evaluateTitles(facts, prof, hadLoseStreakBeforeWin) {
+  const owned = prof.titles || {};
+  const unlocked = [];
+  function tryUnlock(id, cond) {
+    if (cond && !owned[id]) unlocked.push(id);
+  }
+
+  tryUnlock('win_streak_3', facts.isWinner && prof.currentWinStreak >= 3);
+  tryUnlock('win_streak_5', facts.isWinner && prof.currentWinStreak >= 5);
+  tryUnlock('win_streak_10', facts.isWinner && prof.currentWinStreak >= 10);
+  tryUnlock('lose_streak_3', !facts.isWinner && prof.currentLoseStreak >= 3);
+  tryUnlock('lose_streak_5', !facts.isWinner && prof.currentLoseStreak >= 5);
+  tryUnlock('lose_streak_10', !facts.isWinner && prof.currentLoseStreak >= 10);
+  tryUnlock('phoenix_comeback', facts.isWinner && hadLoseStreakBeforeWin);
+
+  tryUnlock('speed_win_fast', facts.isWinner && facts.drawsUsed <= 4);
+  tryUnlock('speed_win_normal', facts.isWinner && facts.drawsUsed <= 8);
+  tryUnlock('speed_win_relative', facts.isWinner && facts.drawsUsed <= 12);
+
+  tryUnlock('drew_one_joker', facts.drewBlackJoker || facts.drewWhiteJoker);
+  tryUnlock('drew_both_jokers', facts.drewBlackJoker && facts.drewWhiteJoker);
+  tryUnlock('start_with_joker', facts.startHadJoker);
+  tryUnlock('start_all_same_color', facts.startAllSameColor);
+  tryUnlock('start_all_extremes', facts.startAllExtremes);
+
+  tryUnlock('guess_streak_3', facts.bestCorrectStreak >= 3);
+  tryUnlock('guess_streak_5', facts.bestCorrectStreak >= 5);
+  tryUnlock('flawless_win', facts.isWinner && facts.wrongGuessCount === 0);
+  tryUnlock('guess_total_10', facts.correctGuessCount >= 10);
+
+  tryUnlock('ice_thin_win', facts.isWinner && facts.handSize > 1 && facts.revealedCountAtWin === facts.handSize - 1);
+  tryUnlock('flawless_defense', facts.isWinner && facts.revealedCountAtWin === 0);
+  tryUnlock('carried_team', facts.isTeamCarry);
+
+  tryUnlock('zero_correct_guess', facts.correctGuessCount === 0 && facts.wrongGuessCount > 0);
+  tryUnlock('many_wrong_guesses', facts.wrongGuessCount >= 3);
+  tryUnlock('very_many_wrong_guesses', facts.wrongGuessCount >= 5);
+
+  tryUnlock('games_10', prof.totalGames >= 10);
+  tryUnlock('games_50', prof.totalGames >= 50);
+  tryUnlock('games_100', prof.totalGames >= 100);
+  tryUnlock('wins_10', prof.wins >= 10);
+  tryUnlock('wins_50', prof.wins >= 50);
+
+  return unlocked;
+}
+
+// 승수/총 게임 수/연승·연패/칭호는 계정(users/{accountId})에 누적되는 전역 통계다.
+// 보안 규칙상 각 계정은 본인(auth.uid)만 쓸 수 있어야 하므로, 방장이 남의 계정을 대신 써주는 대신
+// 게임이 끝났을 때 "이번 판의 판정 재료(titleFacts)"를 방에 함께 기록해두고, 각자 자기 클라이언트가
+// 그 재료를 읽어서 자기 계정(users/{myAccountId})만 갱신한다. (자기 계정 쓰기이므로 규칙과도 맞음)
+function applyMyOwnStats(data) {
+  if (!myAccountId || isSpectator) return;
+  const facts = data.titleFacts && data.titleFacts[myPlayerId];
+  if (!facts) return; // 이번 판에 참여하지 않았거나(관전 등) 판정 재료가 없음
+
+  runTransaction(ref(db, `users/${myAccountId}`), (prof) => {
+    if (!prof) return undefined; // 프로필이 없으면 트랜잭션을 취소(원본 유지)
+
+    prof.totalGames = (prof.totalGames || 0) + 1;
+
+    let hadLoseStreakBeforeWin = false;
+    if (facts.isWinner) {
+      hadLoseStreakBeforeWin = (prof.currentLoseStreak || 0) >= 5;
+      prof.wins = (prof.wins || 0) + 1;
+      prof.currentWinStreak = (prof.currentWinStreak || 0) + 1;
+      prof.maxWinStreak = Math.max(prof.maxWinStreak || 0, prof.currentWinStreak);
+      prof.currentLoseStreak = 0;
+    } else {
+      prof.currentLoseStreak = (prof.currentLoseStreak || 0) + 1;
+      prof.maxLoseStreak = Math.max(prof.maxLoseStreak || 0, prof.currentLoseStreak);
+      prof.currentWinStreak = 0;
+    }
+
+    const unlocked = evaluateTitles(facts, prof, hadLoseStreakBeforeWin);
+    if (unlocked.length > 0) {
+      prof.titles = prof.titles || {};
+      unlocked.forEach(tid => { prof.titles[tid] = true; });
+      if (!prof.equippedTitle) prof.equippedTitle = unlocked[unlocked.length - 1];
+    }
+
+    return prof;
+  });
+}
+
+function revealAllHandsAndTriggerGameOver(msg, data, playerIds, players, winningIds) {
+  let updatedPlayers = { ...players };
+  playerIds.forEach(pId => {
+    if (updatedPlayers[pId].hand) {
+      updatedPlayers[pId].hand = updatedPlayers[pId].hand.map(t => ({ ...t, revealed: true }));
+    }
+  });
+
+  // 전원 공개(updatedPlayers)로 덮어쓰기 전, 판정에 필요한 재료를 미리 계산해서 함께 기록해둔다
+  const titleFacts = {};
+  playerIds.forEach(pId => {
+    titleFacts[pId] = buildTitleRoomFacts(pId, players, data, winningIds);
+  });
+
+  update(roomRef, {
+    players: updatedPlayers,
+    lastLog: msg,
+    isGameOver: true,
+    winningIds: winningIds,
+    titleFacts: titleFacts
+  }).then(() => {
+    document.getElementById('btn-return-lobby').style.display = 'block';
+  });
+}
+
+function forceReturnToWaitingRoom() {
+  get(roomRef).then((snapshot) => {
+    if (!snapshot.exists()) { location.reload(); return; }
+    const data = snapshot.val();
+    const playerIds = Object.keys(data.players || {});
+
+    let resetPlayers = {};
+    playerIds.forEach(pId => {
+      resetPlayers[pId] = {
+        name: data.players[pId].name,
+        isHost: data.players[pId].isHost,
+        team: data.players[pId].team,
+        accountId: data.players[pId].accountId,
+        hand: []
+      };
+    });
+
+    set(roomRef, {
+      ...data,
+      gameState: "waiting",
+      isGameOver: false,
+      turnIndex: 0,
+      lastLog: "게임이 종료되어 대기실로 복귀했습니다.",
+      players: resetPlayers,
+      spectators: data.spectators || {},
+      chats: {}
+    });
+  });
+}
+</script>
+
+</body>
+</html>
