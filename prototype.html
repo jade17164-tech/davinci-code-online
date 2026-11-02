@@ -34,16 +34,16 @@ h1 { font-size: 16px; text-align: center; color: #e8d9b8; margin: 0 0 12px; }
 .seat-left  { left: -34px; top: 50%;   transform: translateY(-50%) rotate(90deg); }
 .seat-right { right: -34px; top: 50%;  transform: translateY(-50%) rotate(-90deg); }
 
-.board .rack { min-height: 84px; gap: 6px; padding: 0 5px; border-radius: 8px; }
+/* 타일 두께(약 4px)가 앞면 아래로 비져나오므로 그만큼 아래 여백을 준다.
+   랙 자신의 기준이라 돌려 앉은 자리에서도 같은 방향으로 맞는다. */
+.board .rack { min-height: 72px; gap: 6px; padding: 0 5px 5px; border-radius: 8px; }
 .board .rack.out  { background: rgba(70,45,20,.16);   box-shadow: inset 0 0 0 1px rgba(70,45,20,.3); }
 .board .rack.turn { background: rgba(255,245,215,.32); box-shadow: inset 0 0 0 2px rgba(217,164,65,.8); }
 .label.out { color: rgba(60,38,18,.4); }
 
-/* 자리를 돌려 앉히면 공개된 숫자도 같이 뒤집힌다. 실제로는 맞지만 읽을 수가 없어서,
-   숫자만 반대로 돌려 내 시점에서 똑바로 보이게 한다. */
-.seat-top .num   { transform: rotate(180deg); }
-.seat-left .num  { transform: rotate(-90deg); }
-.seat-right .num { transform: rotate(90deg); }
+/* 실제 테이블 그대로 고정한다. 각자 자기 기준 왼→오로 놓고, 숫자도 타일과 함께 돌아간다.
+   그래서 상대 2는 거꾸로, 상대 1·3은 숫자가 눕고 밑줄이 숫자 옆 세로 막대처럼 보인다.
+   실물을 그 각도에서 보면 실제로 그렇게 보이므로 그대로 둔다. */
 
 /* 이름표는 돌리지 않고 똑바로 둔다 */
 .np { position: absolute; }
@@ -74,18 +74,21 @@ h1 { font-size: 16px; text-align: center; color: #e8d9b8; margin: 0 0 12px; }
 .f-left  { transform: rotateY(-90deg) translateZ(calc(var(--tw)/2)); }
 .f-right { transform: rotateY(90deg)  translateZ(calc(var(--tw)/2)); }
 
-.black .f-front, .black .f-back { background: linear-gradient(172deg, #35373d, #191a1e 60%, #0c0d10); }
-.black .f-top { background: linear-gradient(180deg, #55585f, #3a3c42); }
+/* 앞면은 단색이어야 한다. 밝기가 변하면 자리가 90/180도 돌아갔을 때 그 변화가
+   좌우 밝기 차이로 바뀌어, 타일이 두 톤으로 쪼개진 것처럼 보인다.
+   입체감은 윗면(밝게)·옆면(어둡게)·광택으로만 준다. 아랫면도 같은 단색이라 이음새가 없다. */
+.black .f-front, .black .f-back { background: #1d1e23; }
+.black .f-top { background: #4a4d55; }
 /* 앞면 아래끝 색에 맞춰, 세워뒀을 때 경계가 눈에 띄지 않게 한다 */
-.black .f-bottom { background: #0c0d10; }
-.black .f-left, .black .f-right { background: linear-gradient(172deg, #212328, #0a0b0d); }
+.black .f-bottom { background: #1d1e23; }
+.black .f-left, .black .f-right { background: #0e0f12; }
 .black .num { color: #f4f4f4; }
-.white .f-front, .white .f-back { background: linear-gradient(172deg, #fbf8ef, #e6dfcc 60%, #d2c8ae); }
-.white .f-top { background: linear-gradient(180deg, #fffdf7, #efe9d9); }
+.white .f-front, .white .f-back { background: #ebe4d1; }
+.white .f-top { background: #fdfaf0; }
 /* 앞면 아래끝(#d2c8ae)에 그늘이 깔린 색에 맞춘다.
    이 값이 어긋나면 세워둔 타일 밑에 3px짜리 가로줄이 그어진 것처럼 보인다. */
-.white .f-bottom { background: #d2c8ae; }
-.white .f-left, .white .f-right { background: linear-gradient(172deg, #ddd5c0, #bdb398); }
+.white .f-bottom { background: #ebe4d1; }
+.white .f-left, .white .f-right { background: #c3b99e; }
 .white .num { color: #1b1b1b; }
 
 /* 칸 너비가 밑줄(17px) 기준으로 잡히기 때문에, 그보다 좁은 한 자리 숫자는
@@ -94,9 +97,12 @@ h1 { font-size: 16px; text-align: center; color: #e8d9b8; margin: 0 0 12px; }
 .num::after { content: ''; display: block; width: 17px; height: 2px; background: currentColor; margin: 4px auto 0; opacity: .85; }
 .blank .num { display: none; }
 
+/* 바닥 그림자. translateZ로 앞면 평면에서 반드시 떼어놓을 것 —
+   같은 평면에 두면 z-파이팅으로 그림자가 타일 면 위에 그려져,
+   타일 아래쪽에 가로줄이 그어진 것처럼 보인다. (흰 타일에서만 눈에 띈다) */
 .tile::after {
-  content: ''; position: absolute; left: 50%; bottom: -3px; width: 125%; height: 14px;
-  transform: translateX(-50%) rotateX(90deg); transform-origin: center top;
+  content: ''; position: absolute; left: 50%; bottom: -7px; width: 125%; height: 14px;
+  transform: translateX(-50%) translateZ(-10px) rotateX(90deg); transform-origin: center top;
   background: radial-gradient(ellipse, rgba(50,28,8,.6), transparent 70%);
   transition: opacity .2s, width .2s;
 }
@@ -112,13 +118,9 @@ h1 { font-size: 16px; text-align: center; color: #e8d9b8; margin: 0 0 12px; }
 
 /* 방금 뽑은 내 타일 표시 */
 .tile.justdrawn .f-front { box-shadow: inset 0 0 0 2px #d9a441; }
-.tile.justdrawn .f-bottom { background: #d9a441; }
 /* 아직 자리를 못 정해 손패 끝에 떠 있는 타일 */
 .tile.placing { transform: rotateX(11deg) translateY(-12px) translateZ(24px) !important; }
 .tile.placing .f-front { box-shadow: inset 0 0 0 2px #d9a441; }
-/* 테두리를 앞면에만 두르면, 테두리가 없는 아랫면이 밑에 띠로 남아
-   테두리 아랫변이 가로줄처럼 보인다. 아랫면도 같은 색으로 칠해 테두리의 일부로 만든다. */
-.tile.placing .f-bottom { background: #d9a441; }
 
 .pile { position: absolute; left: 50%; top: 50%; width: 360px; height: 190px; transform: translate(-50%, -50%); transform-style: preserve-3d; }
 /* 격자 중심에 찍은 좌표 위에 타일을 올리기 위해 자기 크기의 절반만큼 당긴다 */
@@ -146,16 +148,27 @@ h1 { font-size: 16px; text-align: center; color: #e8d9b8; margin: 0 0 12px; }
    가로로 그어진 검은 선처럼 보인다. 이 두 면만 테두리를 뺀다. */
 .f-top, .f-bottom { box-shadow: none !important; }
 
-/* 실물 타일은 반들거린다. 왼쪽 위에서 들어온 빛이 비스듬히 훑고 지나가는 느낌만 얹는다. */
+/* 실물 타일은 반들거린다. 빛줄기 하나가 비스듬히 훑고 지나가는 느낌만 얹는다.
+
+   조명은 테이블 위 한 곳에 고정돼 있어야 한다. 광택을 타일 기준으로 그리면
+   자리마다 빛이 다른 방향에서 들어와, 돌려 앉은 자리의 타일이 좌우 두 톤으로 쪼개져 보인다.
+   그래서 자리가 돌아간 각도만큼 광택 각도를 되돌려, 네 자리 모두 같은 방향에서 빛을 받게 한다. */
+:root        { --gloss: 138deg; }
+.seat-left   { --gloss:  48deg; }   /* 자리 +90도 → 광택 -90도 */
+.seat-top    { --gloss: -42deg; }   /* 자리 +180도 */
+.seat-right  { --gloss: 228deg; }   /* 자리 -90도 */
+
 .f-front::after, .f-top::after {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  background: linear-gradient(138deg, rgba(255,255,255,.28) 0 14%, rgba(255,255,255,.07) 30%, transparent 46%);
+  /* 평탄 구간(0 14%)을 두면 그만큼이 통째로 밝아져 타일이 두 톤으로 갈라져 보인다.
+     처음부터 끝까지 끊김 없이 옅어지게 하고 세기도 낮춘다. */
+  background: linear-gradient(var(--gloss), rgba(255,255,255,.13), rgba(255,255,255,.04) 40%, transparent 70%);
 }
-.black .f-front::after { background: linear-gradient(138deg, rgba(255,255,255,.17) 0 13%, rgba(255,255,255,.05) 28%, transparent 44%); }
+.black .f-front::after { background: linear-gradient(var(--gloss), rgba(255,255,255,.09), rgba(255,255,255,.03) 40%, transparent 70%); }
 
 .f-front, .f-back { border-radius: 3px; }
 
@@ -178,18 +191,26 @@ h1 { font-size: 16px; text-align: center; color: #e8d9b8; margin: 0 0 12px; }
 
 /* 공개된 타일. 실제 게임에서도 눕히지 않고 세운 채 돌려놓는다.
    눕히면 숫자가 납작하게 찌그러져 무슨 숫자인지 읽을 수가 없다. */
+/* 끝나는 자리를 원래 자리에서 옮기지 말 것. translateY로 내려놓으면
+   돌려 앉은 자리(90/180도)에서는 옆이나 위로 밀려 박스 밖으로 삐져나간다.
+   공개 여부는 빨간 테두리로만 구분한다. */
 @keyframes reveal {
   0%   { transform: rotateX(11deg); }
   26%  { transform: rotateX(48deg) translateY(4px); }
-  58%  { transform: rotateX(2deg) translateY(9px); }
-  100% { transform: rotateX(11deg) translateY(9px); }
+  58%  { transform: rotateX(2deg); }
+  100% { transform: rotateX(11deg); }
 }
 .tile.knocked { animation: reveal .55s cubic-bezier(.4,.1,.35,1.15) both; }
 /* 공개됐다는 표시 — 숨은 타일과 한눈에 구분되어야 한다 */
 .tile.knocked .f-front { box-shadow: inset 0 0 0 2px #b8372a !important; }
+/* 테두리는 앞면에만 그려지는데 타일 두께가 그 밖으로 나온다. 아랫면도 같은 색으로 칠해
+   테두리가 블록 전체를 감싸게 한다. (그냥 두면 빨간 선이 타일과 어긋나 보인다) */
 .tile.knocked .f-bottom { background: #b8372a; }
 
 .pile .tile::after { display: none; }
+/* 돌려 앉은 자리에서는 바닥 그림자도 같이 돌아가, 바닥이 아니라 타일 옆면 위로 드리워져
+   숫자를 가린다. 그림자가 제대로 눕는 건 안 돌아간 내 자리뿐이라 나머지는 끈다. */
+.seat-top .tile::after, .seat-left .tile::after, .seat-right .tile::after { display: none; }
 
 /* 조커 자리 고르기 버튼 */
 .slot {
@@ -235,7 +256,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 <div class="table">
   <div class="stage">
     <!-- 테이블에 둘러앉은 배치. 가운데가 더미, 각자 자기 쪽을 보고 앉는다. -->
-    <div class="board">
+    <div class="board" id="board">
       <div class="seat seat-top"><div class="rack" id="rack-ai1"></div></div>
       <div class="seat seat-left"><div class="rack" id="rack-ai0"></div></div>
       <div class="seat seat-right"><div class="rack" id="rack-ai2"></div></div>
@@ -479,6 +500,8 @@ function takeFromPile(el, rack, faceUp) {
   moved.style.setProperty('--fy', (from.top - to.top) + 'px');
   moved.style.setProperty('--fr', fr + 'deg');
   moved.classList.add('bringing');
+  // 끝난 애니메이션을 붙여두면 fill-mode가 인라인 transform을 계속 덮고 합성 레이어도 남는다
+  moved.addEventListener('animationend', () => moved.classList.remove('bringing'), { once: true });
   return moved;
 }
 
