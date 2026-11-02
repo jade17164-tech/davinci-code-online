@@ -26,6 +26,32 @@ h1 { font-size: 16px; text-align: center; color: #e8d9b8; margin: 0 0 12px; }
 }
 .label { font-size: 11.5px; color: rgba(60,38,18,.75); text-align: center; font-weight: 700; }
 
+/* 테이블에 둘러앉은 배치: 가운데 더미를 두고 네 자리가 각자 자기 쪽을 본다 */
+.board { position: relative; height: 532px; }
+.seat { position: absolute; }
+.seat-me    { left: 50%;  bottom: 4px; transform: translateX(-50%); }
+.seat-top   { left: 50%;  top: 4px;    transform: translateX(-50%) rotate(180deg); }
+.seat-left  { left: -34px; top: 50%;   transform: translateY(-50%) rotate(90deg); }
+.seat-right { right: -34px; top: 50%;  transform: translateY(-50%) rotate(-90deg); }
+
+.board .rack { min-height: 84px; gap: 6px; padding: 0 5px; border-radius: 8px; }
+.board .rack.out  { background: rgba(70,45,20,.16);   box-shadow: inset 0 0 0 1px rgba(70,45,20,.3); }
+.board .rack.turn { background: rgba(255,245,215,.32); box-shadow: inset 0 0 0 2px rgba(217,164,65,.8); }
+.label.out { color: rgba(60,38,18,.4); }
+
+/* 자리를 돌려 앉히면 공개된 숫자도 같이 뒤집힌다. 실제로는 맞지만 읽을 수가 없어서,
+   숫자만 반대로 돌려 내 시점에서 똑바로 보이게 한다. */
+.seat-top .num   { transform: rotate(180deg); }
+.seat-left .num  { transform: rotate(-90deg); }
+.seat-right .num { transform: rotate(90deg); }
+
+/* 이름표는 돌리지 않고 똑바로 둔다 */
+.np { position: absolute; }
+.np-top   { left: 50%; top: 96px;    transform: translateX(-50%); }
+.np-me    { left: 50%; bottom: 94px; transform: translateX(-50%); }
+.np-left  { left: 12px;  top: calc(50% - 128px); }
+.np-right { right: 12px; top: calc(50% - 128px); }
+
 /* 원근을 멀리 둔다. 가깝게 잡으면 옆면이 보이면서 가운데 맞춘 숫자가 쏠려 보인다 */
 .stage { perspective: 2600px; perspective-origin: 50% 0%; }
 .rack { display: flex; justify-content: center; align-items: flex-end; gap: 9px; min-height: 96px; transform-style: preserve-3d; }
@@ -50,16 +76,21 @@ h1 { font-size: 16px; text-align: center; color: #e8d9b8; margin: 0 0 12px; }
 
 .black .f-front, .black .f-back { background: linear-gradient(172deg, #35373d, #191a1e 60%, #0c0d10); }
 .black .f-top { background: linear-gradient(180deg, #55585f, #3a3c42); }
-.black .f-bottom { background: #0b0c0e; }
+/* 앞면 아래끝 색에 맞춰, 세워뒀을 때 경계가 눈에 띄지 않게 한다 */
+.black .f-bottom { background: #0c0d10; }
 .black .f-left, .black .f-right { background: linear-gradient(172deg, #212328, #0a0b0d); }
 .black .num { color: #f4f4f4; }
 .white .f-front, .white .f-back { background: linear-gradient(172deg, #fbf8ef, #e6dfcc 60%, #d2c8ae); }
 .white .f-top { background: linear-gradient(180deg, #fffdf7, #efe9d9); }
-.white .f-bottom { background: #b3a98e; }
+/* 앞면 아래끝(#d2c8ae)에 그늘이 깔린 색에 맞춘다.
+   이 값이 어긋나면 세워둔 타일 밑에 3px짜리 가로줄이 그어진 것처럼 보인다. */
+.white .f-bottom { background: #d2c8ae; }
 .white .f-left, .white .f-right { background: linear-gradient(172deg, #ddd5c0, #bdb398); }
 .white .num { color: #1b1b1b; }
 
-.num { font-size: 19px; font-weight: 800; letter-spacing: .5px; user-select: none; line-height: 1; padding-top: 2px; }
+/* 칸 너비가 밑줄(17px) 기준으로 잡히기 때문에, 그보다 좁은 한 자리 숫자는
+   text-align 없이는 칸 왼쪽에 붙어버린다. 두 자리 숫자만 멀쩡해 보였던 이유. */
+.num { font-size: 19px; font-weight: 800; letter-spacing: .5px; user-select: none; line-height: 1; padding-top: 2px; text-align: center; }
 .num::after { content: ''; display: block; width: 17px; height: 2px; background: currentColor; margin: 4px auto 0; opacity: .85; }
 .blank .num { display: none; }
 
@@ -74,18 +105,59 @@ h1 { font-size: 16px; text-align: center; color: #e8d9b8; margin: 0 0 12px; }
 .tile.pickable { cursor: pointer; }
 .rack .tile.pickable:hover { transform: rotateX(11deg) translateY(-15px) translateZ(30px); }
 .rack .tile.pickable:hover::after { opacity: .3; width: 150%; }
-.pile .tile.pickable:hover { filter: brightness(1.25); }
+/* filter는 쓰지 말 것 — opacity와 마찬가지로 스태킹 컨텍스트를 만들어 preserve-3d를 깨뜨린다.
+   타일이 납작하게 눌리면서 엉뚱한 면이 비쳐 보인다. 대신 들어올리고 테두리로 표시한다. */
+.pile .tile.pickable:hover { transform: rotateX(74deg) rotateZ(var(--rz)) translateZ(16px) !important; }
+.pile .tile.pickable:hover .f-front { box-shadow: inset 0 0 0 2px #d9a441 !important; }
 
 /* 방금 뽑은 내 타일 표시 */
 .tile.justdrawn .f-front { box-shadow: inset 0 0 0 2px #d9a441; }
+.tile.justdrawn .f-bottom { background: #d9a441; }
+/* 아직 자리를 못 정해 손패 끝에 떠 있는 타일 */
+.tile.placing { transform: rotateX(11deg) translateY(-12px) translateZ(24px) !important; }
+.tile.placing .f-front { box-shadow: inset 0 0 0 2px #d9a441; }
+/* 테두리를 앞면에만 두르면, 테두리가 없는 아랫면이 밑에 띠로 남아
+   테두리 아랫변이 가로줄처럼 보인다. 아랫면도 같은 색으로 칠해 테두리의 일부로 만든다. */
+.tile.placing .f-bottom { background: #d9a441; }
 
-.pile { position: relative; height: 178px; margin: 4px 0; transform-style: preserve-3d; }
+.pile { position: absolute; left: 50%; top: 50%; width: 360px; height: 190px; transform: translate(-50%, -50%); transform-style: preserve-3d; }
 /* 격자 중심에 찍은 좌표 위에 타일을 올리기 위해 자기 크기의 절반만큼 당긴다 */
 .pile .tile { position: absolute; margin-left: calc(var(--tw) / -2); margin-top: calc(var(--th) / -2); }
 
-/* 같은 색 타일끼리 맞닿으면 덩어리로 뭉개져 보여서, 면마다 반대 밝기의 테두리를 넣어 경계를 세운다 */
-.black .face { box-shadow: inset 0 0 0 1px rgba(255,255,255,.22); }
-.white .face { box-shadow: inset 0 0 0 1px rgba(92,70,40,.45); }
+/* 같은 색 타일끼리 맞닿으면 덩어리로 뭉개져 보여서 면마다 반대 밝기의 테두리를 넣고,
+   거기에 모서리 베벨(위쪽 하이라이트 + 아래쪽 그늘)을 겹쳐 사출 플라스틱처럼 보이게 한다 */
+/* 테두리는 좌·우·위 세 변만 두른다. 아래 변까지 두르면 그 1px이 아랫면과 맞닿으면서
+   가로줄로 보인다. 아래쪽은 선 대신 넓게 퍼지는 그늘로 처리한다. */
+/* 아래쪽 그늘은 넣지 않는다. 앞면 아래끝이 어두워지면 바로 밑에 붙는 아랫면과 색이 어긋나
+   타일 밑에 긴 밑줄이 그어진 것처럼 보인다. 아랫면 색은 앞면 그라데이션 끝값과 정확히 맞춘다. */
+.black .face {
+  box-shadow:
+    inset 1px 0 0 rgba(255,255,255,.16),
+    inset -1px 0 0 rgba(255,255,255,.16),
+    inset 0 1px 0 rgba(255,255,255,.3);
+}
+.white .face {
+  box-shadow:
+    inset 1px 0 0 rgba(92,70,40,.32),
+    inset -1px 0 0 rgba(92,70,40,.32),
+    inset 0 1px 0 rgba(255,255,255,.95);
+}
+/* 세워둔 타일의 위·아래면은 3px도 안 되는 띠라서, 테두리가 띠를 거의 다 덮어
+   가로로 그어진 검은 선처럼 보인다. 이 두 면만 테두리를 뺀다. */
+.f-top, .f-bottom { box-shadow: none !important; }
+
+/* 실물 타일은 반들거린다. 왼쪽 위에서 들어온 빛이 비스듬히 훑고 지나가는 느낌만 얹는다. */
+.f-front::after, .f-top::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(138deg, rgba(255,255,255,.28) 0 14%, rgba(255,255,255,.07) 30%, transparent 46%);
+}
+.black .f-front::after { background: linear-gradient(138deg, rgba(255,255,255,.17) 0 13%, rgba(255,255,255,.05) 28%, transparent 44%); }
+
+.f-front, .f-back { border-radius: 3px; }
 
 /* 게임 시작: 가운데에 쌓인 타일을 테이블에 쏟아 널브러뜨린다 */
 /* opacity는 절대 넣지 말 것 — 애니메이션되는 opacity는 스태킹 컨텍스트를 만들어
@@ -104,17 +176,29 @@ h1 { font-size: 16px; text-align: center; color: #e8d9b8; margin: 0 0 12px; }
 }
 .tile.bringing { animation: bring .7s cubic-bezier(.3,.85,.35,1) both; }
 
-@keyframes knock {
+/* 공개된 타일. 실제 게임에서도 눕히지 않고 세운 채 돌려놓는다.
+   눕히면 숫자가 납작하게 찌그러져 무슨 숫자인지 읽을 수가 없다. */
+@keyframes reveal {
   0%   { transform: rotateX(11deg); }
-  30%  { transform: rotateX(-2deg); }
-  100% { transform: translateY(16px) rotateX(74deg) rotateZ(var(--kz)); }
+  26%  { transform: rotateX(48deg) translateY(4px); }
+  58%  { transform: rotateX(2deg) translateY(9px); }
+  100% { transform: rotateX(11deg) translateY(9px); }
 }
-.tile.knocked { animation: knock .6s cubic-bezier(.45,.05,.3,1.25) both; }
+.tile.knocked { animation: reveal .55s cubic-bezier(.4,.1,.35,1.15) both; }
+/* 공개됐다는 표시 — 숨은 타일과 한눈에 구분되어야 한다 */
+.tile.knocked .f-front { box-shadow: inset 0 0 0 2px #b8372a !important; }
+.tile.knocked .f-bottom { background: #b8372a; }
 
-/* 그림자는 "세워둔 타일" 기준으로 바닥에 눕도록 맞춰둔 것이라,
-   이미 눕혀진 타일(더미·쓰러진 타일)에서는 평면이 몸통을 뚫고 지나가 얼룩처럼 보인다.
-   눕은 타일은 테이블에 붙어 있어 그림자가 거의 안 보이는 게 맞으므로 그냥 끈다. */
-.pile .tile::after, .tile.knocked::after { display: none; }
+.pile .tile::after { display: none; }
+
+/* 조커 자리 고르기 버튼 */
+.slot {
+  width: 17px; height: 48px; padding: 0; flex-shrink: 0; align-self: center;
+  background: rgba(255,255,255,.45); color: #3a2512;
+  border: 1px dashed #6b4a28; border-bottom: 1px dashed #6b4a28;
+  border-radius: 4px; font-size: 13px; line-height: 1;
+}
+.slot:hover { background: #f7e9c8; }
 
 .status {
   text-align: center; font-size: 14px; font-weight: 700; color: #3a2512;
@@ -146,18 +230,25 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 </head>
 <body>
 
-<h1>다빈치 코드 — 3D 프로토타입 (1 : 1)</h1>
+<h1>다빈치 코드 — 3D 프로토타입 (4인)</h1>
 
 <div class="table">
   <div class="stage">
-    <div class="label">상대</div>
-    <div class="rack" id="rack-ai"></div>
+    <!-- 테이블에 둘러앉은 배치. 가운데가 더미, 각자 자기 쪽을 보고 앉는다. -->
+    <div class="board">
+      <div class="seat seat-top"><div class="rack" id="rack-ai1"></div></div>
+      <div class="seat seat-left"><div class="rack" id="rack-ai0"></div></div>
+      <div class="seat seat-right"><div class="rack" id="rack-ai2"></div></div>
 
-    <div class="label" style="margin-top:8px;">타일 더미</div>
-    <div class="pile" id="pile"></div>
+      <div class="pile" id="pile"></div>
 
-    <div class="label">내 타일</div>
-    <div class="rack" id="rack-me"></div>
+      <div class="seat seat-me"><div class="rack" id="rack-me"></div></div>
+
+      <div class="label np np-top" id="label-ai1">상대 2</div>
+      <div class="label np np-left" id="label-ai0">상대 1</div>
+      <div class="label np np-right" id="label-ai2">상대 3</div>
+      <div class="label np np-me">내 타일</div>
+    </div>
   </div>
 
   <div class="status" id="status">게임을 시작합니다</div>
@@ -177,23 +268,39 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 </div>
 
 <p class="note">
-  <b>실제 규칙으로 끝까지 플레이됩니다.</b> 더미에서 타일을 집고 → 상대 타일을 눌러 숫자를 추리하세요.
-  맞히면 상대 타일이 쓰러지고 한 번 더 추리할 수 있습니다. 틀리면 방금 뽑은 내 타일이 공개되고 턴이 넘어갑니다.
-  한쪽 타일이 모두 공개되면 끝납니다.
+  <b>실제 규칙으로 끝까지 플레이됩니다.</b> 네 명이 테이블에 둘러앉고, 시작하면 26장이 전부 가운데에 쏟아집니다.
+  미리 나눠주지 않고 거기서 한 장씩 돌아가며 집어 시작 타일 4장을 만듭니다.
+  <br>
+  이후 자기 턴마다 한 장 뽑고 상대 타일을 추리합니다.
+  <b>맞히면</b> 뽑은 타일은 그대로 숨긴 채 두고 한 번 더 추리할 수 있고,
+  <b>틀리면</b> 방금 뽑은 내 타일이 공개되고 턴이 넘어갑니다.
+  타일이 전부 공개된 사람은 탈락하고, 마지막 한 명이 남으면 끝납니다.
   <br><br>
-  <b>원본 게임과 다른 점</b> — 타일이 <b>자동으로 오름차순 자리에 꽂힙니다</b> (원본은 [+] 버튼으로 직접 배치).
-  일반 숫자는 들어갈 자리가 어차피 하나뿐이라 결과는 같고, 조커만 맨 뒤로 갑니다.
-  3D 연출만 확인하는 게 목적이라 배치 UI는 원본 것을 그대로 둘 생각입니다.
+  <b>타일은 전부 직접 배치합니다.</b> 조커일 때만 자리를 물으면, 배치 UI가 뜨는 것 자체가
+  "조커를 뽑았다"는 신호가 되어 상대에게 패가 읽힙니다. 그래서 모든 타일이 똑같이 자리를 묻고,
+  <b>규칙에 맞는 자리에만</b> 버튼이 생깁니다 (같은 숫자면 검은색이 왼쪽, 조커는 어디든).
+  <br><br>
+  공개된 타일은 눕히지 않고 <b>세운 채 빨간 테두리</b>로 표시합니다. 눕히면 숫자가 찌그러져 읽을 수 없습니다.
+  돌려 앉은 자리의 숫자는 뒤집혀 보이는 게 실제에 맞지만, 읽을 수 있도록 숫자만 똑바로 세웠습니다.
 </p>
 
 <script>
 const START_TILES = 4;
 const rnd = (a, b) => a + Math.random() * (b - a);
 
-let deck = [], drawnEl = null, myTurn = true, busy = false, over = false;
+let deck = [], drawnEl = null, over = false;
 
 const $ = id => document.getElementById(id);
-const rackMe = $('rack-me'), rackAi = $('rack-ai'), pile = $('pile');
+const rackMe = $('rack-me'), pile = $('pile');
+
+// 나 + 상대 3명. turnIdx가 도는 순서이고, 타일이 전부 공개된 사람은 탈락해 건너뛴다.
+const players = [
+  { name: '나',    rack: rackMe,      label: null,          isMe: true  },
+  { name: '상대 1', rack: $('rack-ai0'), label: $('label-ai0'), isMe: false },
+  { name: '상대 2', rack: $('rack-ai1'), label: $('label-ai1'), isMe: false },
+  { name: '상대 3', rack: $('rack-ai2'), label: $('label-ai2'), isMe: false },
+];
+let turnIdx = 0;
 
 function makeTile(color, num, blank) {
   const el = document.createElement('div');
@@ -211,24 +318,27 @@ function makeTile(color, num, blank) {
 function stand(el) { el.style.transform = 'rotateX(11deg)'; }
 
 // 오름차순, 같은 숫자면 검은색이 왼쪽. 조커는 자리가 정해지지 않아 맨 뒤로 보낸다.
+// 조커 자리를 고르는 동안에는 손패에 버튼이 섞여 있으므로, 타일만 골라 다룬다
+const tilesIn = rack => [...rack.children].filter(t => t.classList.contains('tile'));
+
 function insertSorted(rack, el) {
   const num = Number(el.dataset.num), color = el.dataset.color;
-  if (num === -1) return rack.appendChild(el);
-  const before = [...rack.children].find(t => {
+  if (num === -1) return rack.appendChild(el); // 조커 자리는 규칙으로 정해지지 않아 일단 끝에 둔다
+  const before = tilesIn(rack).find(t => {
     const n = Number(t.dataset.num);
-    if (n === -1) return true; // 조커는 항상 맨 뒤에 모아두므로 그 앞에 꽂는다
+    if (n === -1) return true;
     if (n !== num) return n > num;
     return color === 'black' && t.dataset.color === 'white';
   });
   rack.insertBefore(el, before || null);
 }
 
-const hidden = rack => [...rack.children].filter(t => !t.classList.contains('knocked'));
+const hidden = rack => tilesIn(rack).filter(t => !t.classList.contains('knocked'));
 
 function setStatus(msg) { $('status').textContent = msg; }
 
 function setPickable(rack, on, handler) {
-  [...rack.children].forEach(t => {
+  tilesIn(rack).forEach(t => {
     const ok = on && !t.classList.contains('knocked');
     t.classList.toggle('pickable', ok);
     t.onclick = ok ? () => handler(t) : null;
@@ -236,16 +346,82 @@ function setPickable(rack, on, handler) {
 }
 
 function clearPickable() {
-  [...pile.children, ...rackAi.children, ...rackMe.children].forEach(t => {
+  [pile, ...players.map(p => p.rack)].forEach(r => tilesIn(r).forEach(t => {
     t.classList.remove('pickable'); t.onclick = null;
+  }));
+}
+
+// 타일이 전부 공개된 사람은 탈락이다. 턴 순서에서 빠지고 추리 대상에서도 빠진다.
+const isAlive = p => hidden(p.rack).length > 0;
+const alivePlayers = () => players.filter(isAlive);
+const foesOf = p => players.filter(q => q !== p && isAlive(q));
+
+function markOut() {
+  players.forEach(p => {
+    if (!p.label) return;
+    const out = p.rack.children.length > 0 && !isAlive(p);
+    p.rack.classList.toggle('out', out);
+    p.label.classList.toggle('out', out);
+    p.label.textContent = p.name + (out ? ' · 탈락' : '');
   });
+}
+
+function highlightTurn(p) {
+  players.forEach(q => q.rack.classList.toggle('turn', q === p && !q.isMe));
+}
+
+// 정렬 기준값. 같은 숫자면 검은색이 왼쪽이므로 색까지 섞어 하나의 키로 만든다.
+const keyOf = t => Number(t.dataset.num) * 2 + (t.dataset.color === 'black' ? 0 : 1);
+
+// 놓을 수 있는 자리들을 구한다.
+// 조커는 어느 값으로도 통하므로 어디든 놓을 수 있고, 그래서 조커를 사이에 둔
+// 일반 타일의 자리도 하나로 정해지지 않는다. 제약은 "일반 타일끼리의 오름차순"뿐이다.
+function legalSpots(el) {
+  const tiles = tilesIn(rackMe).filter(t => t !== el);
+  const isJoker = Number(el.dataset.num) === -1;
+  const k = keyOf(el);
+  const spots = [];
+  for (let i = 0; i <= tiles.length; i++) {
+    const left = tiles.slice(0, i).filter(t => Number(t.dataset.num) !== -1);
+    const right = tiles.slice(i).filter(t => Number(t.dataset.num) !== -1);
+    const ok = isJoker || (left.every(t => keyOf(t) < k) && right.every(t => keyOf(t) > k));
+    if (ok) spots.push(tiles[i] || null);
+  }
+  return spots;
+}
+
+// 모든 타일을 직접 배치하게 한다.
+// 조커일 때만 물어보면, 배치 UI가 뜨는 것 자체가 "조커를 뽑았다"는 신호가 되어 상대에게 패가 읽힌다.
+function choosePlacement(el, done) {
+  setStatus('타일을 놓을 자리를 고르세요');
+  el.classList.add('placing');
+
+  const place = before => {
+    [...rackMe.querySelectorAll('.slot')].forEach(s => s.remove());
+    el.classList.remove('placing');
+    rackMe.insertBefore(el, before);
+    done();
+  };
+
+  legalSpots(el).forEach(before => {
+    const b = document.createElement('button');
+    b.className = 'slot';
+    b.textContent = '+';
+    b.onclick = () => place(before);
+    // 배치 대기 중인 타일은 손패 끝에 떠 있으므로, 맨 뒤 자리는 그 타일 바로 앞에 버튼을 둔다
+    rackMe.insertBefore(b, before || el);
+  });
+}
+
+function afterMyPick(el, next) {
+  setTimeout(() => choosePlacement(el, next), 720);
 }
 
 // ---- 더미 ----
 // 자리는 무작위로 잡되, 이미 놓인 타일과 너무 가까우면 다시 뽑는다.
 // 그냥 난수로 뿌리면 타일이 포개져서 몇 장인지 안 보이고,
 // 격자로 깔면 사람이 쏟아놓은 게 아니라 진열한 것처럼 보인다. 그 사이를 노린다.
-const SPREAD_X = 268, SPREAD_Y = 58, MIN_GAP = 46;
+const SPREAD_X = 150, SPREAD_Y = 62, MIN_GAP = 40;
 function scatterSpots(n) {
   const spots = [];
   for (let i = 0; i < n; i++) {
@@ -295,7 +471,8 @@ function takeFromPile(el, rack, faceUp) {
   el.remove();
   deck = deck.filter(t => !(t.c === moved.dataset.color && String(t.n) === moved.dataset.num));
 
-  insertSorted(rack, moved);
+  // 내 타일은 내가 직접 배치하므로 일단 손패 끝에 둔다. 상대 타일만 규칙대로 자동 정렬.
+  if (rack === rackMe) rack.appendChild(moved); else insertSorted(rack, moved);
   const to = moved.getBoundingClientRect();
   stand(moved);
   moved.style.setProperty('--fx', (from.left - to.left) + 'px');
@@ -307,18 +484,70 @@ function takeFromPile(el, rack, faceUp) {
 
 function knock(el) {
   el.classList.remove('blank');
-  el.style.setProperty('--kz', rnd(-6, 6).toFixed(1) + 'deg');
   el.classList.add('knocked');
   el.onclick = null;
   el.classList.remove('pickable');
 }
 
+// ---- 시작 단계: 26장을 다 쏟아놓고 거기서 한 장씩 돌아가며 집어간다 ----
+let setupLeft = 0;
+
+function startSetup() {
+  setupLeft = START_TILES;
+  armSetupPick();
+}
+
+function armSetupPick() {
+  setStatus(`시작 타일을 고르세요 (${START_TILES - setupLeft} / ${START_TILES})`);
+  [...pile.children].forEach(t => {
+    t.classList.add('pickable');
+    t.onclick = () => {
+      clearPickable();
+      const mine = takeFromPile(t, rackMe, true);
+      setupLeft--;
+      afterMyPick(mine, () => {
+        setStatus('상대가 고르는 중...');
+        aiSetupPick(1);
+      });
+    };
+  });
+}
+
+// 상대 3명이 차례로 한 장씩 집는다
+function aiSetupPick(i) {
+  if (i >= players.length) {
+    return setTimeout(() => (setupLeft > 0 ? armSetupPick() : beginTurn(0)), 480);
+  }
+  setTimeout(() => {
+    if (pile.children.length) {
+      const p = pile.children[Math.floor(Math.random() * pile.children.length)];
+      takeFromPile(p, players[i].rack, false); // 상대 타일은 색만 보인다
+    }
+    aiSetupPick(i + 1);
+  }, 400);
+}
+
+// ---- 턴 돌리기 ----
+function beginTurn(idx) {
+  if (over) return;
+  const alive = alivePlayers();
+  if (alive.length <= 1) return finish(alive[0]);
+
+  turnIdx = ((idx % players.length) + players.length) % players.length;
+  const p = players[turnIdx];
+  if (!isAlive(p)) return beginTurn(turnIdx + 1); // 탈락자는 건너뛴다
+
+  highlightTurn(p);
+  drawnEl = null;
+  if (p.isMe) startMyTurn(); else aiTurn(p);
+}
+
+function nextTurn() { setTimeout(() => beginTurn(turnIdx + 1), 900); }
+
 // ---- 내 턴 ----
 function startMyTurn() {
-  if (over) return;
-  myTurn = true; drawnEl = null;
   $('btn-end').disabled = true;
-  if (!deck.length) return setStatus('더미가 비었습니다');
+  if (!pile.children.length) return askGuessTarget(); // 더미가 비면 뽑지 않고 추리만 한다
   setStatus('더미에서 타일을 집으세요');
   [...pile.children].forEach(t => {
     t.classList.add('pickable');
@@ -326,21 +555,26 @@ function startMyTurn() {
       clearPickable();
       drawnEl = takeFromPile(t, rackMe, true);
       drawnEl.classList.add('justdrawn');
-      setTimeout(askGuessTarget, 700);
+      afterMyPick(drawnEl, askGuessTarget);
     };
   });
+}
+
+function armMyGuessing() {
+  foesOf(players[0]).forEach(p => setPickable(p.rack, true, openGuess));
 }
 
 function askGuessTarget() {
   if (over) return;
   setStatus('상대 타일을 눌러 숫자를 추리하세요');
-  setPickable(rackAi, true, openGuess);
+  armMyGuessing();
 }
 
 let guessTarget = null;
 function openGuess(t) {
   guessTarget = t;
-  $('guess-sub').textContent = (t.dataset.color === 'black' ? '검은색' : '흰색') + ' 타일의 숫자는?';
+  const owner = players.find(p => p.rack === t.parentElement);
+  $('guess-sub').textContent = `${owner ? owner.name + '의 ' : ''}${t.dataset.color === 'black' ? '검은색' : '흰색'} 타일의 숫자는?`;
   const pad = $('pad');
   pad.innerHTML = '';
   for (let n = 0; n <= 11; n++) {
@@ -360,20 +594,24 @@ function closeGuess() { $('guess-modal').classList.add('hidden'); }
 
 function submitGuess(n) {
   closeGuess();
+  const owner = players.find(p => p.rack === guessTarget.parentElement);
   const correct = Number(guessTarget.dataset.num) === n;
   clearPickable();
 
   if (correct) {
     knock(guessTarget);
-    if (!hidden(rackAi).length) return finish(true);
-    setStatus('적중! 한 번 더 추리하거나 턴을 넘기세요');
+    markOut();
+    if (alivePlayers().length <= 1) return finish(alivePlayers()[0]);
+    setStatus(`적중! ${owner ? owner.name + ' 타일 공개. ' : ''}한 번 더 추리하거나 턴을 넘기세요`);
     $('btn-end').disabled = false;
-    setPickable(rackAi, true, openGuess);
+    armMyGuessing();
   } else {
-    setStatus(`틀렸습니다 (정답 ${guessTarget.dataset.num === '-1' ? '조커' : guessTarget.dataset.num}). 내 타일이 공개됩니다`);
+    const ans = guessTarget.dataset.num === '-1' ? '조커' : guessTarget.dataset.num;
+    setStatus(`틀렸습니다 (정답 ${ans}). 내 타일이 공개됩니다`);
     if (drawnEl) knock(drawnEl);
-    if (!hidden(rackMe).length) return finish(false);
-    setTimeout(aiTurn, 1300);
+    markOut();
+    if (alivePlayers().length <= 1) return finish(alivePlayers()[0]);
+    nextTurn();
   }
 }
 
@@ -381,80 +619,72 @@ $('btn-end').onclick = () => {
   if (drawnEl) drawnEl.classList.remove('justdrawn');
   clearPickable();
   $('btn-end').disabled = true;
-  setTimeout(aiTurn, 500);
+  nextTurn();
 };
 
 // ---- 상대 턴 (단순 AI: 아직 안 나온 숫자 중 하나를 찍는다) ----
-function aiTurn() {
+function aiTurn(me) {
   if (over) return;
-  myTurn = false;
-  setStatus('상대 차례...');
-
-  let aiDrawn = null;
+  setStatus(me.name + ' 차례...');
+  let drawn = null;
   if (pile.children.length) {
     const pick = pile.children[Math.floor(Math.random() * pile.children.length)];
-    aiDrawn = takeFromPile(pick, rackAi, false);
+    drawn = takeFromPile(pick, me.rack, false);
   }
-
-  setTimeout(() => {
-    const targets = hidden(rackMe);
-    if (!targets.length) return finish(true);
-    const t = targets[Math.floor(Math.random() * targets.length)];
-
-    // 이미 공개된 숫자와 자기 손패를 빼고 남은 후보 중에서 찍는다
-    const seen = new Set([...rackMe.children, ...rackAi.children]
-      .filter(x => x.classList.contains('knocked') || x.parentElement === rackAi)
-      .map(x => x.dataset.color + x.dataset.num));
-    const cand = [];
-    for (let n = -1; n <= 11; n++) if (!seen.has(t.dataset.color + n)) cand.push(n);
-    const guess = cand.length ? cand[Math.floor(Math.random() * cand.length)] : 0;
-
-    if (Number(t.dataset.num) === guess) {
-      knock(t);
-      setStatus('상대가 내 타일을 맞혔습니다');
-      if (!hidden(rackMe).length) return finish(false);
-      setTimeout(() => (Math.random() < .5 ? aiTurn2(aiDrawn) : endAiTurn(aiDrawn)), 1200);
-    } else {
-      setStatus('상대가 틀렸습니다');
-      if (aiDrawn) knock(aiDrawn);
-      if (!hidden(rackAi).length) return finish(true);
-      setTimeout(startMyTurn, 1300);
-    }
-  }, 1000);
+  setTimeout(() => aiGuess(me, drawn), 950);
 }
 
-// 맞힌 뒤 한 번 더 추리하는 경우 (타일은 이미 뽑았으므로 추리만 반복)
-function aiTurn2(aiDrawn) {
-  const targets = hidden(rackMe);
-  if (!targets.length) return finish(false);
+function aiGuess(me, drawn) {
+  if (over) return;
+  const foes = foesOf(me);
+  if (!foes.length) return finish(me);
+
+  const foe = foes[Math.floor(Math.random() * foes.length)];
+  const targets = hidden(foe.rack);
   const t = targets[Math.floor(Math.random() * targets.length)];
-  const guess = Math.floor(rnd(0, 12));
+
+  // 이미 공개된 타일과 자기 손패는 후보에서 뺀다
+  const seen = new Set();
+  players.forEach(p => tilesIn(p.rack).forEach(x => {
+    if (p === me || x.classList.contains('knocked')) seen.add(x.dataset.color + x.dataset.num);
+  }));
+  const cand = [];
+  for (let n = -1; n <= 11; n++) if (!seen.has(t.dataset.color + n)) cand.push(n);
+  const guess = cand.length ? cand[Math.floor(Math.random() * cand.length)] : 0;
+
+  const whose = foe.isMe ? '내' : foe.name;
   if (Number(t.dataset.num) === guess) {
     knock(t);
-    setStatus('상대가 또 맞혔습니다');
-    if (!hidden(rackMe).length) return finish(false);
-    setTimeout(() => endAiTurn(aiDrawn), 1200);
+    markOut();
+    setStatus(`${me.name}가 ${whose} 타일을 맞혔습니다`);
+    if (alivePlayers().length <= 1) return finish(alivePlayers()[0]);
+    setTimeout(() => (Math.random() < .45 ? aiGuess(me, drawn) : nextTurn()), 1100);
   } else {
-    setStatus('상대가 틀렸습니다');
-    if (aiDrawn) knock(aiDrawn);
-    if (!hidden(rackAi).length) return finish(true);
-    setTimeout(startMyTurn, 1300);
+    setStatus(`${me.name}가 틀렸습니다`);
+    if (drawn) knock(drawn);
+    markOut();
+    if (alivePlayers().length <= 1) return finish(alivePlayers()[0]);
+    nextTurn();
   }
 }
 
-function endAiTurn() { setTimeout(startMyTurn, 400); }
-
-function finish(iWon) {
+function finish(winner) {
   over = true;
   clearPickable();
+  highlightTurn(null);
+  markOut();
   $('btn-end').disabled = true;
-  setStatus(iWon ? '이겼습니다!' : '졌습니다');
+  setStatus(!winner ? '게임 종료' : winner.isMe ? '이겼습니다!' : `${winner.name} 승리`);
 }
 
 // ---- 시작 ----
 function newGame() {
-  over = false; drawnEl = null;
-  rackMe.innerHTML = ''; rackAi.innerHTML = '';
+  over = false; drawnEl = null; turnIdx = 0;
+  players.forEach(p => {
+    p.rack.innerHTML = '';
+    p.rack.classList.remove('out', 'turn');
+    if (p.label) { p.label.classList.remove('out'); p.label.textContent = p.name; }
+  });
   $('btn-end').disabled = true;
 
   deck = [];
@@ -464,16 +694,9 @@ function newGame() {
   }
   deck.sort(() => Math.random() - .5);
 
-  for (let i = 0; i < START_TILES; i++) {
-    for (const [rack, faceUp] of [[rackMe, true], [rackAi, false]]) {
-      const t = deck.shift();
-      const el = makeTile(t.c, t.n, !faceUp);
-      insertSorted(rack, el);
-      stand(el);
-    }
-  }
+  // 미리 나눠주지 않는다. 26장을 전부 테이블에 쏟고 거기서 각자 골라간다.
   buildPile();
-  startMyTurn();
+  startSetup();
 }
 $('btn-new').onclick = newGame;
 newGame();
