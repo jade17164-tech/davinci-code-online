@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>다빈치 코드 - 3D 프로토타입</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+
+:root { --tw: 44px; --th: 62px; --td: 20px; }
+* { box-sizing: border-box; }
+
+body {
+  margin: 0; padding: 16px 14px 40px;
+  font-family: 'Nunito', sans-serif; color: #eee;
+  background: #15100b; min-height: 100vh;
+}
+h1 { font-size: 16px; text-align: center; color: #e8d9b8; margin: 0 0 12px; }
+
+.table {
+  max-width: 700px; margin: 0 auto; border-radius: 10px; padding: 14px 16px 20px;
+  background:
+    repeating-linear-gradient(94deg, rgba(0,0,0,.05) 0 2px, rgba(255,255,255,.025) 2px 5px, rgba(0,0,0,.03) 5px 9px),
+    linear-gradient(176deg, #d9b182, #c49a67 45%, #a87f4f);
+  box-shadow: 0 20px 44px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.35);
+}
+.label { font-size: 11.5px; color: rgba(60,38,18,.75); text-align: center; font-weight: 700; }
+
+/* 원근을 멀리 둔다. 가깝게 잡으면 옆면이 보이면서 가운데 맞춘 숫자가 쏠려 보인다 */
+.stage { perspective: 2600px; perspective-origin: 50% 0%; }
+.rack { display: flex; justify-content: center; align-items: flex-end; gap: 9px; min-height: 96px; transform-style: preserve-3d; }
+
+.tile { position: relative; width: var(--tw); height: var(--th); flex-shrink: 0; transform-style: preserve-3d; transition: transform .2s cubic-bezier(.34,1.25,.5,1); cursor: default; }
+
+/* 상자 전체를 두께의 절반만큼 뒤로 밀어, 앞면이 타일 자신의 평면(z=0)에 정확히 놓이게 한다.
+   앞면이 앞으로 튀어나와 있으면 perspective 원점이 화면 중앙이라
+   가장자리 타일일수록 앞면이 바깥으로 밀려 숫자가 한쪽으로 쏠려 보인다. */
+.box { position: absolute; inset: 0; transform-style: preserve-3d; transform: translateZ(calc(var(--td) / -2)); }
+.face { position: absolute; left: 50%; top: 50%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; }
+.f-front, .f-back { width: var(--tw); height: var(--th); margin: calc(var(--th)/-2) 0 0 calc(var(--tw)/-2); }
+.f-front { transform: translateZ(calc(var(--td)/2)); }
+.f-back  { transform: rotateY(180deg) translateZ(calc(var(--td)/2)); }
+.f-top, .f-bottom { width: var(--tw); height: var(--td); margin: calc(var(--td)/-2) 0 0 calc(var(--tw)/-2); }
+.f-top { transform: rotateX(90deg) translateZ(calc(var(--th)/2)); }
+/* 바닥면이 없으면 타일을 눕혔을 때 속이 뚫려 보여서 뚜껑 열린 상자처럼 된다 */
+.f-bottom { transform: rotateX(-90deg) translateZ(calc(var(--th)/2)); }
+.f-left, .f-right { width: var(--td); height: var(--th); margin: calc(var(--th)/-2) 0 0 calc(var(--td)/-2); }
+.f-left  { transform: rotateY(-90deg) translateZ(calc(var(--tw)/2)); }
+.f-right { transform: rotateY(90deg)  translateZ(calc(var(--tw)/2)); }
+
+.black .f-front, .black .f-back { background: linear-gradient(172deg, #35373d, #191a1e 60%, #0c0d10); }
+.black .f-top { background: linear-gradient(180deg, #55585f, #3a3c42); }
+.black .f-bottom { background: #0b0c0e; }
+.black .f-left, .black .f-right { background: linear-gradient(172deg, #212328, #0a0b0d); }
+.black .num { color: #f4f4f4; }
+.white .f-front, .white .f-back { background: linear-gradient(172deg, #fbf8ef, #e6dfcc 60%, #d2c8ae); }
+.white .f-top { background: linear-gradient(180deg, #fffdf7, #efe9d9); }
+.white .f-bottom { background: #b3a98e; }
+.white .f-left, .white .f-right { background: linear-gradient(172deg, #ddd5c0, #bdb398); }
+.white .num { color: #1b1b1b; }
+
+.num { font-size: 19px; font-weight: 800; letter-spacing: .5px; user-select: none; line-height: 1; padding-top: 2px; }
+.num::after { content: ''; display: block; width: 17px; height: 2px; background: currentColor; margin: 4px auto 0; opacity: .85; }
+.blank .num { display: none; }
+
+.tile::after {
+  content: ''; position: absolute; left: 50%; bottom: -3px; width: 125%; height: 14px;
+  transform: translateX(-50%) rotateX(90deg); transform-origin: center top;
+  background: radial-gradient(ellipse, rgba(50,28,8,.6), transparent 70%);
+  transition: opacity .2s, width .2s;
+}
+
+/* 지금 누를 수 있는 타일만 반응한다 */
+.tile.pickable { cursor: pointer; }
+.rack .tile.pickable:hover { transform: rotateX(11deg) translateY(-15px) translateZ(30px); }
+.rack .tile.pickable:hover::after { opacity: .3; width: 150%; }
+.pile .tile.pickable:hover { filter: brightness(1.25); }
+
+/* 방금 뽑은 내 타일 표시 */
+.tile.justdrawn .f-front { box-shadow: inset 0 0 0 2px #d9a441; }
+
+.pile { position: relative; height: 178px; margin: 4px 0; transform-style: preserve-3d; }
+/* 격자 중심에 찍은 좌표 위에 타일을 올리기 위해 자기 크기의 절반만큼 당긴다 */
+.pile .tile { position: absolute; margin-left: calc(var(--tw) / -2); margin-top: calc(var(--th) / -2); }
+
+/* 같은 색 타일끼리 맞닿으면 덩어리로 뭉개져 보여서, 면마다 반대 밝기의 테두리를 넣어 경계를 세운다 */
+.black .face { box-shadow: inset 0 0 0 1px rgba(255,255,255,.22); }
+.white .face { box-shadow: inset 0 0 0 1px rgba(92,70,40,.45); }
+
+/* 게임 시작: 가운데에 쌓인 타일을 테이블에 쏟아 널브러뜨린다 */
+/* opacity는 절대 넣지 말 것 — 애니메이션되는 opacity는 스태킹 컨텍스트를 만들어
+   preserve-3d를 깨뜨리고, 타일이 납작한 평면으로 눌려버린다. */
+@keyframes scatter {
+  0%   { transform: translate(var(--sx), var(--sy)) rotateX(74deg) rotateZ(0deg) scale(.5); }
+  72%  { transform: translate(calc(var(--sx) * .08), calc(var(--sy) * .08)) rotateX(74deg) rotateZ(calc(var(--rz) + 14deg)) scale(1.05); }
+  100% { transform: rotateX(74deg) rotateZ(var(--rz)); }
+}
+.tile.scattering { animation: scatter .6s cubic-bezier(.25,.9,.35,1.1) both; }
+
+@keyframes bring {
+  0%   { transform: translate(var(--fx), var(--fy)) rotateX(74deg) rotateZ(var(--fr)); }
+  55%  { transform: translate(calc(var(--fx)*.4), calc(var(--fy)*.45)) translateY(-60px) rotateX(20deg) rotateZ(calc(var(--fr)*.3)); }
+  100% { transform: rotateX(11deg); }
+}
+.tile.bringing { animation: bring .7s cubic-bezier(.3,.85,.35,1) both; }
+
+@keyframes knock {
+  0%   { transform: rotateX(11deg); }
+  30%  { transform: rotateX(-2deg); }
+  100% { transform: translateY(16px) rotateX(74deg) rotateZ(var(--kz)); }
+}
+.tile.knocked { animation: knock .6s cubic-bezier(.45,.05,.3,1.25) both; }
+
+/* 그림자는 "세워둔 타일" 기준으로 바닥에 눕도록 맞춰둔 것이라,
+   이미 눕혀진 타일(더미·쓰러진 타일)에서는 평면이 몸통을 뚫고 지나가 얼룩처럼 보인다.
+   눕은 타일은 테이블에 붙어 있어 그림자가 거의 안 보이는 게 맞으므로 그냥 끈다. */
+.pile .tile::after, .tile.knocked::after { display: none; }
+
+.status {
+  text-align: center; font-size: 14px; font-weight: 700; color: #3a2512;
+  background: rgba(255,255,255,.35); border-radius: 7px; padding: 9px 12px; margin: 10px 0 4px;
+  min-height: 38px; display: flex; align-items: center; justify-content: center;
+}
+.bar { display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+button {
+  font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 13px;
+  padding: 8px 14px; border-radius: 6px; cursor: pointer;
+  border: 1px solid #50351c; border-bottom: 3px solid #3a2512;
+  background: linear-gradient(180deg, #a87544, #74492a); color: #f3e2c0;
+}
+button:hover:not(:disabled) { filter: brightness(1.1); }
+button:active:not(:disabled) { transform: translateY(2px); border-bottom-width: 1px; }
+button:disabled { opacity: .4; cursor: not-allowed; }
+
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,.72); display: flex; align-items: center; justify-content: center; z-index: 10; }
+.modal.hidden { display: none; }
+.modal-box { background: #241607; border: 2px solid #8a5a2e; border-radius: 12px; padding: 18px; max-width: 330px; text-align: center; }
+.modal-box h3 { margin: 0 0 4px; font-size: 15px; color: #f0d78c; }
+.modal-box p { margin: 0 0 12px; font-size: 12.5px; color: #c3b299; }
+.pad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.pad button { padding: 9px 0; font-size: 14px; }
+
+.note { max-width: 700px; margin: 16px auto 0; font-size: 12.5px; line-height: 1.7; color: #9a8f7f; }
+.note b { color: #e8d9b8; }
+</style>
+</head>
+<body>
+
+<h1>다빈치 코드 — 3D 프로토타입 (1 : 1)</h1>
+
+<div class="table">
+  <div class="stage">
+    <div class="label">상대</div>
+    <div class="rack" id="rack-ai"></div>
+
+    <div class="label" style="margin-top:8px;">타일 더미</div>
+    <div class="pile" id="pile"></div>
+
+    <div class="label">내 타일</div>
+    <div class="rack" id="rack-me"></div>
+  </div>
+
+  <div class="status" id="status">게임을 시작합니다</div>
+  <div class="bar">
+    <button id="btn-end" disabled>턴 넘기기</button>
+    <button id="btn-new">새 게임</button>
+  </div>
+</div>
+
+<div class="modal hidden" id="guess-modal">
+  <div class="modal-box">
+    <h3>숫자 맞히기</h3>
+    <p id="guess-sub"></p>
+    <div class="pad" id="pad"></div>
+    <button style="margin-top:10px; width:100%;" onclick="closeGuess()">취소</button>
+  </div>
+</div>
+
+<p class="note">
+  <b>실제 규칙으로 끝까지 플레이됩니다.</b> 더미에서 타일을 집고 → 상대 타일을 눌러 숫자를 추리하세요.
+  맞히면 상대 타일이 쓰러지고 한 번 더 추리할 수 있습니다. 틀리면 방금 뽑은 내 타일이 공개되고 턴이 넘어갑니다.
+  한쪽 타일이 모두 공개되면 끝납니다.
+  <br><br>
+  <b>원본 게임과 다른 점</b> — 타일이 <b>자동으로 오름차순 자리에 꽂힙니다</b> (원본은 [+] 버튼으로 직접 배치).
+  일반 숫자는 들어갈 자리가 어차피 하나뿐이라 결과는 같고, 조커만 맨 뒤로 갑니다.
+  3D 연출만 확인하는 게 목적이라 배치 UI는 원본 것을 그대로 둘 생각입니다.
+</p>
+
+<script>
+const START_TILES = 4;
+const rnd = (a, b) => a + Math.random() * (b - a);
+
+let deck = [], drawnEl = null, myTurn = true, busy = false, over = false;
+
+const $ = id => document.getElementById(id);
+const rackMe = $('rack-me'), rackAi = $('rack-ai'), pile = $('pile');
+
+function makeTile(color, num, blank) {
+  const el = document.createElement('div');
+  el.className = 'tile ' + color + (blank ? ' blank' : '');
+  el.dataset.num = num;
+  el.dataset.color = color;
+  el.innerHTML = '<div class="box">' +
+    `<div class="face f-front"><span class="num">${num === -1 ? '–' : num}</span></div>` +
+    `<div class="face f-back"></div><div class="face f-top"></div><div class="face f-bottom"></div>` +
+    `<div class="face f-left"></div><div class="face f-right"></div>` +
+    '</div>';
+  return el;
+}
+
+function stand(el) { el.style.transform = 'rotateX(11deg)'; }
+
+// 오름차순, 같은 숫자면 검은색이 왼쪽. 조커는 자리가 정해지지 않아 맨 뒤로 보낸다.
+function insertSorted(rack, el) {
+  const num = Number(el.dataset.num), color = el.dataset.color;
+  if (num === -1) return rack.appendChild(el);
+  const before = [...rack.children].find(t => {
+    const n = Number(t.dataset.num);
+    if (n === -1) return true; // 조커는 항상 맨 뒤에 모아두므로 그 앞에 꽂는다
+    if (n !== num) return n > num;
+    return color === 'black' && t.dataset.color === 'white';
+  });
+  rack.insertBefore(el, before || null);
+}
+
+const hidden = rack => [...rack.children].filter(t => !t.classList.contains('knocked'));
+
+function setStatus(msg) { $('status').textContent = msg; }
+
+function setPickable(rack, on, handler) {
+  [...rack.children].forEach(t => {
+    const ok = on && !t.classList.contains('knocked');
+    t.classList.toggle('pickable', ok);
+    t.onclick = ok ? () => handler(t) : null;
+  });
+}
+
+function clearPickable() {
+  [...pile.children, ...rackAi.children, ...rackMe.children].forEach(t => {
+    t.classList.remove('pickable'); t.onclick = null;
+  });
+}
+
+// ---- 더미 ----
+// 자리는 무작위로 잡되, 이미 놓인 타일과 너무 가까우면 다시 뽑는다.
+// 그냥 난수로 뿌리면 타일이 포개져서 몇 장인지 안 보이고,
+// 격자로 깔면 사람이 쏟아놓은 게 아니라 진열한 것처럼 보인다. 그 사이를 노린다.
+const SPREAD_X = 268, SPREAD_Y = 58, MIN_GAP = 46;
+function scatterSpots(n) {
+  const spots = [];
+  for (let i = 0; i < n; i++) {
+    let best = null, bestScore = -1;
+    for (let tryN = 0; tryN < 60; tryN++) {
+      const p = { x: rnd(-SPREAD_X, SPREAD_X), y: rnd(-SPREAD_Y, SPREAD_Y) };
+      // 세로는 눕혀서 납작해 보이므로 같은 거리라도 더 답답하다. 가중치를 준다.
+      const score = spots.length
+        ? Math.min(...spots.map(s => Math.hypot(s.x - p.x, (s.y - p.y) * 1.5)))
+        : Infinity;
+      if (score > bestScore) { best = p; bestScore = score; }
+      if (score >= MIN_GAP) break;
+    }
+    spots.push(best);
+  }
+  return spots;
+}
+
+function buildPile() {
+  pile.innerHTML = '';
+  const spots = scatterSpots(deck.length);
+  deck.forEach((t, i) => {
+    const el = makeTile(t.c, t.n, true);
+    const { x, y } = spots[i];
+    const r = rnd(-85, 85);
+    el.style.left = `calc(50% + ${x.toFixed(1)}px)`;
+    el.style.top = `calc(50% + ${y.toFixed(1)}px)`;
+    el.style.setProperty('--rz', r.toFixed(1) + 'deg');
+    el.style.transform = `rotateX(74deg) rotateZ(${r.toFixed(1)}deg)`;
+    el.dataset.fr = r;
+
+    // 가운데에서 쏟아져 제자리로 흩어지는 모션
+    el.style.setProperty('--sx', (-x).toFixed(1) + 'px');
+    el.style.setProperty('--sy', (-y).toFixed(1) + 'px');
+    el.style.animationDelay = (i * 28) + 'ms';
+    el.classList.add('scattering');
+    // 끝난 애니메이션을 계속 붙여두면 합성 레이어가 남아 3D가 틀어질 수 있어 떼어낸다
+    el.addEventListener('animationend', () => el.classList.remove('scattering'), { once: true });
+    pile.appendChild(el);
+  });
+}
+
+function takeFromPile(el, rack, faceUp) {
+  const from = el.getBoundingClientRect();
+  const fr = el.dataset.fr;
+  const moved = makeTile(el.dataset.color, Number(el.dataset.num), !faceUp);
+  el.remove();
+  deck = deck.filter(t => !(t.c === moved.dataset.color && String(t.n) === moved.dataset.num));
+
+  insertSorted(rack, moved);
+  const to = moved.getBoundingClientRect();
+  stand(moved);
+  moved.style.setProperty('--fx', (from.left - to.left) + 'px');
+  moved.style.setProperty('--fy', (from.top - to.top) + 'px');
+  moved.style.setProperty('--fr', fr + 'deg');
+  moved.classList.add('bringing');
+  return moved;
+}
+
+function knock(el) {
+  el.classList.remove('blank');
+  el.style.setProperty('--kz', rnd(-6, 6).toFixed(1) + 'deg');
+  el.classList.add('knocked');
+  el.onclick = null;
+  el.classList.remove('pickable');
+}
+
+// ---- 내 턴 ----
+function startMyTurn() {
+  if (over) return;
+  myTurn = true; drawnEl = null;
+  $('btn-end').disabled = true;
+  if (!deck.length) return setStatus('더미가 비었습니다');
+  setStatus('더미에서 타일을 집으세요');
+  [...pile.children].forEach(t => {
+    t.classList.add('pickable');
+    t.onclick = () => {
+      clearPickable();
+      drawnEl = takeFromPile(t, rackMe, true);
+      drawnEl.classList.add('justdrawn');
+      setTimeout(askGuessTarget, 700);
+    };
+  });
+}
+
+function askGuessTarget() {
+  if (over) return;
+  setStatus('상대 타일을 눌러 숫자를 추리하세요');
+  setPickable(rackAi, true, openGuess);
+}
+
+let guessTarget = null;
+function openGuess(t) {
+  guessTarget = t;
+  $('guess-sub').textContent = (t.dataset.color === 'black' ? '검은색' : '흰색') + ' 타일의 숫자는?';
+  const pad = $('pad');
+  pad.innerHTML = '';
+  for (let n = 0; n <= 11; n++) {
+    const b = document.createElement('button');
+    b.textContent = n;
+    b.onclick = () => submitGuess(n);
+    pad.appendChild(b);
+  }
+  const j = document.createElement('button');
+  j.textContent = '조커';
+  j.style.gridColumn = 'span 4';
+  j.onclick = () => submitGuess(-1);
+  pad.appendChild(j);
+  $('guess-modal').classList.remove('hidden');
+}
+function closeGuess() { $('guess-modal').classList.add('hidden'); }
+
+function submitGuess(n) {
+  closeGuess();
+  const correct = Number(guessTarget.dataset.num) === n;
+  clearPickable();
+
+  if (correct) {
+    knock(guessTarget);
+    if (!hidden(rackAi).length) return finish(true);
+    setStatus('적중! 한 번 더 추리하거나 턴을 넘기세요');
+    $('btn-end').disabled = false;
+    setPickable(rackAi, true, openGuess);
+  } else {
+    setStatus(`틀렸습니다 (정답 ${guessTarget.dataset.num === '-1' ? '조커' : guessTarget.dataset.num}). 내 타일이 공개됩니다`);
+    if (drawnEl) knock(drawnEl);
+    if (!hidden(rackMe).length) return finish(false);
+    setTimeout(aiTurn, 1300);
+  }
+}
+
+$('btn-end').onclick = () => {
+  if (drawnEl) drawnEl.classList.remove('justdrawn');
+  clearPickable();
+  $('btn-end').disabled = true;
+  setTimeout(aiTurn, 500);
+};
+
+// ---- 상대 턴 (단순 AI: 아직 안 나온 숫자 중 하나를 찍는다) ----
+function aiTurn() {
+  if (over) return;
+  myTurn = false;
+  setStatus('상대 차례...');
+
+  let aiDrawn = null;
+  if (pile.children.length) {
+    const pick = pile.children[Math.floor(Math.random() * pile.children.length)];
+    aiDrawn = takeFromPile(pick, rackAi, false);
+  }
+
+  setTimeout(() => {
+    const targets = hidden(rackMe);
+    if (!targets.length) return finish(true);
+    const t = targets[Math.floor(Math.random() * targets.length)];
+
+    // 이미 공개된 숫자와 자기 손패를 빼고 남은 후보 중에서 찍는다
+    const seen = new Set([...rackMe.children, ...rackAi.children]
+      .filter(x => x.classList.contains('knocked') || x.parentElement === rackAi)
+      .map(x => x.dataset.color + x.dataset.num));
+    const cand = [];
+    for (let n = -1; n <= 11; n++) if (!seen.has(t.dataset.color + n)) cand.push(n);
+    const guess = cand.length ? cand[Math.floor(Math.random() * cand.length)] : 0;
+
+    if (Number(t.dataset.num) === guess) {
+      knock(t);
+      setStatus('상대가 내 타일을 맞혔습니다');
+      if (!hidden(rackMe).length) return finish(false);
+      setTimeout(() => (Math.random() < .5 ? aiTurn2(aiDrawn) : endAiTurn(aiDrawn)), 1200);
+    } else {
+      setStatus('상대가 틀렸습니다');
+      if (aiDrawn) knock(aiDrawn);
+      if (!hidden(rackAi).length) return finish(true);
+      setTimeout(startMyTurn, 1300);
+    }
+  }, 1000);
+}
+
+// 맞힌 뒤 한 번 더 추리하는 경우 (타일은 이미 뽑았으므로 추리만 반복)
+function aiTurn2(aiDrawn) {
+  const targets = hidden(rackMe);
+  if (!targets.length) return finish(false);
+  const t = targets[Math.floor(Math.random() * targets.length)];
+  const guess = Math.floor(rnd(0, 12));
+  if (Number(t.dataset.num) === guess) {
+    knock(t);
+    setStatus('상대가 또 맞혔습니다');
+    if (!hidden(rackMe).length) return finish(false);
+    setTimeout(() => endAiTurn(aiDrawn), 1200);
+  } else {
+    setStatus('상대가 틀렸습니다');
+    if (aiDrawn) knock(aiDrawn);
+    if (!hidden(rackAi).length) return finish(true);
+    setTimeout(startMyTurn, 1300);
+  }
+}
+
+function endAiTurn() { setTimeout(startMyTurn, 400); }
+
+function finish(iWon) {
+  over = true;
+  clearPickable();
+  $('btn-end').disabled = true;
+  setStatus(iWon ? '이겼습니다!' : '졌습니다');
+}
+
+// ---- 시작 ----
+function newGame() {
+  over = false; drawnEl = null;
+  rackMe.innerHTML = ''; rackAi.innerHTML = '';
+  $('btn-end').disabled = true;
+
+  deck = [];
+  for (const c of ['black', 'white']) {
+    for (let n = 0; n <= 11; n++) deck.push({ c, n });
+    deck.push({ c, n: -1 });
+  }
+  deck.sort(() => Math.random() - .5);
+
+  for (let i = 0; i < START_TILES; i++) {
+    for (const [rack, faceUp] of [[rackMe, true], [rackAi, false]]) {
+      const t = deck.shift();
+      const el = makeTile(t.c, t.n, !faceUp);
+      insertSorted(rack, el);
+      stand(el);
+    }
+  }
+  buildPile();
+  startMyTurn();
+}
+$('btn-new').onclick = newGame;
+newGame();
+</script>
+
+</body>
+</html>
