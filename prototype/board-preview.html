@@ -90,7 +90,7 @@ button.on{background:linear-gradient(180deg,#e0b65f,#b8862f);color:#2b1810;borde
  */
 window.Board3D = (() => {
   const V3 = THREE.Vector3;
-  const TW = 1, TH = 1.4, TD = 0.28;        // 타일 크기
+  const TW = 1.12, TH = 1.58, TD = 0.3;     // 타일 크기
 
   let canvas, appEl, labelsEl, renderer, scene, camera, world, tileGroup, tileGeo, clock;
   let S = null, pickCb = null, zoom = 1, hover = null, pickables = [], raf = 0;
@@ -113,11 +113,11 @@ window.Board3D = (() => {
   function faceMat(kind, color, num) {
     const key = kind + color + (kind === 'cover' ? '' : num);
     if (matCache.has(key)) return matCache.get(key);
-    const W = 160, H = 224, c = document.createElement('canvas'); c.width = W; c.height = H;
+    const W = 220, H = 310, c = document.createElement('canvas'); c.width = W; c.height = H;
     const g = c.getContext('2d'), blk = color === 'black';
     const bg = blk ? '#17171a' : '#f2ede0', fg = blk ? '#f4efe0' : '#1a1a1e';
     g.fillStyle = bg; g.fillRect(0, 0, W, H);
-    g.strokeStyle = blk ? '#4a4a52' : '#b8ae92'; g.lineWidth = 6; rr(g, 8, 8, W - 16, H - 16, 14); g.stroke();
+    g.strokeStyle = blk ? '#4a4a52' : '#b8ae92'; g.lineWidth = 6; rr(g, 7, 7, W - 14, H - 14, 16); g.stroke();
     if (kind === 'cover' || kind === 'peek') {
       // 가려진 타일은 실물처럼 민무늬다. 색만 보이고 숫자는 보이지 않는다.
       if (kind === 'peek') {   // 팀전 아군 타일만 작게 숫자를 띄운다
@@ -129,15 +129,16 @@ window.Board3D = (() => {
     } else {
       g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle';
       const label = num === -1 ? '-' : String(num);
-      g.font = '800 ' + (label.length > 1 ? 104 : 130) + 'px Georgia, "Times New Roman", serif';
-      g.fillText(label, W / 2, H / 2 + 6);
+      // 멀리서도 한눈에 읽히도록 글자를 면 높이의 70% 가까이 키운다
+      g.font = '800 ' + (label.length > 1 ? 196 : 240) + 'px Georgia, "Times New Roman", serif';
+      g.fillText(label, W / 2, H / 2 + 10);
       if (kind === 'rev') {
         g.fillStyle = '#c0392b'; g.beginPath();
-        g.moveTo(W - 56, 8); g.lineTo(W - 8, 8); g.lineTo(W - 8, 56); g.closePath(); g.fill();
+        g.moveTo(W - 68, 7); g.lineTo(W - 7, 7); g.lineTo(W - 7, 68); g.closePath(); g.fill();
         g.fillStyle = 'rgba(192,57,43,.10)'; g.fillRect(0, 0, W, H);
       }
     }
-    const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding; tex.anisotropy = 4;
+    const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding; tex.anisotropy = 8;
     const m = new THREE.MeshStandardMaterial({ map: tex, roughness: .55, metalness: 0 });
     matCache.set(key, m); return m;
   }
@@ -244,9 +245,9 @@ window.Board3D = (() => {
   const isDead = p => (p.hand || []).length > 0 && (p.hand || []).every(t => t.revealed);
   function rowScale(pi, len, n) {
     const st = seats[pi];
-    if (pi === 0) return Math.min(1.0, 10.8 / (Math.max(len, 1) * 1.1));
+    if (pi === 0) return Math.min(1.1, 10.8 / (Math.max(len, 1) * TW * 1.1));
     const chord = n === 2 ? 10 : 2 * st.Rs * Math.sin(Math.PI / n) * 0.8;
-    return Math.min(n === 2 ? 0.82 : 0.66, chord / (Math.max(len, 1) * 1.1));
+    return Math.min(n === 2 ? 0.9 : 0.74, chord / (Math.max(len, 1) * TW * 1.1));
   }
   const deckSpawn = color => new V3(color === 'black' ? -1.25 : 1.25, 0.6, 0);
   function getMesh(t, spawnAt) {
@@ -269,7 +270,7 @@ window.Board3D = (() => {
 
     s.players.forEach((p, pi) => {
       const st = seats[pi], hand = p.hand || [], len = hand.length;
-      const sc = rowScale(pi, len, s.n), sp = 1.1 * sc;
+      const sc = rowScale(pi, len, s.n), sp = TW * 1.1 * sc;
       const stand = pi === 0 ? -0.42 : 0.42;
       const rack = racks[pi]; rack.scale.x = Math.max(2.4, len * sp + 0.9);
 
@@ -310,7 +311,7 @@ window.Board3D = (() => {
     slotSprites.forEach(sp => scene.remove(sp)); slotSprites = [];
     const me = s.players[0];
     if (me && me.pending && (s.slots || []).length) {
-      const st = seats[0], len = (me.hand || []).length, sc = rowScale(0, len, s.n), sp = 1.1 * sc;
+      const st = seats[0], len = (me.hand || []).length, sc = rowScale(0, len, s.n), sp = TW * 1.1 * sc;
       s.slots.forEach(idx => {
         const spr = new THREE.Sprite(plusMat()); spr.scale.set(0.75, 0.75, 1);
         const x = (idx - len / 2) * sp;
