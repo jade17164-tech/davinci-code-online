@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>다빈치 코드 3D 프로토타입 (2~6인)</title>
+<style>
+  :root {
+    --bg: #120d0a; --panel: rgba(24, 17, 12, .88); --line: rgba(255, 220, 150, .22);
+    --gold: #f1c40f; --text: #f4ead6; --muted: #b9a98d; --ok: #2ecc71; --bad: #e74c3c; --blue: #4aa3ff;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
+    font-family: -apple-system, "Segoe UI", "Noto Sans KR", "Malgun Gothic", sans-serif; }
+  #stage { position: fixed; inset: 0; }
+  #stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  .hidden { display: none !important; }
+
+  /* 상단: 플레이어 목록 */
+  #players { position: fixed; top: 8px; left: 8px; display: flex; flex-direction: column; gap: 4px; max-width: 46vw; z-index: 5; }
+  .chip { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 5px 9px; font-size: 12px;
+    display: flex; align-items: center; gap: 6px; backdrop-filter: blur(4px); }
+  .chip .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .chip.turn { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 0 12px rgba(241, 196, 15, .35); }
+  .chip.dead { opacity: .45; text-decoration: line-through; }
+  .chip .cnt { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .chip .team { font-weight: 700; }
+
+  /* 로그 */
+  #log { position: fixed; top: 8px; right: 8px; width: min(300px, 44vw); max-height: 34vh; overflow: hidden; z-index: 5;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 7px 9px; font-size: 11.5px;
+    line-height: 1.5; color: var(--muted); backdrop-filter: blur(4px); }
+  #log div { padding: 1px 0; }
+  #log div:last-child { color: var(--text); }
+  #log b { color: var(--gold); }
+
+  /* 하단 */
+  #bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; flex-direction: column; align-items: center;
+    gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); pointer-events: none; }
+  #status { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; font-size: 13.5px;
+    font-weight: 600; max-width: 94vw; text-align: center; backdrop-filter: blur(4px); pointer-events: auto; }
+  #actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; pointer-events: auto; }
+  button { font: inherit; cursor: pointer; border: 1px solid var(--line); color: var(--text); background: #2b1f16; border-radius: 10px; padding: 9px 14px; font-weight: 700; }
+  button:hover:not(:disabled) { filter: brightness(1.25); }
+  button:disabled { opacity: .35; cursor: not-allowed; }
+  button.primary { background: linear-gradient(180deg, #f1c40f, #c9a008); color: #1d1405; border-color: #f1c40f; }
+  button.draw-b { background: #111; color: #fff; border-color: #888; }
+  button.draw-w { background: #f3efe4; color: #111; border-color: #fff; }
+
+  /* 모달 */
+  .overlay { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, .62); padding: 14px; }
+  .card { background: #1e1610; border: 1px solid var(--line); border-radius: 16px; padding: 20px; width: min(430px, 100%); max-height: 94vh; overflow: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, .6); }
+  .card h1 { margin: 0 0 4px; font-size: 20px; }
+  .card h2 { margin: 0 0 4px; font-size: 17px; }
+  .card p.sub { margin: 0 0 14px; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+  .row { margin: 12px 0; }
+  .row > label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seg button { flex: 1 1 0; min-width: 44px; padding: 9px 4px; }
+  .seg button.on { background: var(--gold); color: #1d1405; border-color: var(--gold); }
+  @media (max-width: 640px) {
+    #log { width: 54vw; font-size: 10.5px; max-height: none; top: 8px; }
+    #log div:not(:nth-last-child(-n+3)) { display: none; }
+    #hint { display: none; }
+    #players { max-width: 38vw; }
+  }
+  .check { display: flex; gap: 8px; align-items: center; font-size: 13px; cursor: pointer; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin: 12px 0; }
+  .grid button { padding: 13px 0; font-size: 18px; }
+  .grid button.imp { opacity: .3; }
+  .grid button.joker { grid-column: span 4; font-size: 14px; }
+  #toast { position: fixed; top: 18%; left: 50%; transform: translateX(-50%); z-index: 30; background: rgba(120, 25, 20, .95); color: #fff;
+    padding: 10px 18px; border-radius: 12px; font-size: 13.5px; font-weight: 600; max-width: 90vw; text-align: center; pointer-events: none;
+    opacity: 0; transition: opacity .2s; }
+  #toast.show { opacity: 1; }
+  #toast.good { background: rgba(20, 100, 55, .95); }
+  #hint { position: fixed; left: 50%; top: 10px; transform: translateX(-50%); z-index: 4; font-size: 11px; color: var(--muted); pointer-events: none; white-space: nowrap; }
+  #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 50; background: var(--bg); color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="loading">3D 엔진 불러오는 중…</div>
+
+<div id="players"></div>
+<div id="log"></div>
+<div id="hint">드래그: 시점 회전 · 휠/핀치: 확대 · 상대 타일 클릭: 추리</div>
+
+<div id="bottom">
+  <div id="status">-</div>
+  <div id="actions">
+    <button id="btn-draw-b" class="draw-b">검은 타일 뽑기 (<span id="cnt-b">0</span>)</button>
+    <button id="btn-draw-w" class="draw-w">흰 타일 뽑기 (<span id="cnt-w">0</span>)</button>
+    <button id="btn-pass">턴 넘기기</button>
+    <button id="btn-menu">설정 / 새 게임</button>
+  </div>
+</div>
+
+<!-- 설정 -->
+<div id="setup" class="overlay">
+  <div class="card">
+    <h1>다빈치 코드 3D</h1>
+    <p class="sub">프로토타입 · 2~6인 개인전 / 4인 팀전 · 나(1번 자리)를 제외한 나머지는 AI가 플레이합니다. 실제 사이트 적용 전 확인용 샘플입니다.</p>
+    <div class="row"><label>인원 수</label>
+      <div class="seg" id="seg-n"></div></div>
+    <div class="row"><label>게임 모드</label>
+      <div class="seg" id="seg-mode">
+        <button data-v="ffa" class="on">개인전</button>
+        <button data-v="team">2:2 팀전 (4인)</button>
+      </div></div>
+    <div class="row"><label>시작 타일 수</label>
+      <div class="seg" id="seg-start"></div></div>
+    <div class="row"><label class="check"><input type="checkbox" id="chk-demo"> 데모 모드 (내 차례도 AI가 자동 진행)</label></div>
+    <button class="primary" id="btn-start" style="width:100%;padding:13px;font-size:15px;">게임 시작</button>
+  </div>
+</div>
+
+<!-- 추리 -->
+<div id="guess" class="overlay hidden">
+  <div class="card">
+    <h2 id="guess-title">추리</h2>
+    <p class="sub" id="guess-sub"></p>
+    <div class="grid" id="guess-grid"></div>
+    <button id="guess-cancel" style="width:100%">취소</button>
+  </div>
+</div>
+
+<!-- 종료 -->
+<div id="over" class="overlay hidden">
+  <div class="card" style="text-align:center">
+    <h2 id="over-title" style="font-size:22px"></h2>
+    <p class="sub" id="over-sub"></p>
+    <button class="primary" id="btn-again" style="width:100%;padding:12px">다시 하기</button>
+    <button id="btn-view" style="width:100%;margin-top:8px">테이블 둘러보기</button>
+  </div>
+</div>
+<div id="toast"></div>
+
+<!-- ============================================================
+     게임 엔진 (렌더링과 완전히 분리된 순수 로직 · 시뮬레이션 테스트 대상)
+     ============================================================ -->
+<script id="engine">
+const DVC = (function () {
+  'use strict';
+
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function shuffle(arr, rng) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
+    return arr;
+  }
+  const label = n => (n === -1 ? '-' : String(n));
+  const isDead = p => p.hand.length > 0 && p.hand.every(t => t.revealed);
+
+  // 숫자(조커 제외)는 왼쪽이 작고, 같은 숫자면 검은색이 왼쪽. 조커는 어디든 가능.
+  function validInsert(hand, tile, idx) {
+    const t = hand.slice();
+    t.splice(idx, 0, tile);
+    const nj = t.filter(x => x.num !== -1);
+    for (let i = 0; i < nj.length - 1; i++) {
+      const a = nj[i], b = nj[i + 1];
+      if (a.num > b.num) return false;
+      if (a.num === b.num && a.color === 'white' && b.color === 'black') return false;
+    }
+    return true;
+  }
+  function validPositions(hand, tile) {
+    const r = [];
+    for (let i = 0; i <= hand.length; i++) if (validInsert(hand, tile, i)) r.push(i);
+    return r;
+  }
+
+  function create(n, opts) {
+    opts = opts || {};
+    if (!(n >= 2 && n <= 6)) throw new Error('인원은 2~6명이어야 합니다');
+    const rng = opts.rng || Math.random;
+    const mode = (opts.mode === 'team' && n === 4) ? 'team' : 'ffa';
+    const black = [], white = [];
+    for (let i = 0; i <= 11; i++) {
+      black.push({ id: 'b' + i, color: 'black', num: i, revealed: false });
+      white.push({ id: 'w' + i, color: 'white', num: i, revealed: false });
+    }
+    black.push({ id: 'bJ', color: 'black', num: -1, revealed: false });
+    white.push({ id: 'wJ', color: 'white', num: -1, revealed: false });
+    shuffle(black, rng); shuffle(white, rng);
+
+    let start = (opts.tileSetting && opts.tileSetting !== 'auto') ? Number(opts.tileSetting) : (n >= 5 ? 3 : 4);
+    start = Math.max(1, Math.min(start, Math.floor(26 / n))); // 타일이 모자라지 않도록
+
+    const humans = opts.humans || [0];
+    const players = [];
+    for (let k = 0; k < n; k++) {
+      const pool = [];
+      for (let i = 0; i < start; i++) {
+        const pick = (black.length > 0 && rng() < 0.5) ? black : (white.length > 0 ? white : black);
+        pool.push(pick.pop());
+      }
+      const first = pool.shift();
+      players.push({
+        id: k,
+        name: (opts.names && opts.names[k]) || (k === 0 ? '나' : 'AI ' + k),
+        team: mode === 'team' ? (k % 2 === 0 ? 'A' : 'B') : null,
+        bot: humans.indexOf(k) < 0,
+        hand: [first], pool: pool,
+        stats: { correct: 0, wrong: 0, streak: 0, best: 0 }
+      });
+    }
+    const s = {
+      n: n, mode: mode, start: start, players: players, black: black, white: white,
+      turn: 0, turnCount: 1, phase: 'initial', drawn: null, drawnId: null, guessedOk: false,
+      winners: null, log: [], seq: 0
+    };
+    addLog(s, '게임 시작! 각자 처음 받은 타일을 원하는 위치에 배치하세요.');
+    if (players.every(p => p.pool.length === 0)) beginTurn(s);
+    return s;
+  }
+
+  function addLog(s, msg) { s.seq++; s.log.push(msg); if (s.log.length > 200) s.log.shift(); }
+
+  function beginTurn(s) {
+    let guard = 0;
+    while (isDead(s.players[s.turn]) && guard++ < s.n) s.turn = (s.turn + 1) % s.n;
+    s.drawn = null; s.drawnId = null; s.guessedOk = false;
+    s.phase = (s.black.length + s.white.length === 0) ? 'guess' : 'draw';
+  }
+  function advance(s) {
+    s.turn = (s.turn + 1) % s.n;
+    s.turnCount++;
+    beginTurn(s);
+  }
+
+  function checkWinner(s) {
+    const alive = s.players.filter(p => !isDead(p));
+    if (s.mode === 'team') {
+      const a = alive.some(p => p.team === 'A'), b = alive.some(p => p.team === 'B');
+      if (a && !b) return finish(s, s.players.filter(p => p.team === 'A').map(p => p.id), '팀 A');
+      if (!a && b) return finish(s, s.players.filter(p => p.team === 'B').map(p => p.id), '팀 B');
+    } else if (alive.length === 1) {
+      return finish(s, [alive[0].id], alive[0].name);
+    }
+    return false;
+  }
+  function finish(s, ids, name) {
+    s.phase = 'over'; s.winners = ids; s.winnerName = name;
+    addLog(s, '게임 종료! 승리: ' + name);
+    return true;
+  }
+
+  const err = m => ({ ok: false, err: m });
+
+  function placeInitial(s, pid, idx) {
+    if (s.phase !== 'initial') return err('지금은 초기 배치 단계가 아닙니다');
+    const p = s.players[pid];
+    if (!p || p.pool.length === 0) return err('배치할 타일이 없습니다');
+    const tile = p.pool[0];
+    if (!validInsert(p.hand, tile, idx)) return err('배치 오류! 숫자는 왼쪽이 작고 오른쪽이 커야 하며, 같은 숫자는 검은색이 왼쪽입니다.');
+    p.hand.splice(idx, 0, tile);
+    p.pool.shift();
+    if (s.players.every(q => q.pool.length === 0)) {
+      addLog(s, '모든 플레이어가 배치를 마쳤습니다. ' + s.players[0].name + ' 님부터 시작!');
+      beginTurn(s);
+    }
+    return { ok: true };
+  }
+
+  function draw(s, pid, color) {
+    if (s.phase !== 'draw') return err('지금은 타일을 뽑을 수 없습니다');
+    if (pid !== s.turn) return err('내 차례가 아닙니다');
+    const deck = color === 'black' ? s.black : s.white;
+    if (deck.length === 0) return err((color === 'black' ? '검은색' : '흰색') + ' 덱에 남은 타일이 없습니다');
+    s.drawn = deck.pop();
+    s.drawnId = s.drawn.id;
+    s.phase = 'place';
+    addLog(s, s.players[pid].name + ' 님이 ' + (color === 'black' ? '검은색' : '흰색') + ' 타일을 뽑았습니다.');
+    return { ok: true, tile: s.drawn };
+  }
+
+  function place(s, pid, idx) {
+    if (s.phase !== 'place') return err('지금은 타일을 배치할 수 없습니다');
+    if (pid !== s.turn) return err('내 차례가 아닙니다');
+    const p = s.players[pid];
+    if (!validInsert(p.hand, s.drawn, idx)) return err('배치 오류! 숫자는 왼쪽이 작고 오른쪽이 커야 하며, 같은 숫자는 검은색이 왼쪽입니다.');
+    p.hand.splice(idx, 0, s.drawn);
+    s.drawn = null;
+    s.phase = 'guess';
+    return { ok: true };
+  }
+
+  function guess(s, pid, targetId, idx, num) {
+    if (s.phase !== 'guess') return err('지금은 추리할 수 없습니다');
+    if (pid !== s.turn) return err('내 차례가 아닙니다');
+    const me = s.players[pid], tg = s.players[targetId];
+    if (!tg || targetId === pid) return err('상대 플레이어를 선택하세요');
+    if (s.mode === 'team' && tg.team === me.team) return err('같은 팀 타일은 추리할 수 없습니다');
+    if (isDead(tg)) return err('이미 탈락한 플레이어입니다');
+    const tile = tg.hand[idx];
+    if (!tile || tile.revealed) return err('이미 공개된 타일입니다');
+    if (!Number.isInteger(num) || num < -1 || num > 11) return err('0~11 또는 조커(-)만 입력할 수 있습니다');
+
+    const shown = label(num);
+    if (num === tile.num) {
+      tile.revealed = true;
+      s.guessedOk = true;
+      me.stats.correct++; me.stats.streak++; me.stats.best = Math.max(me.stats.best, me.stats.streak);
+      addLog(s, me.name + ' → ' + tg.name + '의 ' + (idx + 1) + '번째 [' + shown + '] : 정답!');
+      checkWinner(s);
+      return { ok: true, correct: true, tile: tile };
+    }
+    // 오답: 방금 뽑은 타일(없으면 가장 오른쪽 비공개 타일)을 공개하고 턴 종료
+    let rev = s.drawnId ? me.hand.find(t => t.id === s.drawnId) : null;
+    if (!rev || rev.revealed) {
+      rev = null;
+      for (let i = me.hand.length - 1; i >= 0; i--) if (!me.hand[i].revealed) { rev = me.hand[i]; break; }
+    }
+    if (rev) rev.revealed = true;
+    me.stats.wrong++; me.stats.streak = 0;
+    addLog(s, me.name + ' → ' + tg.name + '의 ' + (idx + 1) + '번째 [' + shown + '] : 오답! 내 타일 공개, 턴 종료');
+    if (!checkWinner(s)) advance(s);
+    return { ok: true, correct: false, revealed: rev };
+  }
+
+  function pass(s, pid) {
+    if (s.phase !== 'guess') return err('지금은 턴을 넘길 수 없습니다');
+    if (pid !== s.turn) return err('내 차례가 아닙니다');
+    if (!s.guessedOk) return err('최소 1번은 상대 타일을 맞혀야 턴을 넘길 수 있습니다');
+    addLog(s, s.players[pid].name + ' 님이 턴을 종료했습니다.');
+    advance(s);
+    return { ok: true };
+  }
+
+  /* ---------- 추리 보조 / AI ---------- */
+  function visibleSet(s, viewer) {
+    const set = new Set();
+    const me = s.players[viewer];
+    s.players.forEach(p => {
+      const mate = s.mode === 'team' && p.team === me.team;
+      p.hand.forEach(t => { if (p.id === viewer || mate || t.revealed) set.add(t.color + t.num); });
+    });
+    if (s.drawn && s.turn === viewer) set.add(s.drawn.color + s.drawn.num);
+    return set;
+  }
+  // viewer 입장에서 target의 idx번째 타일이 될 수 있는 값(조커=-1 포함)
+  function candidates(s, viewer, targetId, idx) {
+    const tg = s.players[targetId], tile = tg.hand[idx];
+    const known = visibleSet(s, viewer);
+    let L = null, R = null;
+    for (let i = idx - 1; i >= 0; i--) { const t = tg.hand[i]; if (t.revealed && t.num !== -1) { L = t; break; } }
+    for (let i = idx + 1; i < tg.hand.length; i++) { const t = tg.hand[i]; if (t.revealed && t.num !== -1) { R = t; break; } }
+    const c = tile.color, out = [];
+    for (let v = -1; v <= 11; v++) {
+      if (known.has(c + v)) continue;
+      if (v !== -1) {
+        if (L && !(L.num < v || (L.num === v && L.color === 'black' && c === 'white'))) continue;
+        if (R && !(v < R.num || (v === R.num && c === 'black' && R.color === 'white'))) continue;
+      }
+      out.push(v);
+    }
+    return out;
+  }
+
+  function aiStep(s, pid, rng) {
+    rng = rng || Math.random;
+    const p = s.players[pid];
+    if (s.phase === 'initial') {
+      if (p.pool.length === 0) return err('대기');
+      const pos = validPositions(p.hand, p.pool[0]);
+      return placeInitial(s, pid, pos[Math.floor(rng() * pos.length)]);
+    }
+    if (pid !== s.turn) return err('내 차례가 아님');
+    if (s.phase === 'draw') {
+      const opts = [];
+      if (s.black.length) opts.push('black');
+      if (s.white.length) opts.push('white');
+      return draw(s, pid, opts[Math.floor(rng() * opts.length)]);
+    }
+    if (s.phase === 'place') {
+      const pos = validPositions(p.hand, s.drawn);
+      return place(s, pid, pos[Math.floor(rng() * pos.length)]);
+    }
+    if (s.phase === 'guess') {
+      let best = null, bestN = 99;
+      s.players.forEach(t => {
+        if (t.id === pid || isDead(t)) return;
+        if (s.mode === 'team' && t.team === p.team) return;
+        t.hand.forEach((tile, i) => {
+          if (tile.revealed) return;
+          const c = candidates(s, pid, t.id, i);
+          if (c.length === 0) return;
+          const score = c.length + rng() * 0.5;
+          if (score < bestN) { bestN = score; best = { t: t.id, i: i, c: c }; }
+        });
+      });
+      const prob = best ? 1 / best.c.length : 0;
+      if (s.guessedOk && (!best || prob < 0.34 || (prob < 0.5 && rng() < 0.5))) return pass(s, pid);
+      if (!best) { // 후보가 모순되는 비정상 상황: 아무 타일이나 지목
+        const t = s.players.find(x => x.id !== pid && !isDead(x) && !(s.mode === 'team' && x.team === p.team));
+        const i = t.hand.findIndex(x => !x.revealed);
+        return guess(s, pid, t.id, i, Math.floor(rng() * 13) - 1);
+      }
+      return guess(s, pid, best.t, best.i, best.c[Math.floor(rng() * best.c.length)]);
+    }
+    return err('진행할 수 없는 단계');
+  }
+
+  /* ---------- 무결성 검사 (시뮬레이션용) ---------- */
+  function audit(s) {
+    const problems = [];
+    const seen = new Map();
+    const note = (t, where) => { if (seen.has(t.id)) problems.push('중복 타일 ' + t.id + ' (' + seen.get(t.id) + ' / ' + where + ')'); seen.set(t.id, where); };
+    s.black.forEach(t => note(t, 'blackDeck')); s.white.forEach(t => note(t, 'whiteDeck'));
+    s.players.forEach(p => {
+      p.hand.forEach(t => note(t, 'hand' + p.id)); p.pool.forEach(t => note(t, 'pool' + p.id));
+      if (!validInsert(p.hand.slice(0, 0), { num: -1 }, 0)) problems.push('검증 함수 오류');
+      const nj = p.hand.filter(t => t.num !== -1);
+      for (let i = 0; i < nj.length - 1; i++) {
+        if (nj[i].num > nj[i + 1].num || (nj[i].num === nj[i + 1].num && nj[i].color === 'white' && nj[i + 1].color === 'black'))
+          problems.push('P' + p.id + ' 정렬 깨짐');
+      }
+    });
+    if (s.drawn) note(s.drawn, 'drawn');
+    if (seen.size !== 26) problems.push('총 타일 수 ' + seen.size + ' != 26');
+    if (s.phase === 'over' && !s.winners) problems.push('승자 없음');
+    if (s.phase !== 'over' && s.phase !== 'initial' && isDead(s.players[s.turn])) problems.push('탈락자의 차례');
+    if (s.phase === 'place' && !s.drawn) problems.push('place 단계인데 뽑은 타일 없음');
+    return problems;
+  }
+
+  return { create, draw, place, placeInitial, guess, pass, aiStep, candidates, validPositions, validInsert, isDead, audit, mulberry32, label };
+})();
+if (typeof module !== 'undefined') module.exports = DVC;
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script id="view">
+(function () {
+'use strict';
+const $ = id => document.getElementById(id);
+$('loading').classList.add('hidden');
+if (typeof THREE === 'undefined') {
+  $('loading').classList.remove('hidden');
+  $('loading').textContent = '3D 엔진(three.js)을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.';
+  return;
+}
+
+const URLP = new URLSearchParams(location.search);
+const BOT_DELAY = URLP.has('speed') ? Number(URLP.get('speed')) : 650;
+const SEAT_COLORS = ['#f1c40f', '#4aa3ff', '#e74c3c', '#2ecc71', '#b57cff', '#ff9f43'];
+
+/* ---------------- 상태 ---------------- */
+let G = null;                  // 게임 상태
+const cfg = { n: 4, mode: 'ffa', start: 'auto', demo: false };
+const VIEW = 0;                // 화면 주인(내 자리)
+let ui = { hoverId: null, selected: null, guessing: false };
+let botTimer = null;
+
+/* ---------------- three.js 기본 ---------------- */
+const stage = $('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x120d0a);
+scene.fog = new THREE.Fog(0x120d0a, 40, 90);
+const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
+
+scene.add(new THREE.HemisphereLight(0xfff4e0, 0x4a3018, 0.95));
+const sun = new THREE.DirectionalLight(0xfff0d8, 0.85);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+scene.add(sun); scene.add(sun.target);
+const lamp = new THREE.PointLight(0xffd9a0, 0.55, 60);
+lamp.position.set(0, 12, 0);
+scene.add(lamp);
+
+const worldGroup = new THREE.Group();   // 인원수에 따라 다시 만드는 테이블/좌석
+scene.add(worldGroup);
+const tileGroup = new THREE.Group();
+scene.add(tileGroup);
+
+/* ---------------- 공용 지오메트리 / 텍스처 ---------------- */
+const TW = 0.9, TH = 1.35, TD = 0.3, BEV = 0.045, SP = 1.12;
+const TILE_H = TH + BEV * 2, FACE_Z = TD / 2 + BEV + 0.004;
+function roundedTileGeo() {
+  const w = TW, h = TH, r = 0.14, x = -w / 2, y = -h / 2, sh = new THREE.Shape();
+  sh.moveTo(x + r, y); sh.lineTo(x + w - r, y); sh.quadraticCurveTo(x + w, y, x + w, y + r);
+  sh.lineTo(x + w, y + h - r); sh.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  sh.lineTo(x + r, y + h); sh.quadraticCurveTo(x, y + h, x, y + h - r);
+  sh.lineTo(x, y + r); sh.quadraticCurveTo(x, y, x + r, y);
+  const g = new THREE.ExtrudeGeometry(sh, { depth: TD, bevelEnabled: true, bevelThickness: BEV, bevelSize: BEV, bevelSegments: 2, curveSegments: 6 });
+  g.translate(0, 0, -TD / 2);
+  return g;
+}
+const TILE_GEO = roundedTileGeo();
+const FACE_GEO = new THREE.PlaneGeometry(0.8, 1.22);
+
+const texCache = {};
+function faceTexture(color, num, covered) {
+  const key = covered ? 'cover' + color : color + num;
+  if (texCache[key]) return texCache[key];
+  const c = document.createElement('canvas'); c.width = 128; c.height = 192;
+  const g = c.getContext('2d');
+  const fg = color === 'black' ? '#f4f0e6' : '#17120d';
+  g.fillStyle = fg; g.strokeStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle';
+  if (covered) {
+    g.globalAlpha = .28; g.lineWidth = 3;
+    g.strokeRect(22, 28, 84, 136);
+    g.beginPath(); g.arc(64, 96, 22, 0, Math.PI * 2); g.stroke();
+  } else if (num === -1) {
+    g.font = 'bold 150px Georgia, serif'; g.fillText('-', 64, 96);
+  } else {
+    g.font = 'bold ' + (num > 9 ? 104 : 130) + 'px Georgia, "Times New Roman", serif';
+    g.fillText(String(num), 64, 100);
+    g.globalAlpha = .55; g.font = 'bold 22px Georgia, serif';
+    g.fillText(String(num), 20, 24); g.fillText(String(num), 108, 170);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.anisotropy = 4;
+  texCache[key] = t;
+  return t;
+}
+
+/* ---------------- 타일 메쉬 ---------------- */
+const tileObjs = {};   // id -> { g, body, front, back, pos, quat, scale, fk, bk }
+function getTileObj(tile) {
+  let o = tileObjs[tile.id];
+  if (o) return o;
+  const g = new THREE.Group();
+  const black = tile.color === 'black';
+  const mat = new THREE.MeshStandardMaterial({ color: black ? 0x1c1c21 : 0xf1ede2, roughness: black ? 0.38 : 0.5, metalness: 0.05 });
+  const body = new THREE.Mesh(TILE_GEO, mat);
+  body.castShadow = true; body.receiveShadow = true;
+  const fm = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false });
+  const bm = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false });
+  const front = new THREE.Mesh(FACE_GEO, fm); front.position.z = FACE_Z;
+  const back = new THREE.Mesh(FACE_GEO, bm); back.position.z = -FACE_Z; back.rotation.y = Math.PI;
+  g.add(body, front, back);
+  g.userData = { type: 'tile', id: tile.id };
+  g.traverse(m => { m.userData.root = g; });
+  g.visible = false;
+  tileGroup.add(g);
+  o = { g, body, front, back, pos: new THREE.Vector3(), quat: new THREE.Quaternion(), scale: 1, fk: '', bk: '', fresh: true, base: black ? 0x1c1c21 : 0xf1ede2 };
+  tileObjs[tile.id] = o;
+  return o;
+}
+function setFace(mesh, key, tile, covered) {
+  mesh.material.map = faceTexture(tile.color, tile.num, covered);
+  mesh.material.needsUpdate = true;
+}
+
+/* ---------------- 테이블 / 좌석 ---------------- */
+let R = null;  // 현재 테이블 치수
+const seatInfo = [];   // 좌석별 라벨 스프라이트
+let turnRing = null, deckObjs = {};
+const slotMarks = [];
+
+function makeLabelSprite() {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 128;
+  const tex = new THREE.CanvasTexture(c);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+  sp.renderOrder = 10;
+  return { sp, c, tex, last: '' };
+}
+function drawLabel(L, text, sub, color, active) {
+  const key = text + '|' + sub + '|' + color + '|' + active;
+  if (L.last === key) return;
+  L.last = key;
+  const g = L.c.getContext('2d');
+  g.clearRect(0, 0, 512, 128);
+  g.fillStyle = active ? 'rgba(60,45,5,.92)' : 'rgba(20,14,10,.8)';
+  const w = 470, h = 92, x = 21, y = 18, r = 22;
+  g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); g.fill();
+  g.lineWidth = active ? 6 : 3; g.strokeStyle = active ? '#f1c40f' : color; g.stroke();
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = '#fff'; g.font = 'bold 40px sans-serif'; g.fillText(text, 256, 52);
+  g.fillStyle = '#d9c9a8'; g.font = '24px sans-serif'; g.fillText(sub, 256, 90);
+  L.tex.needsUpdate = true;
+}
+
+function buildWorld(n) {
+  while (worldGroup.children.length) {
+    const ch = worldGroup.children.pop();
+    ch.traverse && ch.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+  }
+  seatInfo.length = 0;
+  const tableR = 5.4 + n * 0.95;
+  const rr = tableR - 1.55;
+  const avail = Math.min(2 * rr * Math.sin(Math.PI / n) * 0.88, tableR * 1.75);
+  R = { n, tableR, rr, avail, rackY: 0.42 };
+
+  const felt = new THREE.Mesh(new THREE.CylinderGeometry(tableR, tableR, 0.4, 72),
+    new THREE.MeshStandardMaterial({ color: 0x0b5a3b, roughness: 0.95 }));
+  felt.position.y = 0.2 - 0.0; felt.receiveShadow = true; worldGroup.add(felt);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(tableR + 0.05, 0.42, 14, 96),
+    new THREE.MeshStandardMaterial({ color: 0x4a2a14, roughness: 0.55 }));
+  rim.rotation.x = Math.PI / 2; rim.position.y = 0.34; rim.castShadow = true; worldGroup.add(rim);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(tableR * 0.45, tableR * 0.6, 3.2, 32),
+    new THREE.MeshStandardMaterial({ color: 0x2b1a0e, roughness: 0.7 }));
+  base.position.y = -1.6; worldGroup.add(base);
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(80, 48), new THREE.MeshStandardMaterial({ color: 0x1a120c, roughness: 1 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -3.2; floor.receiveShadow = true; worldGroup.add(floor);
+
+  // 중앙 문양
+  const ring = new THREE.Mesh(new THREE.RingGeometry(tableR * 0.2, tableR * 0.205, 64), new THREE.MeshBasicMaterial({ color: 0xc9a74a, transparent: true, opacity: .5 }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.41; worldGroup.add(ring);
+
+  for (let k = 0; k < n; k++) {
+    const phi = k * 2 * Math.PI / n;
+    const out = new THREE.Vector3(Math.sin(phi), 0, Math.cos(phi));
+    const rack = new THREE.Mesh(new THREE.BoxGeometry(avail + 0.6, 0.22, 1.05),
+      new THREE.MeshStandardMaterial({ color: new THREE.Color(SEAT_COLORS[k]).multiplyScalar(0.28).add(new THREE.Color(0x2a1a0c)), roughness: 0.6 }));
+    rack.position.copy(out).multiplyScalar(rr); rack.position.y = 0.4 + 0.11 - 0.02;
+    rack.rotation.y = phi; rack.castShadow = true; rack.receiveShadow = true;
+    worldGroup.add(rack);
+    const L = makeLabelSprite();
+    L.sp.scale.set(4.0, 1.0, 1);
+    L.sp.position.copy(out).multiplyScalar(rr + (k === 0 ? 1.9 : 2.7)); L.sp.position.y = k === 0 ? 0.9 : 1.1;
+    worldGroup.add(L.sp);
+    seatInfo.push(L);
+  }
+  // 현재 차례 표시 링
+  turnRing = new THREE.Mesh(new THREE.TorusGeometry(1, 0.05, 8, 48), new THREE.MeshBasicMaterial({ color: 0xf1c40f }));
+  turnRing.rotation.x = Math.PI / 2; turnRing.visible = false; worldGroup.add(turnRing);
+
+  // 덱 (검은색 / 흰색)
+  deckObjs = {};
+  ['black', 'white'].forEach((color, i) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1, 1.55),
+      new THREE.MeshStandardMaterial({ color: color === 'black' ? 0x1c1c21 : 0xf1ede2, roughness: 0.45, emissive: 0x000000 }));
+    m.position.set(i === 0 ? -1.15 : 1.15, 0.4, 0);
+    m.castShadow = true; m.receiveShadow = true;
+    m.userData = { type: 'deck', color };
+    const L = makeLabelSprite(); L.sp.scale.set(1.6, 0.4, 1);
+    worldGroup.add(m); worldGroup.add(L.sp);
+    deckObjs[color] = { mesh: m, label: L, x: m.position.x };
+  });
+
+  sun.position.set(tableR * 0.7, tableR * 1.8, tableR * 0.9);
+  sun.target.position.set(0, 0, 0);
+  const sc = sun.shadow.camera; const e = tableR * 1.35;
+  sc.left = -e; sc.right = e; sc.top = e; sc.bottom = -e; sc.near = 1; sc.far = tableR * 5; sc.updateProjectionMatrix();
+  lamp.position.set(0, tableR * 1.3, 0);
+  resetCamera();
+}
+
+/* ---------------- 카메라 (간단 궤도 컨트롤) ---------------- */
+const cam = { az: 0, pol: 0.95, dist: 20, zoom: 1, target: new THREE.Vector3() };
+function resetCamera() {
+  const aspect = Math.max(0.4, innerWidth / innerHeight);
+  const portrait = aspect < 0.8;
+  cam.dist = R.tableR * 2.1 * Math.max(1, 1.25 / aspect);
+  cam.zoom = 1; cam.az = 0; cam.pol = portrait ? 0.78 : 1.0;
+  cam.target.set(0, 0, R.rr * (portrait ? 0.5 : 0.28));
+}
+function updateCamera() {
+  const d = cam.dist * cam.zoom;
+  camera.position.set(
+    cam.target.x + d * Math.sin(cam.pol) * Math.sin(cam.az),
+    cam.target.y + d * Math.cos(cam.pol),
+    cam.target.z + d * Math.sin(cam.pol) * Math.cos(cam.az));
+  camera.lookAt(cam.target);
+}
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  if (R) { const aspect = Math.max(0.4, w / h); cam.dist = R.tableR * 2.1 * Math.max(1, 1.25 / aspect); }
+}
+addEventListener('resize', resize);
+
+/* ---------------- 입력 ---------------- */
+const ray = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let drag = null;
+function setMouse(e) {
+  const r = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+  mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+}
+function pick() {
+  ray.setFromCamera(mouse, camera);
+  const targets = [];
+  Object.values(tileObjs).forEach(o => { if (o.g.visible) targets.push(o.g); });
+  Object.values(deckObjs).forEach(d => targets.push(d.mesh));
+  slotMarks.forEach(s => targets.push(s.mesh));
+  const hits = ray.intersectObjects(targets, true);
+  for (const h of hits) {
+    let o = h.object;
+    while (o && !(o.userData && o.userData.type)) o = o.parent;
+    if (o) return o.userData;
+  }
+  return null;
+}
+const pointers = new Map();
+let pinch0 = 0, zoom0 = 1;
+renderer.domElement.addEventListener('pointerdown', e => {
+  renderer.domElement.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 1) drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: 0 };
+  if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    pinch0 = Math.hypot(a.x - b.x, a.y - b.y); zoom0 = cam.zoom; if (drag) drag.moved = 99;
+  }
+});
+renderer.domElement.addEventListener('pointermove', e => {
+  if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y);
+    if (pinch0 > 0) cam.zoom = Math.min(1.5, Math.max(0.55, zoom0 * pinch0 / d));
+    return;
+  }
+  if (drag && pointers.size === 1) {
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    drag.moved += Math.abs(dx) + Math.abs(dy);
+    drag.x = e.clientX; drag.y = e.clientY;
+    if (drag.moved > 6) {
+      cam.az = Math.max(-1.3, Math.min(1.3, cam.az - dx * 0.006));
+      cam.pol = Math.max(0.35, Math.min(1.3, cam.pol - dy * 0.005));
+    }
+  } else if (e.pointerType === 'mouse') {
+    setMouse(e);
+    const h = pick();
+    ui.hoverId = h && h.type === 'tile' ? h.id : null;
+    renderer.domElement.style.cursor = h && isClickable(h) ? 'pointer' : 'default';
+  }
+});
+function endPointer(e) {
+  const wasDrag = drag, moved = drag ? drag.moved : 99;
+  pointers.delete(e.pointerId);
+  if (wasDrag && pointers.size === 0) {
+    drag = null;
+    if (moved <= 6) { setMouse(e); onClick(pick()); }
+  }
+}
+renderer.domElement.addEventListener('pointerup', endPointer);
+renderer.domElement.addEventListener('pointercancel', e => { pointers.delete(e.pointerId); drag = null; });
+renderer.domElement.addEventListener('wheel', e => {
+  e.preventDefault();
+  cam.zoom = Math.min(1.5, Math.max(0.55, cam.zoom * (e.deltaY > 0 ? 1.07 : 0.93)));
+}, { passive: false });
+
+/* ---------------- 게임 진행 ---------------- */
+const me = () => G && G.players[VIEW];
+const myTurn = () => G && G.phase !== 'over' && G.phase !== 'initial' && !G.players[VIEW].bot && G.turn === VIEW;
+const iAmDead = () => G && DVC.isDead(G.players[VIEW]);
+function humanPlacing() {
+  if (!G || G.players[VIEW].bot) return false;
+  if (G.phase === 'initial') return G.players[VIEW].pool.length > 0;
+  return G.phase === 'place' && G.turn === VIEW;
+}
+function pendingTile() {
+  if (!humanPlacing()) return null;
+  return G.phase === 'initial' ? G.players[VIEW].pool[0] : G.drawn;
+}
+function isClickable(h) {
+  if (!G || G.phase === 'over' || iAmDead()) return false;
+  if (h.type === 'slot') return true;
+  if (h.type === 'deck') return G.phase === 'draw' && myTurn();
+  if (h.type === 'tile') return tileGuessable(h.id);
+  return false;
+}
+function locate(id) {
+  for (const p of G.players) {
+    const i = p.hand.findIndex(t => t.id === id);
+    if (i >= 0) return { p, i, tile: p.hand[i] };
+  }
+  return null;
+}
+function tileGuessable(id) {
+  if (!G || G.phase !== 'guess' || !myTurn() || iAmDead()) return false;
+  const loc = locate(id);
+  if (!loc || loc.p.id === VIEW || loc.tile.revealed || DVC.isDead(loc.p)) return false;
+  if (G.mode === 'team' && loc.p.team === me().team) return false;
+  return true;
+}
+
+function toast(msg, good) {
+  const t = $('toast');
+  t.textContent = msg; t.className = 'show' + (good ? ' good' : '');
+  clearTimeout(toast.t); toast.t = setTimeout(() => { t.className = ''; }, 2200);
+}
+
+function onClick(h) {
+  if (!h || !G || G.phase === 'over') return;
+  if (ui.guessing) return;
+  if (h.type === 'deck') {
+    if (!myTurn()) return toast('내 차례가 아닙니다');
+    if (G.phase !== 'draw') return toast('이미 타일을 뽑았습니다');
+    return doDraw(h.color);
+  }
+  if (h.type === 'slot') return doPlace(h.idx);
+  if (h.type === 'tile') {
+    if (tileGuessable(h.id)) return openGuess(h.id);
+    const loc = locate(h.id);
+    if (!loc || loc.p.id === VIEW) return;
+    if (!myTurn()) return toast('내 차례일 때만 추리할 수 있습니다');
+    if (G.phase !== 'guess') return toast('먼저 타일을 뽑고 배치를 완료하세요');
+    if (loc.tile.revealed) return toast('이미 공개된 타일입니다');
+    if (G.mode === 'team' && loc.p.team === me().team) return toast('같은 팀 타일은 추리할 수 없습니다');
+  }
+}
+
+function afterAction(r) {
+  if (!r.ok) { toast(r.err); return r; }
+  sync();
+  scheduleNext();
+  return r;
+}
+function doDraw(color) { return afterAction(DVC.draw(G, VIEW, color)); }
+function doPlace(idx) {
+  if (!humanPlacing()) return;
+  const r = G.phase === 'initial' ? DVC.placeInitial(G, VIEW, idx) : DVC.place(G, VIEW, idx);
+  return afterAction(r);
+}
+function doPass() { if (!myTurn()) return; return afterAction(DVC.pass(G, VIEW)); }
+
+function openGuess(id) {
+  const loc = locate(id);
+  ui.selected = id; ui.guessing = true;
+  $('guess-title').textContent = loc.p.name + ' 님의 ' + (loc.i + 1) + '번째 ' + (loc.tile.color === 'black' ? '검은' : '흰') + ' 타일';
+  $('guess-sub').textContent = '숫자를 맞혀보세요. 흐린 숫자는 이미 내 눈에 보이거나 순서상 불가능한 값입니다.';
+  const cands = new Set(DVC.candidates(G, VIEW, loc.p.id, loc.i));
+  const grid = $('guess-grid'); grid.innerHTML = '';
+  for (let v = 0; v <= 11; v++) {
+    const b = document.createElement('button');
+    b.textContent = v; if (!cands.has(v)) b.className = 'imp';
+    b.onclick = () => submitGuess(v);
+    grid.appendChild(b);
+  }
+  const j = document.createElement('button');
+  j.className = 'joker' + (cands.has(-1) ? '' : ' imp'); j.textContent = '조커 ( - )';
+  j.onclick = () => submitGuess(-1);
+  grid.appendChild(j);
+  $('guess').classList.remove('hidden');
+  sync();
+}
+function closeGuess() { ui.guessing = false; ui.selected = null; $('guess').classList.add('hidden'); sync(); }
+function submitGuess(v) {
+  const loc = locate(ui.selected);
+  const tid = loc.p.id, idx = loc.i;
+  closeGuess();
+  const r = DVC.guess(G, VIEW, tid, idx, v);
+  if (!r.ok) return toast(r.err);
+  toast(r.correct ? '정답! 계속 추리하거나 턴을 넘기세요' : '틀렸습니다! 내 타일이 공개되고 턴이 넘어갑니다', r.correct);
+  sync(); scheduleNext();
+}
+
+/* 봇 진행 */
+function scheduleNext() {
+  clearTimeout(botTimer);
+  if (!G || G.phase === 'over') return;
+  if (G.phase === 'initial') {
+    // 봇은 즉시 초기 배치
+    G.players.forEach(p => { while (p.bot && p.pool.length && G.phase === 'initial') DVC.aiStep(G, p.id); });
+    sync();
+    if (G.phase === 'initial') return;
+  }
+  const p = G.players[G.turn];
+  if (p.bot) {
+    botTimer = setTimeout(() => {
+      if (!G || G.phase === 'over') return;
+      const r = DVC.aiStep(G, G.turn);
+      if (!r.ok) console.warn('AI 오류', r.err);
+      sync(); scheduleNext();
+    }, BOT_DELAY);
+  }
+}
+
+/* ---------------- 장면 동기화 ---------------- */
+const Q = new THREE.Quaternion(), E = new THREE.Euler(), V3 = new THREE.Vector3();
+function seatQuat(phi, rx) { E.set(rx || 0, phi, 0, 'YXZ'); return new THREE.Quaternion().setFromEuler(E); }
+function seatPoint(k, x, y, z) {
+  const phi = k * 2 * Math.PI / G.n;
+  const out = new THREE.Vector3(Math.sin(phi), 0, Math.cos(phi));
+  const right = new THREE.Vector3(Math.cos(phi), 0, -Math.sin(phi));
+  return out.multiplyScalar(R.rr + z).add(right.multiplyScalar(x)).add(new THREE.Vector3(0, y, 0));
+}
+
+function faceKnowledge(ownerIdx, tile) {
+  const over = G.phase === 'over', viewerDead = iAmDead();
+  const owner = G.players[ownerIdx];
+  const mate = G.mode === 'team' && owner.team === me().team && ownerIdx !== VIEW;
+  const full = over || viewerDead || tile.revealed || mate;
+  return { front: full || ownerIdx === VIEW, back: full };
+}
+
+let slotRebuildKey = '';
+function sync() {
+  if (!G) return;
+  const placing = humanPlacing();
+  const shown = new Set();
+
+  // 손패 배치
+  G.players.forEach((p, k) => {
+    const len = p.hand.length;
+    const gap = (k === VIEW && placing) ? 0.5 : 0;
+    const s = Math.max(0.36, Math.min(1, R.avail / (len * SP + (len + 1) * gap + 0.01)));
+    const step = (SP + gap) * s;
+    const phi = k * 2 * Math.PI / G.n;
+    p._layout = { s, step, len };
+    p.hand.forEach((t, i) => {
+      const o = getTileObj(t);
+      shown.add(t.id);
+      const x = (i - (len - 1) / 2) * step;
+      const rev = t.revealed;
+      const lean = rev ? 0.14 : 0;
+      const y = R.rackY + 0.12 + (TILE_H * s / 2) * Math.cos(lean) + (rev ? 0.02 : 0);
+      const pos = seatPoint(k, x, y, rev ? 0.12 * s : 0);
+      o.tpos = pos; o.tquat = seatQuat(phi, lean); o.tscale = s;
+      o.owner = k;
+      const fk = faceKnowledge(k, t);
+      const fkey = (fk.front ? 'n' : 'c'), bkey = (fk.back ? 'n' : 'c');
+      if (o.fk !== fkey) { o.fk = fkey; setFace(o.front, fkey, t, !fk.front); }
+      if (o.bk !== bkey) { o.bk = bkey; setFace(o.back, bkey, t, !fk.back); }
+      o.revealed = rev;
+      if (o.fresh) { // 처음 등장: 덱 위치에서 날아오기
+        o.fresh = false;
+        o.g.position.copy(deckPos(t.color)); o.g.quaternion.copy(o.tquat); o.g.scale.setScalar(s);
+      }
+      o.g.visible = true;
+    });
+  });
+
+  // 뽑은 타일 / 시작 타일 (대기 중)
+  let pend = null, pendOwner = -1;
+  if (G.phase === 'place' && G.drawn) { pend = G.drawn; pendOwner = G.turn; }
+  else if (G.phase === 'initial' && !G.players[VIEW].bot && G.players[VIEW].pool.length) { pend = G.players[VIEW].pool[0]; pendOwner = VIEW; }
+  if (pend) {
+    const o = getTileObj(pend);
+    shown.add(pend.id);
+    const isMine = pendOwner === VIEW;
+    const phi = pendOwner * 2 * Math.PI / G.n;
+    const pos = seatPoint(pendOwner, 0, isMine ? 1.9 : 2.2, -R.rr * (isMine ? 0.3 : 0.42));
+    o.tpos = pos;
+    o.tquat = isMine ? seatQuat(phi, -0.5) : seatQuat(phi + Math.PI, -0.35);
+    o.tscale = isMine ? 1.25 : 1.1;
+    o.owner = pendOwner;
+    const showFront = isMine || G.phase === 'over';
+    const fkey = showFront ? 'n' : 'c';
+    if (isMine) {
+      if (o.fk !== 'n') { o.fk = 'n'; setFace(o.front, 'n', pend, false); }
+    } else {
+      if (o.fk !== 'c') { o.fk = 'c'; setFace(o.front, 'c', pend, true); }
+      if (o.bk !== 'c') { o.bk = 'c'; setFace(o.back, 'c', pend, true); }
+    }
+    o.revealed = false;
+    if (o.fresh) { o.fresh = false; o.g.position.copy(deckPos(pend.color)); o.g.quaternion.copy(o.tquat); o.g.scale.setScalar(1); }
+    o.g.visible = true;
+  }
+  Object.keys(tileObjs).forEach(id => { if (!shown.has(id)) tileObjs[id].g.visible = false; });
+
+  updateDecks();
+  updateSlots(placing);
+  updateHud();
+  if (G.phase === 'over') showGameOver();
+}
+function deckPos(color) { const d = deckObjs[color]; return new THREE.Vector3(d.x, 1.6, 0); }
+
+function updateDecks() {
+  ['black', 'white'].forEach(color => {
+    const d = deckObjs[color], cnt = G[color].length;
+    const h = Math.max(0.04, cnt * 0.11);
+    d.mesh.scale.y = h; d.mesh.position.y = 0.4 + h / 2;
+    d.mesh.visible = cnt > 0;
+    d.label.sp.position.set(d.x, 0.4 + h + 0.85, 0);
+    drawLabel(d.label, (color === 'black' ? '검은' : '흰') + ' ' + cnt, '', '#aaa', false);
+    d.drawable = myTurn() && G.phase === 'draw' && cnt > 0;
+  });
+}
+
+function updateSlots(placing) {
+  slotMarks.forEach(s => { worldGroup.remove(s.mesh); tileGroup.remove(s.mesh); });
+  slotMarks.length = 0;
+  if (!placing) return;
+  const tile = pendingTile(); if (!tile) return;
+  const p = me(), L = p._layout;
+  const valid = new Set(DVC.validPositions(p.hand, tile));
+  for (let j = 0; j <= L.len; j++) {
+    const x = (j - L.len / 2) * L.step;
+    const ok = valid.has(j);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.42 * L.s + 0.1, 1.15 * L.s + 0.2),
+      new THREE.MeshBasicMaterial({ color: ok ? 0x2ecc71 : 0x8a3a3a, transparent: true, opacity: ok ? 0.8 : 0.3, side: THREE.DoubleSide, depthWrite: false }));
+    m.position.copy(seatPoint(VIEW, x, R.rackY + 0.14 + (TILE_H * L.s) / 2, 0.02));
+    m.quaternion.copy(seatQuat(0, 0));
+    m.userData = { type: 'slot', idx: j };
+    tileGroup.add(m);
+    slotMarks.push({ mesh: m, ok });
+  }
+}
+
+function updateHud() {
+  // 플레이어 칩
+  const chips = $('players'); chips.innerHTML = '';
+  G.players.forEach(p => {
+    const hidden = p.hand.filter(t => !t.revealed).length;
+    const d = document.createElement('div');
+    d.className = 'chip' + (G.phase !== 'over' && G.phase !== 'initial' && G.turn === p.id ? ' turn' : '') + (DVC.isDead(p) ? ' dead' : '');
+    const team = p.team ? '<span class="team" style="color:' + (p.team === 'A' ? '#4aa3ff' : '#ff6b5b') + '">' + p.team + '</span>' : '';
+    d.innerHTML = '<span class="dot" style="background:' + SEAT_COLORS[p.id] + '"></span>' + team + '<span>' + p.name + '</span><span class="cnt">남은 ' + hidden + '/' + p.hand.length + '</span>';
+    chips.appendChild(d);
+  });
+  // 로그
+  const lg = $('log');
+  lg.innerHTML = G.log.slice(-7).map(l => '<div>' + l.replace(/\[(.*?)\]/g, '<b>[$1]</b>') + '</div>').join('');
+
+  // 좌석 라벨 + 차례 링
+  G.players.forEach((p, k) => {
+    const hidden = p.hand.filter(t => !t.revealed).length;
+    const tm = p.team ? ' · 팀 ' + p.team : '';
+    const turn = G.phase !== 'over' && G.phase !== 'initial' && G.turn === k;
+    drawLabel(seatInfo[k], p.name + (DVC.isDead(p) ? ' (탈락)' : ''), '남은 타일 ' + hidden + '/' + p.hand.length + tm, SEAT_COLORS[k], turn);
+  });
+  const showRing = G.phase !== 'over' && G.phase !== 'initial';
+  turnRing.visible = showRing;
+  if (showRing) { turnRing.position.copy(seatPoint(G.turn, 0, 0.43, -1.1)); turnRing.rotation.z = G.turn * 2 * Math.PI / G.n; turnRing.scale.set(Math.max(2.2, R.avail * 0.42), 1, 0.9); }
+
+  // 상태 + 버튼
+  const st = $('status'); let msg = '', col = '';
+  const pl = G.players[G.turn];
+  const mt = myTurn(), dead = iAmDead();
+  if (G.phase === 'over') { msg = '게임 종료 — ' + G.winnerName + ' 승리!'; col = '#2ecc71'; }
+  else if (G.phase === 'initial') {
+    msg = me().pool.length ? '시작 타일 배치 (남은 ' + (me().pool.length) + '장) — 초록색 [ + ] 위치를 눌러 놓으세요' : '다른 플레이어가 배치하는 중…';
+    col = '#f1c40f';
+  }
+  else if (dead && !G.players[VIEW].bot) { msg = '내 모든 타일이 공개되어 탈락! 관전 중 — ' + pl.name + ' 님의 턴'; col = '#e74c3c'; }
+  else if (mt && G.phase === 'draw') { msg = '내 차례 — 검은색/흰색 덱을 눌러 타일을 한 장 뽑으세요'; col = '#e67e22'; }
+  else if (mt && G.phase === 'place') { msg = '뽑은 타일을 놓을 위치의 [ + ]를 누르세요'; col = '#f1c40f'; }
+  else if (mt && G.phase === 'guess') {
+    msg = G.guessedOk ? '정답! 계속 추리하거나 [턴 넘기기]를 누르세요' : '상대의 숨겨진 타일을 눌러 숫자를 추리하세요 (1번은 맞혀야 넘길 수 있음)';
+    col = G.guessedOk ? '#2ecc71' : '#f1c40f';
+  }
+  else { msg = pl.name + ' 님의 턴 진행 중…' + (G.phase === 'place' ? ' (타일 배치)' : G.phase === 'guess' ? ' (추리)' : ''); col = '#f39c12'; }
+  st.textContent = msg; st.style.color = col;
+
+  $('cnt-b').textContent = G.black.length; $('cnt-w').textContent = G.white.length;
+  $('btn-draw-b').disabled = !(mt && G.phase === 'draw' && G.black.length > 0);
+  $('btn-draw-w').disabled = !(mt && G.phase === 'draw' && G.white.length > 0);
+  $('btn-pass').disabled = !(mt && G.phase === 'guess' && G.guessedOk);
+}
+
+function showGameOver() {
+  if (!$('over').classList.contains('hidden') || showGameOver.dismissed === G) return;
+  const w = G.winners.indexOf(VIEW) >= 0;
+  $('over-title').textContent = (w ? '🎉 승리! ' : '패배… ') + G.winnerName;
+  $('over-sub').textContent = G.players.map(p => p.name + ' 정답 ' + p.stats.correct + ' / 오답 ' + p.stats.wrong).join('  ·  ') + '  (총 ' + G.turnCount + '턴)';
+  setTimeout(() => { if (G && G.phase === 'over' && showGameOver.dismissed !== G) $('over').classList.remove('hidden'); }, 900);
+}
+
+/* ---------------- 애니메이션 루프 ---------------- */
+let lastT = performance.now();
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
+  const k = 1 - Math.exp(-dt * 9);
+  updateCamera();
+  if (G) {
+    Object.keys(tileObjs).forEach(id => {
+      const o = tileObjs[id];
+      if (!o.g.visible || !o.tpos) return;
+      const hover = ui.hoverId === id && (tileGuessable(id));
+      const sel = ui.selected === id;
+      V3.copy(o.tpos); if (hover || sel) V3.y += 0.32;
+      o.g.position.lerp(V3, k);
+      o.g.quaternion.slerp(o.tquat, k);
+      o.g.scale.setScalar(o.g.scale.x + (o.tscale - o.g.scale.x) * k);
+      const mat = o.body.material;
+      const glow = sel ? 0x6b5200 : hover ? 0x3a3000 : (o.revealed ? 0x3a0f0f : 0x000000);
+      mat.emissive.setHex(glow);
+      mat.color.setHex(o.revealed ? (o.base === 0x1c1c21 ? 0x2a2022 : 0xd9c9c0) : o.base);
+    });
+    const t = now / 1000;
+    ['black', 'white'].forEach(c => {
+      const d = deckObjs[c];
+      d.mesh.material.emissive.setHex(d.drawable ? (Math.sin(t * 5) > 0 ? 0x5a4500 : 0x2a2000) : 0x000000);
+    });
+    if (turnRing.visible) turnRing.material.color.setHex(Math.sin(t * 4) > 0 ? 0xf1c40f : 0xb08d0a);
+    slotMarks.forEach((s, i) => { if (s.ok) s.mesh.material.opacity = 0.55 + 0.3 * Math.sin(t * 5 + i); });
+  }
+  renderer.render(scene, camera);
+}
+
+/* ---------------- 설정 / 시작 ---------------- */
+function buildSetup() {
+  const segN = $('seg-n'); segN.innerHTML = '';
+  for (let n = 2; n <= 6; n++) {
+    const b = document.createElement('button'); b.textContent = n + '인'; b.dataset.v = n;
+    if (n === cfg.n) b.className = 'on';
+    b.onclick = () => { cfg.n = n; if (n !== 4) cfg.mode = 'ffa'; refreshSetup(); };
+    segN.appendChild(b);
+  }
+  [...$('seg-mode').children].forEach(b => b.onclick = () => {
+    if (b.dataset.v === 'team' && cfg.n !== 4) { cfg.n = 4; }
+    cfg.mode = b.dataset.v; refreshSetup();
+  });
+  refreshSetup();
+}
+function refreshSetup() {
+  [...$('seg-n').children].forEach(b => b.className = Number(b.dataset.v) === cfg.n ? 'on' : '');
+  [...$('seg-mode').children].forEach(b => b.className = b.dataset.v === cfg.mode ? 'on' : '');
+  const seg = $('seg-start'); seg.innerHTML = '';
+  const auto = cfg.n >= 5 ? 3 : 4;
+  [['auto', '자동(' + auto + '장)'], ['3', '3장'], ['4', '4장'], ['5', '5장']].forEach(([v, t]) => {
+    const b = document.createElement('button'); b.textContent = t; b.dataset.v = v;
+    const bad = v !== 'auto' && Number(v) * cfg.n > 26;
+    b.disabled = bad;
+    if (cfg.start === v && !bad) b.className = 'on';
+    b.onclick = () => { cfg.start = v; refreshSetup(); };
+    seg.appendChild(b);
+  });
+  if (cfg.start !== 'auto' && Number(cfg.start) * cfg.n > 26) cfg.start = 'auto';
+}
+function startGame() {
+  clearTimeout(botTimer);
+  cfg.demo = $('chk-demo').checked;
+  const names = ['나']; for (let i = 1; i < cfg.n; i++) names.push('AI ' + i);
+  G = DVC.create(cfg.n, { mode: cfg.mode, tileSetting: cfg.start, names, humans: cfg.demo ? [] : [0], rng: URLP.has('seed') ? DVC.mulberry32(Number(URLP.get('seed'))) : Math.random });
+  Object.keys(tileObjs).forEach(id => { tileGroup.remove(tileObjs[id].g); delete tileObjs[id]; });
+  slotMarks.length = 0;
+  buildWorld(cfg.n);
+  ui = { hoverId: null, selected: null, guessing: false };
+  showGameOver.dismissed = null;
+  $('over').classList.add('hidden'); $('setup').classList.add('hidden'); $('guess').classList.add('hidden');
+  sync(); scheduleNext();
+}
+
+$('btn-start').onclick = startGame;
+$('btn-again').onclick = () => { $('over').classList.add('hidden'); startGame(); };
+$('btn-view').onclick = () => { showGameOver.dismissed = G; $('over').classList.add('hidden'); };
+$('btn-menu').onclick = () => { $('setup').classList.remove('hidden'); };
+$('btn-draw-b').onclick = () => doDraw('black');
+$('btn-draw-w').onclick = () => doDraw('white');
+$('btn-pass').onclick = doPass;
+$('guess-cancel').onclick = closeGuess;
+$('setup').addEventListener('click', e => { if (e.target === $('setup') && G) $('setup').classList.add('hidden'); });
+
+buildSetup();
+buildWorld(cfg.n);
+resize();
+requestAnimationFrame(frame);
+
+// 디버그/테스트용 훅
+window.__dvc = {
+  get G() { return G; }, cfg, cam, start: (n, mode, start, demo) => { cfg.n = n; cfg.mode = mode || 'ffa'; cfg.start = start || 'auto'; $('chk-demo').checked = !!demo; startGame(); },
+  project(x, y, z) { const v = new THREE.Vector3(x, y, z).project(camera); const r = renderer.domElement.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; },
+  tilePos(id) { const o = tileObjs[id]; return o ? this.project(o.g.position.x, o.g.position.y, o.g.position.z) : null; },
+  slotPos(idx) { const s = slotMarks.find(m => m.mesh.userData.idx === idx); return s ? this.project(s.mesh.position.x, s.mesh.position.y, s.mesh.position.z) : null; },
+  deckPos(c) { const d = deckObjs[c]; return this.project(d.mesh.position.x, d.mesh.position.y + 0.3, d.mesh.position.z); },
+  slotCount: () => slotMarks.length,
+  dispatchSync: sync
+};
+})();
+</script>
+</body>
+</html>
