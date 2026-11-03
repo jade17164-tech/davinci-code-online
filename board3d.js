@@ -24,6 +24,7 @@ window.Board3D = (() => {
 
   let canvas, appEl, labelsEl, renderer, scene, camera, world, tileGroup, tileGeo, clock;
   let S = null, pickCb = null, zoom = 1, hover = null, pickables = [], raf = 0;
+  let fit = 1;   // 테이블을 화면에 얼마나 꽉 채울지 (작을수록 크게 보인다)
   const cam = { az: 0, pol: 0.92, rad: 20, tgt: new V3(0, 0, 0.4) };
   const tileMeshes = new Map();
   let seats = [], racks = [], deckMeshes = {}, slotSprites = [], builtN = 0;
@@ -152,9 +153,9 @@ window.Board3D = (() => {
   function fitCamera() {
     const W = appEl.clientWidth, H = appEl.clientHeight, asp = W / H, Rt = tableR(builtN || 4);
     const t = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-    const needW = (Rt + 1.4) / (t * Math.min(asp, 1.6)) * 0.98;
-    const needH = (Rt * 1.15 + 2.5) / t * 0.62;
-    cam.rad = Math.max(needW, needH) * zoom;
+    const needW = (Rt + 1.4 * fit) / (t * Math.min(asp, 1.6)) * 0.98;
+    const needH = (Rt * 1.15 + 2.5 * fit) / t * 0.62;
+    cam.rad = Math.max(needW, needH) * zoom * fit;
   }
   function placeCamera() {
     const off = new V3(Math.sin(cam.pol) * Math.sin(cam.az), Math.cos(cam.pol), Math.sin(cam.pol) * Math.cos(cam.az)).multiplyScalar(cam.rad);
@@ -387,5 +388,6 @@ window.Board3D = (() => {
     update(state) { S = state; resize(); sync3D(); },
     onPick(fn) { pickCb = fn; },
     resetCam() { cam.az = 0; cam.pol = 0.92; zoom = 1; fitCamera(); },
+    setFit(f) { fit = f; fitCamera(); },
   };
 })();
