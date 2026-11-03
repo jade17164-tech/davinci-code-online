@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>board3d.js 단독 확인</title>
+<style>
+  html,body{margin:0;height:100%;background:#1b0f07;color:#eee;font-family:system-ui,sans-serif}
+  #app{position:relative;width:100%;height:78vh}
+  #gl{position:absolute;inset:0;width:100%;height:100%;display:block}
+  #labels{position:absolute;inset:0;pointer-events:none}
+  .b3d-pl,.b3d-dl{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;
+    background:rgba(30,18,8,.85);border:1px solid #6b4226;border-radius:999px;
+    padding:3px 9px;font-size:12px;font-weight:700;color:#f0e3c8;display:flex;gap:6px;align-items:center}
+  .b3d-pl.turn{border-color:#d4af37;box-shadow:0 0 0 2px rgba(212,175,55,.35)}
+  .b3d-pl.dead{opacity:.5}
+  .b3d-tag{background:#5c3319;border-radius:6px;padding:1px 5px;font-size:10px}
+  .b3d-cnt{color:#c3b89f;font-weight:600}
+  #bar{padding:10px 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  button{background:#6b4226;color:#f0e3c8;border:1px solid #8a5a2e;border-radius:6px;padding:7px 12px;font-weight:700;cursor:pointer}
+  #out{padding:0 14px;font-size:13px;color:#b9ab93;min-height:3em;line-height:1.6}
+</style>
+</head>
+<body>
+<div id="app"><canvas id="gl"></canvas><div id="labels"></div></div>
+<div id="bar">
+  <button onclick="setN(2)">2인</button>
+  <button onclick="setN(4)">4인</button>
+  <button onclick="setN(6)">6인</button>
+  <button onclick="toggleReveal()">공개 타일 토글</button>
+  <button onclick="togglePending()">뽑은 타일 토글</button>
+  <button onclick="Board3D.resetCam()">시점 초기화</button>
+</div>
+<div id="out">타일·덱·[+] 를 눌러보세요. 클릭 결과가 여기 찍힙니다.</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../board3d.js"></script>
+<script>
+const NAMES = ['나','다빈치','모나','리사','체사레','살라이'];
+let N = 4, revealed = false, pending = true;
+
+function hand(seed, cnt) {
+  return Array.from({length: cnt}, (_, i) => ({
+    id: 't' + seed + '_' + i,
+    color: (seed + i) % 2 ? 'black' : 'white',
+    num: (seed * 3 + i * 2) % 12,
+    revealed: revealed && i < 2,
+  }));
+}
+function state() {
+  const players = Array.from({length: N}, (_, i) => ({
+    name: NAMES[i], team: null, hand: hand(i, 4),
+    pending: (i === 0 && pending) ? { id: 'pend', color: 'black', num: 7 } : null,
+  }));
+  return {
+    n: N, mode: 'solo', over: false, turn: 0, phase: 'place',
+    players,
+    decks: { black: 5, white: 5 },
+    slots: pending ? [0, 2, 4] : [],
+    targets: players.slice(1).flatMap((p, k) => p.hand.map((t, i) => t.revealed ? null : ({ pi: k + 1, idx: i })).filter(Boolean)),
+    canDraw: !pending,
+  };
+}
+const out = document.getElementById('out');
+Board3D.mount({ canvas: document.getElementById('gl'), app: document.getElementById('app'), labels: document.getElementById('labels') });
+Board3D.onPick(p => { out.textContent = '클릭 → ' + JSON.stringify(p); });
+const redraw = () => Board3D.update(state());
+function setN(n) { N = n; redraw(); }
+function toggleReveal() { revealed = !revealed; redraw(); }
+function togglePending() { pending = !pending; redraw(); }
+redraw();
+
+// 자체 점검: 인원별로 좌석·타일이 제대로 서는지 한 번 훑는다
+(() => {
+  const errs = [];
+  [2, 3, 4, 5, 6].forEach(n => {
+    N = n; redraw();
+    const meshes = document.querySelectorAll('#labels .b3d-pl').length;
+    if (meshes !== n) errs.push(`${n}인: 이름표 ${meshes}개`);
+  });
+  N = 4; redraw();
+  out.textContent = errs.length ? '자체 점검 실패 → ' + errs.join(', ')
+                                : '자체 점검 통과 (2~6인 좌석·이름표 정상). 타일/덱/[+] 를 눌러보세요.';
+})();
+</script>
+</body>
+</html>
