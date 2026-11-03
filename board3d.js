@@ -279,7 +279,7 @@ window.Board3D = (() => {
       const dead = isDead(p), turn = !S.over && S.turn === pi;
       el.className = 'b3d-pl' + (turn ? ' turn' : '') + (dead ? ' dead' : '');
       const team = p.team ? `<span class="b3d-tag t${p.team}">팀 ${p.team}</span>` : '';
-      el.innerHTML = `<span>${pi === 0 ? '나' : (p.name || '?')}</span>${team}`
+      el.innerHTML = `<span>${p.name || '?'}</span>${team}`
         + `<span class="b3d-cnt">남은 ${hiddenCount(p)}/${(p.hand || []).length}</span>`
         + (dead ? '<span class="b3d-tag">탈락</span>' : '');
     });
