@@ -2067,11 +2067,7 @@ function handleStartGame() {
       whiteDeck.sort(() => Math.random() - 0.5);
     }
 
-    let startTileCount = 4;
-    if (data.tileSetting === '3') startTileCount = 3;
-    else if (data.tileSetting === '4') startTileCount = 4;
-    else if (data.tileSetting === '5') startTileCount = 5;
-    else startTileCount = playerIds.length >= 5 ? 3 : 4;
+    const startTileCount = startTileCountFor(data, playerIds.length);
 
     let updatedPlayers = {};
 
@@ -2119,6 +2115,14 @@ function handleStartGame() {
 
 // 상대 패를 화면에 늘어놓는 순서. 지목할 때 넘기는 인덱스가 이 순서 기준이라
 // 3D 보드와 기존 DOM 보드가 반드시 같은 함수를 써야 한다.
+// 시작 타일 수. 자동이면 5인 이상 3장, 그 아래는 4장.
+function startTileCountFor(data, playerCount) {
+  if (data.tileSetting === '3') return 3;
+  if (data.tileSetting === '4') return 4;
+  if (data.tileSetting === '5') return 5;
+  return playerCount >= 5 ? 3 : 4;
+}
+
 function sortHandForDisplay(hand) {
   const withIdx = (hand || []).map((t, originalIdx) => ({ ...t, originalIdx }));
   const jokers = withIdx.filter(t => Number(t.num) === -1);
@@ -2184,7 +2188,7 @@ function updateGameUI(data) {
   document.getElementById('deck-black-count').innerText = blackLen;
   document.getElementById('deck-white-count').innerText = whiteLen;
 
-  const targetStartCount = data.tileSetting === '3' ? 3 : data.tileSetting === '4' ? 4 : data.tileSetting === '5' ? 5 : 4;
+  const targetStartCount = startTileCountFor(data, playerIds.length);
   const isInitialPlacing = (pendingPlacementTile !== null && myHand.length < targetStartCount);
 
   if (pendingPlacementTile !== null) {
