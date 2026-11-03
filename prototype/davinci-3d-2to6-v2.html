@@ -1,0 +1,802 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>다빈치 코드 3D 테이블 v2 (2~6인)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap">
+<style>
+/* 레이아웃: 전체 화면 3D 테이블 + 가장자리에 얹힌 HUD(상단 바, 하단 독, 중앙 모달). 실제 사이트의 우드/펠트/골드 팔레트를 그대로 사용 */
+:root {
+  --felt: #0b5e3f;
+  --felt-dark: #063d29;
+  --wood-dark: #2b1810;
+  --wood: #5c3319;
+  --wood-light: #8a5a2e;
+  --gold: #d4af37;
+  --gold-light: #f0d78c;
+  --parchment: #f2e8d0;
+  --ink: #2b1810;
+  --ruby: #c0392b;
+  --sapphire: #3b82d6;
+  --emerald: #2ea866;
+  --panel: rgba(28, 15, 8, 0.86);
+  --panel-line: rgba(212, 175, 55, 0.55);
+  --font-display: 'Cinzel', 'Noto Serif KR', serif;
+  --font-body: 'Nunito', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: radial-gradient(ellipse at 50% 30%, #6b4226 0%, #3a2112 55%, #1c0f08 100%);
+  color: var(--gold-light);
+  font-family: var(--font-body);
+  overflow: hidden;
+  user-select: none; -webkit-user-select: none;
+}
+#app { position: relative; width: 100%; height: 100%; overflow: hidden; touch-action: none; }
+#gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+
+.b3d-pl {
+  position: absolute; left: 0; top: 0; transform: translate(-50%, -50%);
+  padding: 3px 10px; border-radius: 999px; white-space: nowrap;
+  background: rgba(28,15,8,.82); border: 1.5px solid rgba(212,175,55,.35);
+  font-size: 12px; font-weight: 700; line-height: 1.35; text-align: center;
+  display: flex; gap: 6px; align-items: center;
+}
+.b3d-pl.turn { border-color: var(--gold); box-shadow: 0 0 14px rgba(240,215,140,.75); color: #fff; }
+.b3d-pl.dead { opacity: .55; text-decoration: line-through; }
+.b3d-pl .b3d-tag { font-size: 10px; padding: 0 5px; border-radius: 6px; background: rgba(255,255,255,.12); }
+.b3d-pl .tA { color: var(--sapphire); } .b3d-pl .tB { color: #ec6a5c; }
+.b3d-pl .b3d-cnt { font-weight: 600; color: #cdbb86; font-size: 11px; }
+.b3d-dl {
+  position: absolute; left: 0; top: 0; transform: translate(-50%, -50%);
+  font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 8px;
+  border: 1.5px solid var(--gold); background: rgba(28,15,8,.85);
+}
+
+#topbar {
+  position: absolute; left: 0; right: 0; top: 0;
+  padding: calc(8px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-left, 0px)) 8px max(12px, env(safe-area-inset-right, 0px));
+  display: flex; align-items: center; gap: 8px; pointer-events: none;
+}
+#topbar > * { pointer-events: auto; }
+#topbar h1 {
+  font-family: var(--font-display); font-weight: 800; font-size: 15px; letter-spacing: 1px; margin: 0; padding: 5px 12px;
+  background: linear-gradient(180deg,#3d2110,#1c0f08); border: 2px solid var(--gold); border-radius: 10px;
+  color: var(--gold-light); white-space: nowrap;
+}
+#turninfo { flex: 1; min-width: 0; text-align: center; font-size: 12px; font-weight: 700; color: var(--gold-light); pointer-events: none; text-shadow: 0 1px 3px #000; }
+.btn {
+  font-family: inherit; font-weight: 800; font-size: 13px; cursor: pointer;
+  color: var(--gold-light); background: linear-gradient(180deg,#6b4226,#3a2112);
+  border: 1.5px solid var(--gold); border-radius: 10px; padding: 8px 14px; min-height: 38px;
+}
+.btn:hover:not(:disabled) { filter: brightness(1.15); }
+.btn:focus-visible, .chip input:focus-visible + span { outline: 2px solid var(--gold-light); outline-offset: 2px; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn.small { padding: 6px 10px; min-height: 32px; font-size: 12px; }
+.btn.on { background: linear-gradient(180deg,#2ea866,#14653a); color: #fff; }
+.btn.primary { background: linear-gradient(180deg,#e9c558,#a67c14); color: var(--ink); }
+.btn.black { background: linear-gradient(180deg,#34343a,#0e0e11); color: #fff; }
+.btn.white { background: linear-gradient(180deg,#fffdf4,#d9cfb4); color: var(--ink); }
+
+#dock {
+  position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 8px max(12px, env(safe-area-inset-left, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-right, 0px));
+  pointer-events: none;
+}
+#dock > * { pointer-events: auto; }
+#status { max-width: 640px; text-align: center; font-weight: 700; font-size: 14px; padding: 7px 14px; border-radius: 12px; background: var(--panel); border: 1.5px solid var(--panel-line); }
+#actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+#preview { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; }
+.mini { width: 30px; height: 42px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font: 800 18px var(--font-display); border: 2px solid #777; }
+.mini.black { background: #17171a; color: #fff; border-color: #55555c; }
+.mini.white { background: #f2ede0; color: #17171a; border-color: #b8ae92; }
+
+#logbox {
+  position: absolute; left: max(10px, env(safe-area-inset-left, 0px)); top: calc(54px + env(safe-area-inset-top, 0px));
+  width: min(300px, 46vw); max-height: 30vh; overflow: hidden;
+  font-size: 11px; line-height: 1.45; color: #d9c98f; pointer-events: none;
+}
+#logbox div { padding: 1px 0; opacity: .8; text-shadow: 0 1px 2px #000; }
+#logbox div:last-child { opacity: 1; color: #fff; }
+
+#toast {
+  position: absolute; left: 50%; top: calc(56px + env(safe-area-inset-top, 0px)); transform: translate(-50%, -8px);
+  max-width: min(520px, 92vw); padding: 8px 16px; border-radius: 12px; text-align: center; font-weight: 800; font-size: 14px;
+  background: rgba(20,10,5,.92); border: 2px solid var(--gold); opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+#toast.bad { border-color: var(--ruby); } #toast.good { border-color: var(--emerald); }
+
+.overlay { position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; background: rgba(15,8,4,.55); padding: calc(12px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-left, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-right, 0px)); }
+.card { width: min(560px, 100%); max-height: 100%; overflow-y: auto; background: linear-gradient(180deg,#3d2110,#1c0f08); border: 2px solid var(--gold); border-radius: 16px; padding: 18px 20px; box-shadow: 0 12px 40px rgba(0,0,0,.6); }
+.card h2 { font-family: var(--font-display); font-size: 20px; margin: 0 0 4px; letter-spacing: 1px; }
+.card p.sub { margin: 0 0 12px; font-size: 12px; color: #cdbb86; }
+.group { margin: 12px 0; }
+.group > label.t { display: block; font-size: 11px; font-weight: 800; letter-spacing: .08em; color: #cdbb86; margin-bottom: 6px; text-transform: uppercase; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { position: relative; }
+.chip input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.chip span { display: block; padding: 8px 14px; min-width: 44px; text-align: center; border-radius: 10px; font-weight: 800; font-size: 13px; background: rgba(255,255,255,.07); border: 1.5px solid rgba(212,175,55,.3); }
+.chip input:checked + span { background: linear-gradient(180deg,#e9c558,#a67c14); color: var(--ink); border-color: var(--gold-light); }
+.chip input:disabled + span { opacity: .3; }
+.chip input:disabled { cursor: not-allowed; }
+.note { font-size: 11px; color: #b9a76d; margin-top: 5px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.row .btn { flex: 1 1 140px; }
+#numgrid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 10px 0; }
+#numgrid .btn { padding: 10px 0; font-size: 16px; font-family: var(--font-display); }
+#simout { margin-top: 12px; font-size: 11px; overflow-x: auto; }
+#simout table { border-collapse: collapse; min-width: 100%; font-variant-numeric: tabular-nums; }
+#simout th, #simout td { padding: 3px 8px; border-bottom: 1px solid rgba(212,175,55,.2); text-align: right; white-space: nowrap; }
+#simout th:first-child, #simout td:first-child { text-align: left; }
+#simout .ok { color: #6fdc9a; } #simout .ng { color: #ff8b7e; font-weight: 800; }
+@media (max-width: 520px) {
+  #topbar h1 { font-size: 12px; padding: 4px 8px; }
+  #turninfo { display: none; }
+  #topbar .spacer { flex: 1; }
+  .b3d-pl { font-size: 10px; padding: 2px 7px; gap: 4px; }
+  #status { font-size: 12px; }
+  #logbox { display: none; }
+  .card { padding: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="gl"></canvas>
+  <div id="labels"></div>
+
+  <div id="topbar">
+    <h1>DA VINCI CODE 3D</h1>
+    <div id="turninfo"></div>
+    <span class="spacer"></span>
+    <button class="btn small" id="btn-auto" type="button" title="내 차례를 AI가 대신 진행합니다">AI 대리</button>
+    <button class="btn small" id="btn-reset-cam" type="button">시점 초기화</button>
+    <button class="btn small" id="btn-setup" type="button">설정</button>
+  </div>
+  <div id="logbox"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <div id="dock">
+    <div id="preview" hidden></div>
+    <div id="status"></div>
+    <div id="actions">
+      <button class="btn black" id="btn-draw-b" type="button">검은 타일 뽑기</button>
+      <button class="btn white" id="btn-draw-w" type="button">흰 타일 뽑기</button>
+      <button class="btn primary" id="btn-pass" type="button">턴 넘기기</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="setup">
+    <div class="card">
+      <h2>다빈치 코드 3D 테이블</h2>
+      <p class="sub">2~6인 프로토타입 · 나는 아래쪽 좌석, 나머지는 AI가 앉습니다. 드래그로 시점 회전, 휠/핀치로 확대.</p>
+      <div class="group"><label class="t">인원</label>
+        <div class="chips" id="g-n"></div></div>
+      <div class="group"><label class="t">게임 모드</label>
+        <div class="chips" id="g-mode"></div>
+        <div class="note">2:2 팀전은 실제 사이트와 동일하게 4인 전용입니다.</div></div>
+      <div class="group"><label class="t">시작 타일 수</label>
+        <div class="chips" id="g-tiles"></div>
+        <div class="note" id="tiles-note"></div></div>
+      <div class="group"><label class="t">AI 속도</label>
+        <div class="chips" id="g-speed"></div></div>
+      <div class="row">
+        <button class="btn primary" id="btn-start" type="button">게임 시작</button>
+        <button class="btn" id="btn-sim" type="button">시뮬레이션 검증 실행</button>
+        <button class="btn" id="btn-close-setup" type="button" hidden>닫기</button>
+      </div>
+      <div id="simout" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="guess" hidden>
+    <div class="card" style="width:min(380px,100%)">
+      <h2 id="guess-title">숫자 추리</h2>
+      <p class="sub" id="guess-sub"></p>
+      <div id="numgrid"></div>
+      <button class="btn" id="btn-guess-cancel" type="button" style="width:100%">취소</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="over" hidden>
+    <div class="card" style="width:min(420px,100%); text-align:center">
+      <h2 id="over-title">게임 종료</h2>
+      <p class="sub" id="over-sub"></p>
+      <div class="row">
+        <button class="btn primary" id="btn-again" type="button">같은 설정으로 다시</button>
+        <button class="btn" id="btn-over-view" type="button">테이블 보기</button>
+        <button class="btn" id="btn-over-setup" type="button">설정</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
+<script src="board3d-v2.js"></script>
+<script>
+'use strict';
+/* =====================================================================
+ *  1) 게임 엔진 (렌더링과 무관한 순수 로직) — 실제 index.html 규칙을 2~6인으로 그대로 옮김
+ *   - 검은/흰 타일 각 0~11 + 조커(-) = 26장, 색깔별 덱에서 직접 선택해 뽑기
+ *   - 시작 타일 수: 자동(2~4인 4장 / 5~6인 3장), 3, 4, 5장. 시작 타일도 직접 배치
+ *   - 정렬 규칙: 왼쪽이 작고 오른쪽이 큼, 같은 숫자는 검은색이 왼쪽, 조커는 어디든 가능
+ *   - 최소 1회 정답을 맞혀야 턴 종료 가능, 오답이면 방금 뽑은 타일 공개 + 턴 종료
+ *   - 개인전 2~6인 / 2:2 팀전(4인 전용, 팀원 타일은 서로 보임)
+ * ===================================================================== */
+const DV = (() => {
+  const isJ = t => t.num === -1;
+  const tid = (c, n) => c[0] + '_' + (n === -1 ? 'J' : n);
+  const NAMES = ['나', '다빈치', '모나', '리사', '체사레', '살라이'];
+
+  function mulberry(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      let t = a; t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function shuffle(a, rnd) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+  function orderOK(h) {
+    let prev = null;
+    for (const t of h) {
+      if (isJ(t)) continue;
+      if (prev) {
+        if (prev.num > t.num) return false;
+        if (prev.num === t.num && prev.color === 'white' && t.color === 'black') return false;
+      }
+      prev = t;
+    }
+    return true;
+  }
+  function validSlots(hand, tile) {
+    const out = [];
+    for (let i = 0; i <= hand.length; i++) { const h = hand.slice(); h.splice(i, 0, tile); if (orderOK(h)) out.push(i); }
+    return out;
+  }
+  const hiddenCount = p => p.hand.filter(t => !t.revealed).length;
+  const isAlive = p => !(p.hand.length > 0 && p.hand.every(t => t.revealed));
+
+  function startCountFor(n, setting) {
+    if (setting === '3') return 3; if (setting === '4') return 4; if (setting === '5') return 5;
+    return n >= 5 ? 3 : 4;
+  }
+  function maxStart(n) { return n >= 6 ? 4 : 5; } // 6인×5장=30 > 26장이라 6인은 최대 4장
+
+  function log(s, msg) { s.log.push(msg); s.seq++; }
+
+  function newGame(o) {
+    const n = o.n, mode = o.mode || 'solo', rnd = o.rnd || Math.random;
+    if (n < 2 || n > 6) throw new Error('인원은 2~6명');
+    if (mode === 'team' && n !== 4) throw new Error('팀전은 4인 전용');
+    const setting = o.tileSetting || 'auto';
+    const sc = startCountFor(n, setting);
+    if (sc > maxStart(n)) throw new Error('이 인원에서는 시작 타일 ' + sc + '장을 줄 수 없음');
+
+    const black = [], white = [];
+    for (let i = 0; i <= 11; i++) {
+      black.push({ id: tid('black', i), color: 'black', num: i, revealed: false });
+      white.push({ id: tid('white', i), color: 'white', num: i, revealed: false });
+    }
+    black.push({ id: tid('black', -1), color: 'black', num: -1, revealed: false });
+    white.push({ id: tid('white', -1), color: 'white', num: -1, revealed: false });
+    shuffle(black, rnd); shuffle(white, rnd);
+
+    const players = [];
+    for (let i = 0; i < n; i++) {
+      players.push({ id: i, name: NAMES[i], team: mode === 'team' ? (i % 2 === 0 ? 'A' : 'B') : null, bot: i !== (o.humanSeat === undefined ? 0 : o.humanSeat), hand: [], pool: [], pending: null });
+    }
+    const s = { n, mode, setting, startCount: sc, players, decks: { black, white }, turn: 0, phase: 'init', guessedOK: false, drawnId: null, over: false, winners: [], winText: '', log: [], seq: 0, steps: 0, rnd };
+    // 시작 타일 분배 (사이트와 동일: 색은 50% 확률로 고르되 덱이 비면 반대 덱)
+    players.forEach(p => {
+      const got = [];
+      for (let k = 0; k < sc; k++) {
+        const pool = (black.length > 0 && rnd() < 0.5) ? black : (white.length > 0 ? white : black);
+        if (pool.length > 0) got.push(pool.pop());
+      }
+      p.hand = [got.shift()];
+      p.pool = got;
+      p.pending = p.pool.shift() || null;
+    });
+    log(s, '게임이 시작되었습니다! 처음 받은 타일들을 원하는 위치에 배치하세요.');
+    maybeFinishInit(s);
+    return s;
+  }
+
+  function maybeFinishInit(s) {
+    if (s.phase !== 'init') return;
+    if (s.players.some(p => p.pending)) return;
+    s.turn = 0; startTurn(s);
+  }
+
+  function startTurn(s) {
+    s.guessedOK = false; s.drawnId = null;
+    const me = s.players[s.turn];
+    me.pending = null;
+    s.phase = (s.decks.black.length + s.decks.white.length > 0) ? 'draw' : 'guess';
+    log(s, `${me.name} 님의 차례`);
+  }
+
+  function placeTile(s, pi, idx) {
+    const p = s.players[pi];
+    if (!p.pending) throw new Error('배치할 타일이 없음');
+    if (s.phase !== 'init' && !(s.phase === 'place' && s.turn === pi)) throw new Error('지금은 배치할 수 없음');
+    if (!validSlots(p.hand, p.pending).includes(idx)) throw new Error('배치 오류: 숫자는 왼쪽이 작고 오른쪽이 커야 하며, 같은 숫자는 검은색이 왼쪽');
+    p.hand.splice(idx, 0, p.pending);
+    s.steps++;
+    if (s.phase === 'init') {
+      p.pending = p.pool.shift() || null;
+      if (!p.pending) log(s, `${p.name} 님이 시작 타일 배치를 마쳤습니다.`);
+      maybeFinishInit(s);
+    } else {
+      p.pending = null;
+      s.phase = 'guess';
+      log(s, `${p.name} 님이 뽑은 타일을 배치했습니다.`);
+    }
+  }
+
+  function draw(s, color) {
+    if (s.phase !== 'draw') throw new Error('지금은 뽑을 수 없음');
+    const deck = s.decks[color];
+    if (!deck || deck.length === 0) throw new Error('해당 색 덱이 비었음');
+    const p = s.players[s.turn];
+    const t = deck.pop();
+    p.pending = t; s.drawnId = t.id; s.phase = 'place'; s.steps++;
+    log(s, `${p.name} 님이 [${color === 'black' ? '검은색' : '흰색'}] 타일을 뽑았습니다.`);
+  }
+
+  function opponentsOf(s, pi) {
+    const me = s.players[pi];
+    return s.players.filter(q => q.id !== pi && !(s.mode === 'team' && q.team === me.team));
+  }
+  function canTarget(s, pi, tpi, idx) {
+    const q = s.players[tpi];
+    if (!q || tpi === pi) return false;
+    if (s.mode === 'team' && q.team === s.players[pi].team) return false;
+    const t = q.hand[idx];
+    return !!t && !t.revealed;
+  }
+
+  function guess(s, tpi, idx, num) {
+    if (s.phase !== 'guess' || s.over) throw new Error('지금은 추리할 수 없음');
+    const pi = s.turn, me = s.players[pi];
+    if (!canTarget(s, pi, tpi, idx)) throw new Error('지목할 수 없는 타일');
+    const q = s.players[tpi], t = q.hand[idx];
+    const g = num === -1 ? '-' : num;
+    s.steps++;
+    if (t.num === num) {
+      t.revealed = true; s.guessedOK = true;
+      log(s, `${me.name} 님이 [${q.name}] 님의 ${idx + 1}번째 타일을 [${g}]로 지목 → 정답`);
+      checkWinner(s);
+      return { ok: true, actual: t.num };
+    }
+    log(s, `${me.name} 님이 [${q.name}] 님의 ${idx + 1}번째 타일을 [${g}]로 지목 → 실패 (턴 종료)`);
+    const mine = me.hand.find(x => x.id === s.drawnId && !x.revealed);
+    if (mine) { mine.revealed = true; endTurn(s); }
+    else { s.phase = 'reveal'; log(s, `${me.name} 님은 공개할 자기 타일을 하나 골라야 합니다.`); }
+    return { ok: false, actual: t.num };
+  }
+
+  function revealOwn(s, idx) {
+    if (s.phase !== 'reveal') throw new Error('지금은 공개할 수 없음');
+    const me = s.players[s.turn], t = me.hand[idx];
+    if (!t || t.revealed) throw new Error('공개할 수 없는 타일');
+    t.revealed = true; s.steps++;
+    endTurn(s);
+  }
+
+  function pass(s) {
+    if (s.phase !== 'guess' || !s.guessedOK) throw new Error('최소 1번 정답을 맞혀야 턴을 넘길 수 있음');
+    log(s, `${s.players[s.turn].name} 님이 턴을 종료했습니다.`);
+    s.steps++;
+    endTurn(s);
+  }
+
+  function endTurn(s) {
+    checkWinner(s);
+    if (s.over) return;
+    for (let k = 1; k <= s.n; k++) {
+      const ni = (s.turn + k) % s.n;
+      if (isAlive(s.players[ni])) { s.turn = ni; break; }
+    }
+    startTurn(s);
+  }
+
+  function checkWinner(s) {
+    if (s.over) return;
+    const alive = s.players.filter(isAlive);
+    if (s.mode === 'solo') {
+      if (alive.length === 1) finish(s, [alive[0].id], `[${alive[0].name}] 님이 최종 승리!`);
+    } else {
+      const a = alive.some(p => p.team === 'A'), b = alive.some(p => p.team === 'B');
+      if (a && !b) finish(s, s.players.filter(p => p.team === 'A').map(p => p.id), '[팀 A] 최종 승리!');
+      else if (!a && b) finish(s, s.players.filter(p => p.team === 'B').map(p => p.id), '[팀 B] 최종 승리!');
+    }
+  }
+  function finish(s, winners, text) { s.over = true; s.phase = 'over'; s.winners = winners; s.winText = text; log(s, text); }
+
+  /* ---------- AI (사이트에 봇이 없으므로 프로토타입용으로 새로 작성) ---------- */
+  function knownIds(s, pi) {
+    const me = s.players[pi], k = new Set();
+    me.hand.forEach(t => k.add(t.id)); if (me.pending) k.add(me.pending.id);
+    s.players.forEach(p => {
+      const mate = s.mode === 'team' && p.team === me.team;
+      p.hand.forEach(t => { if (t.revealed || mate) k.add(t.id); });
+    });
+    return k;
+  }
+  function candidates(s, known, tpi, idx) {
+    const h = s.players[tpi].hand, c = h[idx].color;
+    let lo = 0, hi = 11, loT = null, hiT = null;
+    for (let i = idx - 1; i >= 0; i--) { const t = h[i]; if (!isJ(t) && (t.revealed || known.has(t.id))) { lo = t.num; loT = t; break; } }
+    for (let i = idx + 1; i < h.length; i++) { const t = h[i]; if (!isJ(t) && (t.revealed || known.has(t.id))) { hi = t.num; hiT = t; break; } }
+    const out = [];
+    for (let k = -1; k <= 11; k++) {
+      if (known.has(tid(c, k))) continue;
+      if (k !== -1) {
+        if (k < lo || k > hi) continue;
+        if (loT && k === lo && loT.color === 'white' && c === 'black') continue;
+        if (hiT && k === hi && c === 'white' && hiT.color === 'black') continue;
+      }
+      out.push(k);
+    }
+    return out;
+  }
+  function hint(s, pi, rnd) {
+    rnd = rnd || s.rnd;
+    const known = knownIds(s, pi);
+    let best = null, ties = 0;
+    opponentsOf(s, pi).forEach(q => q.hand.forEach((t, idx) => {
+      if (t.revealed) return;
+      const c = candidates(s, known, q.id, idx);
+      const score = c.length === 0 ? 99 : c.length;
+      if (!best || score < best.score) { best = { tpi: q.id, idx, c, score }; ties = 1; }
+      else if (score === best.score && rnd() < 1 / ++ties) best = { tpi: q.id, idx, c, score };
+    }));
+    if (!best) return null;
+    // 조커는 후보 중 마지막 선택지로만 취급 (비일반 후보가 있으면 제외)
+    const normal = best.c.filter(x => x !== -1);
+    const pool = normal.length ? normal : (best.c.length ? best.c : [Math.floor(rnd() * 12)]);
+    best.num = pool[Math.floor(rnd() * pool.length)];
+    return best;
+  }
+
+  /** AI 한 동작. 어느 단계든 현재 차례(또는 init 중 미배치 플레이어)를 대신 진행한다. */
+  function botAct(s, rnd, onlySeat) {
+    rnd = rnd || s.rnd;
+    if (s.over) return 'over';
+    if (s.phase === 'init') {
+      const p = s.players.find(x => x.pending && (onlySeat === undefined || x.id === onlySeat));
+      if (!p) return 'wait';
+      const slots = validSlots(p.hand, p.pending);
+      placeTile(s, p.id, slots[Math.floor(rnd() * slots.length)]);
+      return 'init-place';
+    }
+    const p = s.players[s.turn];
+    switch (s.phase) {
+      case 'draw': {
+        const opts = ['black', 'white'].filter(c => s.decks[c].length > 0);
+        draw(s, opts[Math.floor(rnd() * opts.length)]); return 'draw';
+      }
+      case 'place': {
+        const slots = validSlots(p.hand, p.pending);
+        placeTile(s, p.id, slots[Math.floor(rnd() * slots.length)]); return 'place';
+      }
+      case 'guess': {
+        const h = hint(s, p.id, rnd);
+        if (s.guessedOK) {
+          const keep = !h ? 0 : h.score <= 1 ? 0.9 : h.score <= 2 ? 0.65 : h.score <= 3 ? 0.4 : 0.2;
+          if (!h || rnd() > keep) { pass(s); return 'pass'; }
+        }
+        if (!h) throw new Error('지목할 타일이 없는데 게임이 끝나지 않음');
+        guess(s, h.tpi, h.idx, h.num); return 'guess';
+      }
+      case 'reveal': {
+        const idxs = p.hand.map((t, i) => t.revealed ? -1 : i).filter(i => i >= 0);
+        revealOwn(s, idxs[Math.floor(rnd() * idxs.length)]); return 'reveal';
+      }
+    }
+    return 'noop';
+  }
+
+  /* ---------- 무결성 검사 ---------- */
+  function check(s) {
+    const errs = [];
+    const all = [...s.decks.black, ...s.decks.white];
+    s.players.forEach(p => { all.push(...p.hand, ...p.pool); if (p.pending) all.push(p.pending); });
+    if (all.length !== 26) errs.push('타일 총합 ' + all.length + '≠26');
+    if (new Set(all.map(t => t.id)).size !== all.length) errs.push('중복 타일');
+    s.players.forEach(p => { if (!orderOK(p.hand)) errs.push(p.name + ' 패 정렬 위반: ' + p.hand.map(t => t.id).join(',')); });
+    if (!s.over && s.phase !== 'init' && !isAlive(s.players[s.turn])) errs.push('탈락자의 차례');
+    if (s.phase === 'init' && s.players.every(p => !p.pending)) errs.push('init 종료 미처리');
+    return errs;
+  }
+
+  function simulate(o) {
+    const res = { n: o.n, mode: o.mode, setting: o.tileSetting, games: o.games, finished: 0, errors: [], turns: 0, steps: 0, wins: Array(o.n).fill(0), maxHand: 0, noDrawRounds: 0 };
+    for (let g = 0; g < o.games; g++) {
+      const rnd = mulberry((o.seed || 1) * 7919 + g * 104729 + o.n * 31);
+      let s;
+      try { s = newGame({ n: o.n, mode: o.mode, tileSetting: o.tileSetting, rnd, humanSeat: -1 }); }
+      catch (e) { res.errors.push('생성 실패: ' + e.message); continue; }
+      let guard = 0, turnCount = 0, lastTurn = -1, lastPhase = '';
+      try {
+        while (!s.over && guard++ < 5000) {
+          if (s.phase === 'draw' && s.turn !== lastTurn) { /* new turn */ }
+          botAct(s, rnd);
+          if (s.phase === 'draw' && lastPhase !== 'draw') turnCount++;
+          lastPhase = s.phase;
+          const e = check(s); if (e.length) { res.errors.push(`게임${g}: ` + e.join(' | ')); break; }
+        }
+        if (!s.over && guard >= 5000) res.errors.push(`게임${g}: 5000스텝 내 종료 안 됨`);
+        if (s.over) {
+          res.finished++; res.turns += turnCount; res.steps += s.steps;
+          s.winners.forEach(w => res.wins[w]++);
+          res.maxHand = Math.max(res.maxHand, ...s.players.map(p => p.hand.length));
+          // 승리 검증
+          const alive = s.players.filter(isAlive);
+          if (s.mode === 'solo' && !(alive.length === 1 && s.winners[0] === alive[0].id)) res.errors.push(`게임${g}: 승자 불일치`);
+          if (s.mode === 'team' && new Set(alive.map(p => p.team)).size !== 1) res.errors.push(`게임${g}: 팀 승자 불일치`);
+        }
+      } catch (e) { res.errors.push(`게임${g}: 예외 ${e.message}`); }
+    }
+    return res;
+  }
+
+  return { newGame, placeTile, draw, guess, revealOwn, pass, botAct, hint, validSlots, orderOK, canTarget, opponentsOf, isAlive, hiddenCount, check, simulate, startCountFor, maxStart, mulberry, isJ, tid };
+})();
+
+/* =====================================================================
+ *  2) 3D 렌더러 + UI 컨트롤러
+ * ===================================================================== */
+(() => {
+  const $ = id => document.getElementById(id);
+  const V3 = THREE.Vector3;
+  const ui = { G: null, opts: { n: 4, mode: 'solo', tileSetting: 'auto' }, speed: 650, auto: false, demo: true, timer: null, over: false, lastSeq: 0, hover: null, drag: null, toastT: 0, zoom: 1 };
+  window.__ui = ui; window.DV = DV;
+
+  /* ---------- 3D 렌더러: board3d-v2.js (실제 사이트에 들어갈 모듈 그대로) ---------- */
+  Board3D.mount({ canvas: $('gl'), app: $('app'), labels: $('labels') });
+  Board3D.setFit(1); Board3D.setGlyph(0.84);
+  const fitInset = () => Board3D.setInset($('topbar').offsetHeight, $('dock').offsetHeight);
+  window.addEventListener('resize', fitInset);
+  $('btn-reset-cam').onclick = () => Board3D.resetCam();
+
+  // 엔진 상태 → 렌더러 상태 (index.html 의 renderBoard3D 와 같은 모양)
+  function boardState() {
+    const s = ui.G, myTeam = s.players[0].team, humanTurn = isHumanActing();
+    const players = s.players.map((p, pi) => ({
+      name: pi === 0 ? '나' : p.name + ' (AI)', team: p.team,
+      peek: s.mode === 'team' && pi !== 0 && p.team === myTeam,
+      hand: p.hand.map(t => ({ id: t.id, color: t.color, num: t.num, revealed: t.revealed })),
+      pending: p.pending ? { id: p.pending.id, color: p.pending.color, num: p.pending.num } : null,
+    }));
+    const targets = [];
+    if (humanTurn && s.phase === 'guess') s.players.forEach((q, pi) => { if (pi !== 0) q.hand.forEach((t, i) => { if (DV.canTarget(s, 0, pi, i)) targets.push({ pi, idx: i }); }); });
+    if (humanTurn && s.phase === 'reveal') s.players[0].hand.forEach((t, i) => { if (!t.revealed) targets.push({ pi: 0, idx: i }); });
+    const me = s.players[0];
+    return {
+      n: s.n, mode: s.mode, over: s.over, turn: s.phase === 'init' ? -1 : s.turn, phase: s.phase, players,
+      decks: { black: s.decks.black.length, white: s.decks.white.length },
+      slots: (me.pending && humanActsOnPlace()) ? DV.validSlots(me.hand, me.pending) : [],
+      targets, canDraw: humanTurn && s.phase === 'draw',
+    };
+  }
+  function sync3D() { if (ui.G) Board3D.update(boardState()); }
+  function snapAll() { Board3D.snap(); }
+  function renderLabels() {}   // 이름표는 렌더러가 update 때 직접 그린다
+  Board3D.onPick(pk => { if (pk.type === 'target' && pk.pi === 0) onPick({ type: 'own', idx: pk.idx }); else onPick(pk); });
+
+  /* ---------- 컨트롤러 ---------- */
+  const isHumanActing = () => { const s = ui.G; return !!s && !s.over && !ui.demo && !ui.auto && (s.phase === 'init' || s.turn === 0); };
+  const humanActsOnPlace = () => { const s = ui.G; return isHumanActing() && (s.phase === 'init' || s.phase === 'place') && !!s.players[0].pending; };
+
+  function toast(msg, kind) {
+    const t = $('toast'); t.textContent = msg; t.className = 'show ' + (kind || '');
+    clearTimeout(ui.toastT); ui.toastT = setTimeout(() => { t.className = ''; }, 2200);
+  }
+  function onPick(pk) {
+    const s = ui.G; if (!s || !isHumanActing()) return;
+    try {
+      if (pk.type === 'deck') { DV.draw(s, pk.color); }
+      else if (pk.type === 'slot') { DV.placeTile(s, 0, pk.idx); }
+      else if (pk.type === 'target') { openGuess(pk.pi, pk.idx); return; }
+      else if (pk.type === 'own') { DV.revealOwn(s, pk.idx); toast('내 타일 공개', 'bad'); }
+    } catch (err) { toast(err.message, 'bad'); }
+    update();
+  }
+  let gTarget = null;
+  function openGuess(pi, idx) {
+    const s = ui.G, q = s.players[pi], t = q.hand[idx];
+    gTarget = { pi, idx };
+    $('guess-sub').textContent = `${q.name} 님의 ${idx + 1}번째 ${t.color === 'black' ? '검은색' : '흰색'} 타일은 무엇일까요?`;
+    $('guess').hidden = false;
+  }
+  function buildNumGrid() {
+    const g = $('numgrid'); g.innerHTML = '';
+    for (let n = 0; n <= 12; n++) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.dataset.num = n === 12 ? -1 : n; b.textContent = n === 12 ? '-' : n;
+      b.title = n === 12 ? '조커' : ''; b.onclick = () => submitGuess(Number(b.dataset.num)); g.appendChild(b);
+    }
+  }
+  function submitGuess(num) {
+    const s = ui.G; $('guess').hidden = true; if (!gTarget) return;
+    try {
+      const r = DV.guess(s, gTarget.pi, gTarget.idx, num);
+      toast(r.ok ? '정답! 계속 추리하거나 턴을 넘기세요' : '틀렸습니다! 방금 뽑은 타일이 공개되고 턴이 넘어갑니다', r.ok ? 'good' : 'bad');
+    } catch (err) { toast(err.message, 'bad'); }
+    gTarget = null; update();
+  }
+  $('btn-guess-cancel').onclick = () => { $('guess').hidden = true; gTarget = null; };
+  $('btn-draw-b').onclick = () => onPick({ type: 'deck', color: 'black' });
+  $('btn-draw-w').onclick = () => onPick({ type: 'deck', color: 'white' });
+  $('btn-pass').onclick = () => { if (!isHumanActing()) return; try { DV.pass(ui.G); } catch (e) { toast(e.message, 'bad'); } update(); };
+  $('btn-auto').onclick = () => { ui.auto = !ui.auto; update(); };
+
+  function renderHUD() {
+    const s = ui.G; if (!s) return;
+    const me = s.players[0], humanTurn = isHumanActing();
+    const status = $('status'); let msg = '', col = '#f0d78c';
+    if (ui.demo) msg = '데모 진행 중 · 설정에서 게임을 시작하세요';
+    else if (s.over) { msg = '게임 종료! 모든 패가 공개되었습니다.'; col = '#6fdc9a'; }
+    else if (ui.auto) { msg = `AI 대리 플레이 중 · ${s.players[s.turn].name} 님의 차례`; }
+    else if (s.phase === 'init') msg = me.pending ? `[시작 타일 배치] 내 패 위의 [ + ]를 눌러 배치하세요 (남은 ${1 + me.pool.length}장)` : '다른 플레이어가 배치를 마칠 때까지 기다리는 중...';
+    else if (!DV.isAlive(me)) { msg = '내 모든 패가 공개되어 탈락했습니다 (관전 중)'; col = '#ec6a5c'; }
+    else if (s.turn !== 0) msg = `${s.players[s.turn].name} 님의 턴 진행 중...`;
+    else if (s.phase === 'draw') { msg = '가져올 타일 색상을 선택해 뽑으세요 (덱을 눌러도 됩니다)'; col = '#e67e22'; }
+    else if (s.phase === 'place') { msg = '뽑은 타일을 놓을 [ + ] 위치를 선택하세요'; }
+    else if (s.phase === 'guess') { msg = s.guessedOK ? '정답! 계속 추리하거나 [턴 넘기기]를 누르세요' : '상대 타일을 눌러 숫자를 추리하세요 (한 번은 맞혀야 넘길 수 있어요)'; col = s.guessedOK ? '#6fdc9a' : '#f1c40f'; }
+    else if (s.phase === 'reveal') { msg = '틀렸습니다! 공개할 내 타일을 하나 선택하세요'; col = '#ec6a5c'; }
+    status.textContent = msg; status.style.color = col;
+    const can = humanTurn && !s.over;
+    $('btn-draw-b').disabled = !(can && s.phase === 'draw' && s.decks.black.length > 0);
+    $('btn-draw-w').disabled = !(can && s.phase === 'draw' && s.decks.white.length > 0);
+    $('btn-pass').disabled = !(can && s.phase === 'guess' && s.guessedOK);
+    $('btn-draw-b').hidden = $('btn-draw-w').hidden = !(can && s.phase === 'draw');
+    $('btn-pass').hidden = !(can && (s.phase === 'guess'));
+    const pv = $('preview');
+    if (me.pending && humanActsOnPlace()) { pv.hidden = false; pv.innerHTML = `<span>${s.phase === 'init' ? '시작 타일' : '뽑은 타일'}</span><span class="mini ${me.pending.color}">${me.pending.num === -1 ? '-' : me.pending.num}</span>`; }
+    else pv.hidden = true;
+    $('btn-auto').classList.toggle('on', ui.auto);
+    $('btn-auto').hidden = ui.demo;
+    $('turninfo').textContent = ui.demo || s.over ? '' : `${s.n}인 · ${s.mode === 'team' ? '2:2 팀전' : '개인전'} · 시작 ${s.startCount}장 · 덱 ${s.decks.black.length + s.decks.white.length}장`;
+    const lb = $('logbox'); lb.innerHTML = s.log.slice(-5).map(l => `<div>${l.replace(/</g, '&lt;')}</div>`).join('');
+    renderLabels();
+    if (s.over && !ui.over) {
+      ui.over = true;
+      if (!ui.demo) {
+        const mine = s.winners.includes(0);
+        $('over-title').textContent = mine ? '승리!' : '패배';
+        $('over-sub').textContent = s.winText + (s.mode === 'team' ? ` (내 팀: ${me.team})` : '');
+        setTimeout(() => { if (ui.G === s) $('over').hidden = false; }, 1400);
+      } else {
+        setTimeout(() => { if (ui.demo && ui.G === s) startDemo(); }, 3500);
+      }
+    }
+  }
+
+  function update() {
+    sync3D(); renderHUD(); fitInset();
+    const s = ui.G;
+    if (s.log.length !== ui.lastLogLen) {
+      if (!ui.demo && s.log.length > ui.lastLogLen && !$('toast').classList.contains('show')) toast(s.log[s.log.length - 1]);
+      ui.lastLogLen = s.log.length;
+    }
+    schedule();
+  }
+  function schedule() {
+    clearTimeout(ui.timer);
+    const s = ui.G; if (!s || s.over) return;
+    let needBot = false;
+    if (s.phase === 'init') needBot = ui.demo || ui.auto || s.players.some(p => p.bot && p.pending);
+    else needBot = ui.demo || ui.auto || s.players[s.turn].bot;
+    if (!needBot) return;
+    const d = ui.demo ? Math.min(ui.speed, 450) : ui.speed;
+    ui.timer = setTimeout(() => {
+      try {
+        const s2 = ui.G; if (!s2 || s2.over) return;
+        const before = s2.log.length;
+        if (s2.phase === 'init') {
+          const only = (ui.demo || ui.auto) ? undefined : undefined;
+          // 사람이 아닌 좌석부터 한꺼번에 배치
+          let guard = 0; while (s2.phase === 'init' && guard++ < 100) {
+            const p = s2.players.find(x => x.pending && (x.bot || ui.demo || ui.auto));
+            if (!p) break; DV.botAct(s2, undefined, p.id);
+          }
+        } else DV.botAct(s2);
+        void before;
+      } catch (err) { console.error(err); toast('AI 오류: ' + err.message, 'bad'); window.__aiError = err.message; return; }
+      update();
+    }, d);
+  }
+
+  /* ---------- 시작/데모/설정 ---------- */
+  function startGame(o, demo) {
+    clearTimeout(ui.timer);
+    ui.opts = Object.assign({}, o); ui.demo = !!demo; ui.over = false; ui.lastLogLen = 0; ui.auto = false;
+    $('over').hidden = true; $('guess').hidden = true;
+    ui.G = DV.newGame({ n: o.n, mode: o.mode, tileSetting: o.tileSetting });
+    Board3D.reset();
+    update();
+    // 첫 배치는 애니메이션 없이 제자리에서 시작
+    if (!ui.demo) setTimeout(() => {}, 0);
+  }
+  function startDemo() {
+    const n = [3, 4, 5, 6, 2][Math.floor(Math.random() * 5)];
+    startGame({ n, mode: 'solo', tileSetting: 'auto' }, true);
+    $('setup').hidden = $('setup').hidden; // no-op: 데모는 설정 창 뒤에서 진행
+  }
+
+  function chips(id, name, items, value, onchange) {
+    const box = $(id); box.innerHTML = '';
+    items.forEach(it => {
+      const l = document.createElement('label'); l.className = 'chip';
+      l.innerHTML = `<input type="radio" name="${name}" value="${it.v}" ${String(it.v) === String(value) ? 'checked' : ''} ${it.disabled ? 'disabled' : ''}><span>${it.t}</span>`;
+      l.querySelector('input').addEventListener('change', () => onchange(it.v)); box.appendChild(l);
+    });
+  }
+  const form = { n: 4, mode: 'solo', tileSetting: 'auto', speed: 650 };
+  function renderForm() {
+    if (form.mode === 'team' && form.n !== 4) form.mode = 'solo';
+    if (DV.startCountFor(form.n, form.tileSetting) > DV.maxStart(form.n)) form.tileSetting = 'auto';
+    chips('g-n', 'n', [2, 3, 4, 5, 6].map(v => ({ v, t: v + '인' })), form.n, v => { form.n = Number(v); renderForm(); });
+    chips('g-mode', 'mode', [{ v: 'solo', t: '개인전' }, { v: 'team', t: '2:2 팀전', disabled: form.n !== 4 }], form.mode, v => { form.mode = v; renderForm(); });
+    chips('g-tiles', 'tiles', [{ v: 'auto', t: '자동' }, { v: '3', t: '3장' }, { v: '4', t: '4장' }, { v: '5', t: '5장', disabled: form.n === 6 }], form.tileSetting, v => { form.tileSetting = v; renderForm(); });
+    chips('g-speed', 'speed', [{ v: 1200, t: '느림' }, { v: 650, t: '보통' }, { v: 250, t: '빠름' }], form.speed, v => { form.speed = Number(v); });
+    const sc = DV.startCountFor(form.n, form.tileSetting);
+    $('tiles-note').textContent = `${form.n}인 기준 시작 타일 ${sc}장` + (form.n === 6 ? ' · 6인은 26장을 넘지 않도록 최대 4장' : '');
+  }
+  $('btn-start').onclick = () => {
+    ui.speed = form.speed; $('setup').hidden = true; $('btn-close-setup').hidden = false;
+    startGame({ n: form.n, mode: form.mode, tileSetting: form.tileSetting }, false);
+    snapAll();
+  };
+  $('btn-setup').onclick = () => { $('setup').hidden = false; };
+  $('btn-close-setup').onclick = () => { $('setup').hidden = true; };
+  $('btn-again').onclick = () => { $('over').hidden = true; startGame(ui.opts, false); };
+  $('btn-over-view').onclick = () => { $('over').hidden = true; };
+  $('btn-over-setup').onclick = () => { $('over').hidden = true; $('setup').hidden = false; };
+
+  $('btn-sim').onclick = async () => {
+    const out = $('simout'); out.textContent = '시뮬레이션 실행 중...';
+    const cfgs = [];
+    for (let n = 2; n <= 6; n++) for (const ts of ['auto', '3', '4', '5']) { if (DV.startCountFor(n, ts) > DV.maxStart(n)) continue; cfgs.push({ n, mode: 'solo', tileSetting: ts }); }
+    ['auto', '3', '4', '5'].forEach(ts => cfgs.push({ n: 4, mode: 'team', tileSetting: ts }));
+    const rows = []; let bad = 0;
+    for (const c of cfgs) {
+      await new Promise(r => setTimeout(r, 0));
+      const r = DV.simulate(Object.assign({ games: 150, seed: 11 }, c)); bad += r.errors.length;
+      rows.push(`<tr><td>${c.n}인 ${c.mode === 'team' ? '팀전' : '개인'} · ${c.tileSetting === 'auto' ? '자동' : c.tileSetting + '장'}</td><td>${r.games}</td><td>${r.finished}</td><td>${(r.turns / Math.max(1, r.finished)).toFixed(1)}</td><td>${r.maxHand}</td><td class="${r.errors.length ? 'ng' : 'ok'}">${r.errors.length}</td></tr>`);
+    }
+    out.innerHTML = `<table><tr><th>설정</th><th>판</th><th>종료</th><th>평균 턴</th><th>최대 패</th><th>오류</th></tr>${rows.join('')}</table><p class="${bad ? 'ng' : 'ok'}">${bad ? '오류 ' + bad + '건' : '전 설정 오류 0건 · 모든 판이 정상 종료'}</p>`;
+  };
+
+  /* ---------- 테스트/자동화용 훅 ---------- */
+  window.__api = {
+    snap: () => Board3D.snap(),
+    probe: () => Board3D.probe(),
+    fast: () => { ui.speed = 0; form.speed = 0; },
+    state: () => ui.G && { phase: ui.G.phase, turn: ui.G.turn, over: ui.G.over, guessedOK: ui.G.guessedOK, n: ui.G.n },
+    isHumanActing: () => isHumanActing(),
+    setAuto: v => { ui.auto = !!v; update(); },
+  };
+
+  /* ---------- 부팅 ---------- */
+  buildNumGrid(); renderForm(); fitInset();
+  startDemo();
+  snapAll();
+})();
+</script>
+</body>
+</html>
