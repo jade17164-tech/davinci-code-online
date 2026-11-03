@@ -24,7 +24,8 @@ window.Board3D = (() => {
 
   let canvas, appEl, labelsEl, renderer, scene, camera, world, tileGroup, tileGeo, clock;
   let S = null, pickCb = null, zoom = 1, hover = null, pickables = [], raf = 0;
-  let fit = 1;   // 테이블을 화면에 얼마나 꽉 채울지 (작을수록 크게 보인다)
+  let fit = 1;     // 테이블을 화면에 얼마나 꽉 채울지 (작을수록 크게 보인다)
+  let glyph = 1;   // 타일 숫자 크기 배수
   const cam = { az: 0, pol: 0.92, rad: 20, tgt: new V3(0, 0, 0.4) };
   const tileMeshes = new Map();
   let seats = [], racks = [], deckMeshes = {}, slotSprites = [], builtN = 0;
@@ -41,7 +42,7 @@ window.Board3D = (() => {
     c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
   }
   function faceMat(kind, color, num) {
-    const key = kind + color + (kind === 'cover' ? '' : num);
+    const key = kind + color + glyph + (kind === 'cover' ? '' : num);
     if (matCache.has(key)) return matCache.get(key);
     const W = 220, H = 310, c = document.createElement('canvas'); c.width = W; c.height = H;
     const g = c.getContext('2d'), blk = color === 'black';
@@ -60,7 +61,7 @@ window.Board3D = (() => {
       g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle';
       const label = num === -1 ? '-' : String(num);
       // 멀리서도 한눈에 읽히도록 글자를 면 높이의 70% 가까이 키운다
-      g.font = '800 ' + (label.length > 1 ? 196 : 240) + 'px Georgia, "Times New Roman", serif';
+      g.font = '800 ' + Math.round((label.length > 1 ? 196 : 240) * glyph) + 'px Georgia, "Times New Roman", serif';
       g.fillText(label, W / 2, H / 2 + 10);
       if (kind === 'rev') {
         g.fillStyle = '#c0392b'; g.beginPath();
@@ -390,5 +391,12 @@ window.Board3D = (() => {
     onPick(fn) { pickCb = fn; },
     resetCam() { cam.az = 0; cam.pol = 0.92; zoom = 1; fitCamera(); },
     setFit(f) { fit = f; fitCamera(); },
+    setGlyph(g) {
+      glyph = g;
+      // 면 머티리얼은 캐시되고 타일은 '바뀐 게 없으면 넘어간다'로 판단하므로 둘 다 풀어줘야 다시 그려진다
+      matCache.clear();
+      tileMeshes.forEach(m => { m.userData.key = ''; });
+      sync3D();
+    },
   };
 })();
