@@ -2033,7 +2033,8 @@ function updateWaitingRoomUI(data) {
   const startBtn = document.getElementById('start-game-btn');
   if (isHost) {
     startBtn.classList.remove('hidden');
-    let minPlayers = isTeamMode ? 4 : 2;
+    // shortcut: ?solotest=1 이면 혼자서도 시작할 수 있게 한다 (3D 보드 확인용). main 전에 제거.
+    let minPlayers = isTeamMode ? 4 : (new URLSearchParams(location.search).has('solotest') ? 1 : 2);
     startBtn.disabled = pCount < minPlayers;
     startBtn.innerText = isTeamMode && pCount < 4 ? `게임 시작하기 (팀전은 4명 필요, 현재 ${pCount}명)` : `게임 시작하기`;
   } else {
