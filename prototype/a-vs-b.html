@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A안 미리보기 — index.html 타일만 교체</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap');
+
+:root{
+  --wood-dark:#2b1810; --wood:#5c3319; --wood-mid:#6b4226; --wood-light:#8a5a2e;
+  --gold:#d4af37; --gold-light:#f0d78c; --ruby:#c0392b;
+  --tw:42px; --th:62px; --td:18px;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:20px 14px 48px;font-family:'Nunito',sans-serif;color:#eee;
+  background:radial-gradient(ellipse at 50% 0%,#241309,#120a05 70%)}
+h1{font-size:17px;text-align:center;color:var(--gold-light);margin:0 0 4px}
+.lead{text-align:center;font-size:13px;color:#9a8f7f;margin:0 0 22px;line-height:1.7}
+
+.cols{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;max-width:1000px;margin:0 auto}
+.col{flex:1 1 420px;min-width:330px}
+.card{background:linear-gradient(180deg,#3a2112,#241309);border:2px solid var(--wood-dark);
+  border-radius:10px;padding:14px 14px 18px;box-shadow:0 10px 26px rgba(0,0,0,.5)}
+.tag{display:inline-block;font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:999px;margin-bottom:10px}
+.tag.now{background:#4a3a2a;color:#cdbda6}
+.tag.a{background:var(--gold);color:#2b1810}
+h2{font-size:14px;margin:0 0 2px;color:#f0e3c8}
+.sub{font-size:12px;color:#9a8f7f;margin:0 0 12px;line-height:1.65}
+.label{font-size:11.5px;color:#a8977f;font-weight:700;margin:12px 0 4px}
+
+/* ── index.html 의 실제 손패 컨테이너 (양쪽 공통) ── */
+.hand{display:flex;justify-content:flex-start;gap:5px;flex-wrap:nowrap;overflow-x:auto;
+  min-height:82px;margin:4px 0;align-items:center;padding:10px 8px 6px;
+  background:linear-gradient(180deg,#241309,#150b05);border-radius:8px;border:2px solid var(--wood-dark);
+  box-shadow:inset 0 6px 10px rgba(0,0,0,.65), inset 0 -1px 0 rgba(255,255,255,.05)}
+.hand.p3d{perspective:1400px;perspective-origin:50% 0%}
+
+/* ── 지금 (index.html 현재 스타일 그대로) ── */
+.t2{width:42px;height:62px;line-height:62px;font-size:20px;font-weight:800;font-family:'Baloo 2',sans-serif;
+  border-radius:5px;user-select:none;position:relative;display:inline-block;text-align:center;flex-shrink:0}
+.t2.black{background:radial-gradient(circle at 30% 22%,#4d5058,#1c1d22 62%,#0a0a0c);color:#fbfbfb;border:1px solid #050506;
+  box-shadow:0 4px 0 #000,0 8px 12px rgba(0,0,0,.6),inset 0 2px 3px rgba(255,255,255,.15)}
+.t2.white{background:radial-gradient(circle at 30% 22%,#fff,#e9e2cc 62%,#cfc4a3);color:#1a1a1a;border:1px solid #b9ae8c;
+  box-shadow:0 4px 0 #a8987a,0 8px 12px rgba(0,0,0,.4),inset 0 2px 3px rgba(255,255,255,.85)}
+.t2.cover-black{background:radial-gradient(circle at 50% 35%,#34210f 0%,#180d05 75%);color:var(--gold-light);
+  border:1px solid var(--gold);font-size:21px;box-shadow:0 4px 0 #0a0603,0 8px 12px rgba(0,0,0,.6),inset 0 0 0 3px rgba(212,175,55,.18)}
+.t2.cover-white{background:radial-gradient(circle at 50% 35%,#e2d4ab 0%,#b6905a 75%);color:var(--wood-dark);
+  border:1px solid var(--wood-dark);font-size:21px;box-shadow:0 4px 0 #7a5a2c,0 8px 12px rgba(0,0,0,.45),inset 0 0 0 3px rgba(43,24,16,.25)}
+.t2.revealed{border:2px solid var(--ruby)!important;box-shadow:0 0 14px rgba(192,57,43,.8),0 4px 0 rgba(0,0,0,.5)!important}
+
+/* ── A안 (프로토타입에서 가져온 CSS 3D 블록) ── */
+.t3{position:relative;width:var(--tw);height:var(--th);flex-shrink:0;transform-style:preserve-3d;
+  transform:rotateX(11deg);transition:transform .2s cubic-bezier(.34,1.25,.5,1)}
+.t3:hover{transform:rotateX(11deg) translateY(-10px) translateZ(20px)}
+.box{position:absolute;inset:0;transform-style:preserve-3d;transform:translateZ(calc(var(--td)/-2))}
+.f{position:absolute;left:50%;top:50%;backface-visibility:hidden;display:flex;align-items:center;justify-content:center}
+.fr,.bk{width:var(--tw);height:var(--th);margin:calc(var(--th)/-2) 0 0 calc(var(--tw)/-2);border-radius:3px}
+.fr{transform:translateZ(calc(var(--td)/2))}
+.bk{transform:rotateY(180deg) translateZ(calc(var(--td)/2))}
+.tp,.bt{width:var(--tw);height:var(--td);margin:calc(var(--td)/-2) 0 0 calc(var(--tw)/-2)}
+.tp{transform:rotateX(90deg) translateZ(calc(var(--th)/2))}
+.bt{transform:rotateX(-90deg) translateZ(calc(var(--th)/2))}
+.lf,.rt{width:var(--td);height:var(--th);margin:calc(var(--th)/-2) 0 0 calc(var(--td)/-2)}
+.lf{transform:rotateY(-90deg) translateZ(calc(var(--tw)/2))}
+.rt{transform:rotateY(90deg) translateZ(calc(var(--tw)/2))}
+
+.t3.black .fr,.t3.black .bk,.t3.black .bt{background:#1d1e23}
+.t3.black .tp{background:#4a4d55}
+.t3.black .lf,.t3.black .rt{background:#0e0f12}
+.t3.black .n{color:#f4f4f4}
+.t3.white .fr,.t3.white .bk,.t3.white .bt{background:#ebe4d1}
+.t3.white .tp{background:#fdfaf0}
+.t3.white .lf,.t3.white .rt{background:#c3b99e}
+.t3.white .n{color:#1b1b1b}
+.t3.black .f{box-shadow:inset 1px 0 0 rgba(255,255,255,.16),inset -1px 0 0 rgba(255,255,255,.16),inset 0 1px 0 rgba(255,255,255,.3)}
+.t3.white .f{box-shadow:inset 1px 0 0 rgba(92,70,40,.32),inset -1px 0 0 rgba(92,70,40,.32),inset 0 1px 0 rgba(255,255,255,.95)}
+.tp,.bt{box-shadow:none!important}
+.fr::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(138deg,rgba(255,255,255,.13),rgba(255,255,255,.04) 40%,transparent 70%)}
+.t3.black .fr::after{background:linear-gradient(138deg,rgba(255,255,255,.09),rgba(255,255,255,.03) 40%,transparent 70%)}
+.n{font-size:19px;font-weight:800;letter-spacing:.5px;user-select:none;line-height:1;padding-top:2px;text-align:center;
+  font-family:'Nunito',sans-serif}
+.n::after{content:'';display:block;width:17px;height:2px;background:currentColor;margin:4px auto 0;opacity:.85}
+.t3.blank .n{display:none}
+.t3.rev .fr{box-shadow:inset 0 0 0 2px #b8372a!important}
+
+.note{max-width:1000px;margin:22px auto 0;font-size:12.5px;line-height:1.8;color:#9a8f7f}
+.note b{color:var(--gold-light)}
+.note ul{margin:6px 0 0;padding-left:18px}
+</style>
+</head>
+<body>
+
+<h1>A안 미리보기 — 지금 화면에서 타일만 교체</h1>
+<p class="lead">왼쪽이 지금 <b>index.html</b>, 오른쪽이 A안입니다. 손패 틀·배치·버튼은 그대로이고 타일만 바뀝니다.<br>마우스를 올려보세요.</p>
+
+<div class="cols">
+  <div class="col"><div class="card">
+    <span class="tag now">지금 (index.html)</span>
+    <h2>납작한 2D 타일</h2>
+    <p class="sub">가려진 상대 타일은 갈색 카드 뒷면에 <b>?</b> 표시입니다.</p>
+
+    <div class="label">내 타일</div>
+    <div class="hand">
+      <div class="t2 black">1</div><div class="t2 white">4</div>
+      <div class="t2 black revealed">5</div><div class="t2 white">9</div><div class="t2 black">11</div>
+    </div>
+
+    <div class="label">상대 타일</div>
+    <div class="hand">
+      <div class="t2 cover-black">?</div><div class="t2 cover-white">?</div>
+      <div class="t2 white revealed">7</div><div class="t2 cover-black">?</div>
+    </div>
+  </div></div>
+
+  <div class="col"><div class="card">
+    <span class="tag a">A안</span>
+    <h2>입체 블록 타일</h2>
+    <p class="sub">가려진 타일은 실물처럼 <b>숫자 없는 검정/흰 타일</b>입니다. 색은 보이고 숫자만 안 보입니다.</p>
+
+    <div class="label">내 타일</div>
+    <div class="hand p3d">
+      <div class="t3 black"><div class="box"><div class="f fr"><span class="n">1</span></div><div class="f bk"></div><div class="f tp"></div><div class="f bt"></div><div class="f lf"></div><div class="f rt"></div></div></div>
+      <div class="t3 white"><div class="box"><div class="f fr"><span class="n">4</span></div><div class="f bk"></div><div class="f tp"></div><div class="f bt"></div><div class="f lf"></div><div class="f rt"></div></div></div>
+      <div class="t3 black rev"><div class="box"><div class="f fr"><span class="n">5</span></div><div class="f bk"></div><div class="f tp"></div><div class="f bt"></div><div class="f lf"></div><div class="f rt"></div></div></div>
+      <div class="t3 white"><div class="box"><div class="f fr"><span class="n">9</span></div><div class="f bk"></div><div class="f tp"></div><div class="f bt"></div><div class="f lf"></div><div class="f rt"></div></div></div>
+      <div class="t3 black"><div class="box"><div class="f fr"><span class="n">11</span></div><div class="f bk"></div><div class="f tp"></div><div class="f bt"></div><div class="f lf"></div><div class="f rt"></div></div></div>
+    </div>
+
+    <div class="label">상대 타일</div>
+    <div class="hand p3d">
+      <div class="t3 black blank"><div class="box"><div class="f fr"><span class="n">0</span></div><div class="f bk"></div><div class="f tp"></div><div class="f bt"></div><div class="f lf"></div><div class="f rt"></div></div></div>
+      <div class="t3 white blank"><div class="box"><div class="f fr"><span class="n">0</span></div><div class="f bk"></div><div class="f tp"></div><div class="f bt"></div><div class="f lf"></div><div class="f rt"></div></div></div>
+      <div class="t3 white rev"><div class="box"><div class="f fr"><span class="n">7</span></div><div class="f bk"></div><div class="f tp"></div><div class="f bt"></div><div class="f lf"></div><div class="f rt"></div></div></div>
+      <div class="t3 black blank"><div class="box"><div class="f fr"><span class="n">0</span></div><div class="f bk"></div><div class="f tp"></div><div class="f bt"></div><div class="f lf"></div><div class="f rt"></div></div></div>
+    </div>
+  </div></div>
+</div>
+
+<div class="note">
+  <b>A안으로 하면</b>
+  <ul>
+    <li>바뀌는 것 — 타일 생김새, 가려진 타일 표시(갈색 뒷면 → 숫자 없는 검정/흰 타일), 공개 표시(빨간 테두리)</li>
+    <li>그대로인 것 — 화면 배치, <b>[+]</b> 배치 버튼, 채팅, 칭호, Firebase 멀티플레이, 게임 규칙 전부</li>
+    <li>오늘 끝내고 바로 배포할 수 있습니다. 대신 <b>둘러앉은 3D 테이블은 아닙니다</b> — 지금처럼 상대가 세로로 나열됩니다</li>
+  </ul>
+  <br>
+  <b>B안으로 하면</b> 방금 보신 원목 사각 3D 테이블이 그대로 게임이 됩니다. 대신 index.html의 화면 그리기·입력 처리·Firebase 연동을
+  Three.js 기준으로 다시 써야 해서 사실상 재작성이고, 여러 턴에 걸쳐 작업해야 하며 중간에 게임이 동작하지 않는 구간이 생깁니다.
+</div>
+
+</body>
+</html>
