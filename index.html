@@ -2033,8 +2033,7 @@ function updateWaitingRoomUI(data) {
   const startBtn = document.getElementById('start-game-btn');
   if (isHost) {
     startBtn.classList.remove('hidden');
-    // shortcut: ?solotest=1 이면 혼자서도 시작할 수 있게 한다 (3D 보드 확인용). main 전에 제거.
-    let minPlayers = isTeamMode ? 4 : (new URLSearchParams(location.search).has('solotest') ? 1 : 2);
+    let minPlayers = isTeamMode ? 4 : 2;
     startBtn.disabled = pCount < minPlayers;
     startBtn.innerText = isTeamMode && pCount < 4 ? `게임 시작하기 (팀전은 4명 필요, 현재 ${pCount}명)` : `게임 시작하기`;
   } else {
@@ -2048,10 +2047,7 @@ function handleStartGame() {
     const playerIds = Object.keys(data.players || {});
     const isTeamMode = data.gameMode === 'team';
     if (isTeamMode && playerIds.length !== 4) return alert("2:2 팀전은 정확히 4명이 필요합니다!");
-    // shortcut: ?solotest=1 일 때만 1인 시작을 허용한다 (3D 보드 눈으로 확인용).
-    // 추리는 상대가 있어야 하므로 턴은 끝나지 않는다. main 에 합치기 전에 이 줄을 지울 것.
-    const soloTest = new URLSearchParams(location.search).has('solotest');
-    if (!isTeamMode && playerIds.length < 2 && !soloTest) return alert("최소 2명이 필요합니다!");
+    if (!isTeamMode && playerIds.length < 2) return alert("최소 2명이 필요합니다!");
 
     let blackDeck = [];
     let whiteDeck = [];
@@ -2351,7 +2347,8 @@ function initBoard3D() {
     app: document.getElementById('board3d-wrap'),
     labels: document.getElementById('board3d-labels'),
   });
-  Board3D.setFit(0.88);   // 테이블을 화면에 더 꽉 채운다 (가시성)
+  Board3D.setFit(0.88);     // 테이블을 화면에 더 꽉 채운다
+  Board3D.setGlyph(0.84);   // 숫자 크기 (비교해보고 고른 값)
   Board3D.onPick(p => {
     if (p.type === 'target') {
       const pid = board3dSeats[p.pi];
