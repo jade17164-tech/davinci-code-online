@@ -656,15 +656,13 @@ const DV = (() => {
     builtN = n; const Rt = tableR(n);
     const edge = new THREE.MeshStandardMaterial({ color: 0x4a2f18, roughness: .7 });
     const topMat = new THREE.MeshStandardMaterial({ map: woodTex(), roughness: .75 });
-    // 좌석은 반지름 Rt-1.7인 원 위에 놓인다. 한 변이 2Rt면 인원에 상관없이 그 원을 전부 품는다.
-    const S = Rt * 2;
-    // BoxGeometry 머티리얼 순서: +x, -x, +y(윗면), -y, +z, -z
-    const top = new THREE.Mesh(new THREE.BoxGeometry(S, 0.4, S), [edge, edge, topMat, edge, edge, edge]);
+    // CylinderGeometry 머티리얼 순서: 옆면, 윗면, 아랫면
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(Rt, Rt, 0.4, 72), [edge, topMat, edge]);
     top.position.y = -0.2; top.receiveShadow = true; world.add(top);
-    const rim = new THREE.Mesh(new THREE.BoxGeometry(S + 0.8, 0.34, S + 0.8), new THREE.MeshStandardMaterial({ color: 0x6b4226, roughness: .5 }));
-    rim.position.y = -0.36; rim.castShadow = true; world.add(rim);
-    const base = new THREE.Mesh(new THREE.BoxGeometry(S * .55, 0.5, S * .55), new THREE.MeshStandardMaterial({ color: 0x2b1810, roughness: .8 }));
-    base.position.y = -0.78; world.add(base);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(Rt + 0.15, 0.34, 18, 96), new THREE.MeshStandardMaterial({ color: 0x6b4226, roughness: .5 }));
+    rim.rotation.x = Math.PI / 2; rim.position.y = 0.02; rim.castShadow = true; world.add(rim);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(Rt + 0.5, Rt + 0.8, 0.5, 72), new THREE.MeshStandardMaterial({ color: 0x2b1810, roughness: .8 }));
+    base.position.y = -0.62; world.add(base);
 
     // 좌석/랙
     seats = []; racks = [];
