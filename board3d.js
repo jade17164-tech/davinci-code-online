@@ -123,7 +123,7 @@ window.Board3D = (() => {
       o.traverse && o.traverse(x => { if (x.geometry) x.geometry.dispose(); });
     }
     tileMeshes.forEach(m => tileGroup.remove(m)); tileMeshes.clear();
-    labelsEl.querySelectorAll('.b3d-pl, .b3d-dl').forEach(e => e.remove());
+    labelsEl.querySelectorAll('.b3d-pl, .b3d-dl, .b3d-sb').forEach(e => e.remove());
     builtN = n; const Rt = tableR(n);
 
     const edge = new THREE.MeshStandardMaterial({ color: 0x4a2f18, roughness: .7 });
@@ -155,6 +155,8 @@ window.Board3D = (() => {
     for (let i = 0; i < n; i++) {
       const d = document.createElement('div'); d.className = 'b3d-pl'; d.id = 'b3d-pl-' + i; labelsEl.appendChild(d);
     }
+    // 남은 타일 수는 이름표에 붙이면 커져서 타일을 가린다. 구석 현황판에 모아 둔다.
+    const sb = document.createElement('div'); sb.className = 'b3d-sb'; sb.id = 'b3d-sb'; labelsEl.appendChild(sb);
     fitCamera();
   }
 
@@ -316,9 +318,14 @@ window.Board3D = (() => {
       el.className = 'b3d-pl' + (turn ? ' turn' : '') + (dead ? ' dead' : '');
       const team = p.team ? `<span class="b3d-tag t${p.team}">팀 ${p.team}</span>` : '';
       el.innerHTML = `<span>${p.name || '?'}</span>${team}`
-        + `<span class="b3d-cnt">남은 ${hiddenCount(p)}/${(p.hand || []).length}</span>`
         + (dead ? '<span class="b3d-tag">탈락</span>' : '');
     });
+    const sb = document.getElementById('b3d-sb');
+    if (sb) sb.innerHTML = S.players.map((p, pi) => {
+      const dead = isDead(p), turn = !S.over && S.turn === pi;
+      return `<div class="${turn ? 'turn' : ''}${dead ? ' dead' : ''}"><b>${p.name || '?'}</b> `
+        + (dead ? '탈락' : `미공개 ${hiddenCount(p)}/${(p.hand || []).length}`) + '</div>';
+    }).join('');
   }
   function updateLabels() {
     if (!S || builtN !== S.n) return;

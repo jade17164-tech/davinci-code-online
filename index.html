@@ -219,7 +219,12 @@ button:disabled { background: #4a4a4a !important; color: #8a8a8a !important; bor
 .b3d-pl.turn { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(212,175,55,.35); }
 .b3d-pl.dead { opacity: .5; }
 .b3d-tag { background: var(--wood); border-radius: 6px; padding: 1px 5px; font-size: 10px; }
-.b3d-cnt { color: #c3b89f; font-weight: 600; }
+.b3d-sb { position: absolute; left: 8px; top: 8px; background: rgba(30,18,8,.72); border: 1px solid var(--wood-mid);
+  border-radius: 8px; padding: 4px 9px; font-size: 11px; line-height: 1.6; color: #c3b89f; text-align: left; }
+.b3d-sb b { color: var(--gold-light); }
+.b3d-sb .turn b { color: var(--gold); }
+.b3d-sb .turn::before { content: '▶ '; color: var(--gold); }
+.b3d-sb .dead { opacity: .5; }
 /* 3D 보드가 뜨면 기존 2D 보드는 감춘다 */
 body.board3d #other-players, body.board3d #my-section-container { display: none; }
 
@@ -464,7 +469,18 @@ body.board3d #other-players, body.board3d #my-section-container { display: none;
   .modal-content { max-height: 92vh; padding-top: 4vh; }
   .modal-overlay { padding-top: 3vh; }
 }
-  </style>
+  /* 게임 중 채팅은 버튼으로 연다. 옆에 붙여 두면 노트북에서 보드가 절반으로 줄어든다. */
+#game-chat { display: none; }
+#game-chat.open { display: flex; position: fixed; right: 16px; bottom: 72px; z-index: 50; margin: 0;
+  width: min(320px, calc(100vw - 32px)); height: min(50vh, 420px); max-height: none; max-width: none;
+  box-shadow: 0 10px 30px rgba(0,0,0,.55), inset 0 2px 6px rgba(0,0,0,.25); }
+#game-chat.open .chat-messages { max-height: none; flex: 1; }
+#chat-toggle { position: fixed; right: 16px; bottom: 16px; z-index: 51; border-radius: 999px; padding: 10px 18px;
+  font-size: 14px; font-weight: 800; box-shadow: 0 6px 16px rgba(0,0,0,.5); }
+#chat-badge { display: inline-block; min-width: 18px; margin-left: 4px; padding: 0 5px; border-radius: 999px;
+  background: var(--ruby); color: #fff; font-size: 11px; line-height: 18px; }
+#chat-badge.hidden { display: none; }
+</style>
 </head>
 <body>
 
@@ -642,7 +658,7 @@ body.board3d #other-players, body.board3d #my-section-container { display: none;
         <button id="btn-return-lobby" class="btn-lobby-return">대기실로 돌아가기</button>
       </div>
 
-      <div class="chat-container">
+      <div id="game-chat" class="chat-container">
         <div id="game-chat-tabs" class="chat-tab-group hidden">
           <button class="chat-tab active" data-target="all">전체 채팅</button>
           <button class="chat-tab" data-target="team">팀 채팅</button>
@@ -654,6 +670,7 @@ body.board3d #other-players, body.board3d #my-section-container { display: none;
         </div>
       </div>
     </div>
+    <button id="chat-toggle" type="button" aria-controls="game-chat" aria-expanded="false">채팅 <span id="chat-badge" class="hidden">0</span></button>
   </div>
 </div>
 
@@ -1524,6 +1541,18 @@ document.querySelectorAll('.chat-tab').forEach(tab => {
 document.getElementById('chat-send-waiting').addEventListener('click', sendChatMessage);
 document.getElementById('chat-input-waiting').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendChatMessage(); });
 document.getElementById('chat-send-game').addEventListener('click', sendChatMessage);
+document.getElementById('chat-toggle').addEventListener('click', () => {
+  const box = document.getElementById('game-chat');
+  const open = box.classList.toggle('open');
+  document.getElementById('chat-toggle').setAttribute('aria-expanded', open);
+  if (open) {
+    unreadChats = 0;
+    document.getElementById('chat-badge').classList.add('hidden');
+    const msgs = document.getElementById('chat-messages-game');
+    msgs.scrollTop = msgs.scrollHeight;
+    document.getElementById('chat-input-game').focus();
+  }
+});
 document.getElementById('chat-input-game').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendChatMessage(); });
 
 const modal = document.getElementById('rules-modal');
@@ -1882,6 +1911,8 @@ function handleHostDelegationIfNeeded(data) {
   }
 }
 
+let seenChatCount = -1, unreadChats = 0;   // 채팅창이 닫혀 있는 동안 남이 보낸 메시지 수
+
 function updateChatUI(data) {
   const chatsObj = data.chats || {};
   const isTeamMode = data.gameMode === 'team';
@@ -1905,6 +1936,15 @@ function updateChatUI(data) {
     if (c.type === 'team') return isTeamMode && !isSpectator && c.team === myTeam;
     return true;
   });
+
+  // 대기실에서 오간 대화나 처음 불러온 기록은 '안 읽음'으로 세지 않는다
+  const fromOthers = filteredChats.filter(c => c.accountId !== myAccountId).length;
+  const chatOpen = document.getElementById('game-chat').classList.contains('open');
+  if (data.gameState === 'playing' && seenChatCount >= 0 && !chatOpen && fromOthers > seenChatCount) unreadChats += fromOthers - seenChatCount;
+  seenChatCount = fromOthers;
+  const badge = document.getElementById('chat-badge');
+  badge.textContent = unreadChats;
+  badge.classList.toggle('hidden', unreadChats === 0);
 
   const html = filteredChats.map(c => {
     const isTeamMsg = c.type === 'team';
@@ -2044,6 +2084,8 @@ function updateWaitingRoomUI(data) {
 function handleStartGame() {
   get(roomRef).then((snapshot) => {
     const data = snapshot.val();
+    // 두 번 누르면 패를 다시 섞어 덮어써서, 각자 이미 집어 든 타일과 판이 어긋난다
+    if (!data || data.gameState === 'playing') return;
     const playerIds = Object.keys(data.players || {});
     const isTeamMode = data.gameMode === 'team';
     if (isTeamMode && playerIds.length !== 4) return alert("2:2 팀전은 정확히 4명이 필요합니다!");
@@ -2166,13 +2208,12 @@ function updateGameUI(data) {
   handleLogUpdate(data.lastLog);
 
   if (!isSpectator && players[myPlayerId]) {
+    // 처음 받은 타일은 서버의 unplacedPool 맨 앞이 곧 손에 든 타일이다. 화면이 따로 꺼내 들면
+    // 판이 다시 깔리거나 새로고침할 때 서버와 어긋나 같은 타일이 두 번 나오거나 사라진다.
     const myUnplaced = players[myPlayerId].unplacedPool || [];
-    if (myUnplaced.length > 0 && pendingPlacementTile === null) {
-      let pool = [...myUnplaced];
-      pendingPlacementTile = pool.shift();
-      set(ref(db, `rooms/${currentRoomKey}/players/${myPlayerId}/unplacedPool`), pool);
-      return;
-    }
+    const myHandNow = players[myPlayerId].hand || [];
+    if (myUnplaced.length > 0) pendingPlacementTile = myUnplaced[0];
+    else if (pendingPlacementTile && myHandNow.some(t => t.id === pendingPlacementTile.id)) pendingPlacementTile = null;
   }
 
   let currentTurnPlayerId = playerIds[data.turnIndex];
@@ -2442,18 +2483,14 @@ function renderBoard3D(data, ctx) {
 window.insertTileAt = function(insertIdx) {
   if (isSpectator || pendingPlacementTile === null) return;
 
-  // 검사와 서버 읽기 사이에 틈이 있다. 자리를 두 번 누르면 두 호출이 모두 이 검사를 통과하고,
-  // 늦은 쪽이 이미 반영된 패를 읽어 같은 타일을 또 꽂는다(같은 숫자가 두 장이 된다).
-  // 들고 있는 타일을 먼저 치워 두 번째 호출이 바로 돌아가게 하고, 실패하면 되돌린다.
   const tile = pendingPlacementTile;
-  pendingPlacementTile = null;
-  const cancel = () => { pendingPlacementTile = tile; };
 
   get(roomRef).then((snapshot) => {
     const data = snapshot.val();
-    if (!data) return cancel();
+    if (!data) return;
     let myData = data.players[myPlayerId] || {};
     let myHand = [...(myData.hand || [])];
+    if (myHand.some(t => t.id === tile.id)) return;   // 연타로 두 번 들어온 것. 이미 놓였다
 
     let tempHand = [...myHand];
     tempHand.splice(insertIdx, 0, tile);
@@ -2467,23 +2504,16 @@ window.insertTileAt = function(insertIdx) {
       let next = nonJokerTiles[i + 1];
 
       if (curr.num > next.num) {
-        cancel();
         return alert("[오류] 배치 오류! 숫자는 왼쪽이 작고 오른쪽이 커야 합니다.");
       }
       if (curr.num === next.num && curr.color === 'white' && next.color === 'black') {
-        cancel();
         return alert("[오류] 배치 오류! 같은 숫자일 경우 검은색 타일이 왼쪽, 흰색 타일이 오른쪽에 와야 합니다.");
       }
     }
 
     myHand.splice(insertIdx, 0, tile);
-    let unplacedPool = [...(myData.unplacedPool || [])];
-
-    if (unplacedPool.length > 0) {
-      pendingPlacementTile = unplacedPool.shift();
-    } else {
-      pendingPlacementTile = null;
-    }
+    const unplacedPool = (myData.unplacedPool || []).filter(t => t.id !== tile.id);
+    pendingPlacementTile = unplacedPool[0] || null;
 
     let updates = {};
     updates[`rooms/${currentRoomKey}/players/${myPlayerId}/hand`] = myHand;

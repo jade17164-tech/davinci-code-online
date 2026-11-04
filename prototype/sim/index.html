@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>다빈치 코드 시뮬레이터</title>
+<style>
+  :root { --bg:#14100c; --panel:#211a13; --line:#4a3826; --text:#eee3cf; --dim:#a8977c; --ok:#3ccf7a; --bad:#ff5c5c; --gold:#e3b04b; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.5 system-ui, "Malgun Gothic", sans-serif; }
+  header { padding:10px 14px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; border-bottom:1px solid var(--line); background:var(--panel); position:sticky; top:0; z-index:5; }
+  header h1 { font-size:15px; margin:0 8px 0 0; }
+  label { display:flex; gap:5px; align-items:center; color:var(--dim); }
+  select, button { background:#3a2b1d; color:var(--text); border:1px solid var(--line); border-radius:6px; padding:5px 9px; font:inherit; }
+  button { cursor:pointer; font-weight:700; }
+  button.go { background:#2f6b45; border-color:#3f8a5a; }
+  #stats { display:flex; gap:14px; flex-wrap:wrap; padding:0 14px 8px; font-weight:700; color:var(--dim); }
+  #verdict { padding:10px 14px 4px; font-size:16px; font-weight:800; }
+  #verdict.ok { color:var(--ok); } #verdict.bad { color:var(--bad); }
+  #frames { display:grid; gap:8px; padding:0 8px; grid-template-columns:repeat(auto-fit, minmax(380px, 1fr)); }
+  .fw { border:2px solid var(--line); border-radius:8px; overflow:hidden; background:#000; }
+  .fw.hit { border-color:var(--bad); }
+  .fw h2 { margin:0; padding:4px 8px; font-size:13px; background:var(--panel); }
+  iframe { width:100%; height:720px; border:0; display:block; background:#0b3d22; }
+  #log { margin:8px; padding:8px 10px; background:var(--panel); border:1px solid var(--line); border-radius:8px; height:260px; overflow:auto; font:12px/1.55 ui-monospace, Consolas, monospace; }
+  #log .err { color:var(--bad); font-weight:700; } #log .ok { color:var(--ok); } #log .act { color:var(--dim); } #log .warn { color:var(--gold); }
+</style>
+</head>
+<body>
+<header>
+  <h1>다빈치 코드 시뮬레이터</h1>
+  <label>버전 <select id="ver">
+    <option value="prototype/sim/versions/before.html">수정 전 (친구랑 했던 버전)</option>
+    <option value="prototype/sim/versions/deployed.html">지금 배포본</option>
+    <option value="index.html" selected>새 수정 (로컬 index.html)</option>
+  </select></label>
+  <label>인원 <select id="n"><option>2</option><option>3</option><option>4</option></select></label>
+  <label>네트워크 <select id="lat">
+    <option value="30">빠름 (30ms)</option><option value="150" selected>보통 (150ms)</option><option value="500">느림 (500ms)</option>
+  </select></label>
+  <label>속도 <select id="speed">
+    <option value="900">천천히</option><option value="350" selected>보통</option><option value="40">빠르게</option>
+  </select></label>
+  <label><input type="checkbox" id="dbl" checked> 연타</label>
+  <label><input type="checkbox" id="dblStart" checked> 시작 버튼 두 번</label>
+  <label><input type="checkbox" id="stopOnBad" checked> 오류 나면 멈춤</label>
+  <button class="go" id="run">시작</button>
+  <button id="stop">정지</button>
+</header>
+<div id="verdict">시작을 누르세요. 봇들이 실제 게임 코드로 플레이하고, 매 순간 타일 26장을 검사합니다.</div>
+<div id="stats"></div>
+<div id="frames"></div>
+<div id="log"></div>
+
+<script>document.write('<script src="server.js?t=' + Date.now() + '"><\/script>');</script>
+<script>
+const $ = id => document.getElementById(id);
+const server = window.__server;
+const ROOM = 'SIMROOM';
+const NAMES = ['나', '명관', '앨리스', '밥'];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const key = t => Number(t.num) * 2 + (t.color === 'black' ? 0 : 1);
+// 사람이 두 번 누르는 간격. 같은 순간(같은 이벤트) 두 번은 실제로 일어날 수 없으니 반드시 띄운다.
+const tapGap = () => 40 + Math.random() * 120;
+const label = t => t ? (t.color === 'black' ? '검정' : '흰') + (t.num === -1 ? '조커' : t.num) : '-';
+
+let running = false, clients = [], stats = null, cfg = {};
+
+function log(who, msg, cls = 'act') {
+  const el = $('log');
+  const d = document.createElement('div');
+  d.className = cls;
+  d.textContent = `[${new Date().toLocaleTimeString()}] ${who ? who + ': ' : ''}${msg}`;
+  el.appendChild(d);
+  if (el.children.length > 800) el.firstChild.remove();
+  el.scrollTop = el.scrollHeight;
+}
+server.log = (who, msg, cls) => log(who, msg, cls);
+
+function renderStats() {
+  if (!stats) return;
+  $('stats').innerHTML = [
+    `판 ${stats.games}`, `행동 ${stats.actions}`, `검사 ${stats.checks}회`,
+    `연타 ${stats.dbl}`, `시작 두 번 ${stats.dblStart}`,
+    `<span style="color:${stats.bad ? 'var(--bad)' : 'var(--ok)'}">오류 ${stats.bad}</span>`,
+  ].join(' · ');
+}
+
+// ---- 창 만들기: 실제 게임 파일을 읽어 Firebase 주소만 가짜로 바꿔 끼운다 ----
+async function makeFrame(src, i) {
+  let html = await (await fetch('../../' + src + '?t=' + Date.now())).text();
+  const head = '<head>\n<base href="' + new URL('../../', location.href).href + '">\n' +
+    '<script type="importmap">{"imports":{' +
+    '"https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js":"./prototype/sim/fake-app.js?t=' + Date.now() + '",' +
+    '"https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js":"./prototype/sim/fake-db.js?t=' + Date.now() + '",' +
+    '"https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js":"./prototype/sim/fake-auth.js?t=' + Date.now() + '"}}<\/script>\n' +
+    '<script>\n' +
+    'window.__cfg = parent.__cfgFor(' + i + ');\n' +
+    '(function(){\n' +
+    '  function mem(seed){ var m = Object.assign({}, seed); return {\n' +
+    '    getItem:function(k){ return k in m ? m[k] : null; }, setItem:function(k,v){ m[k]=String(v); },\n' +
+    '    removeItem:function(k){ delete m[k]; }, clear:function(){} }; }\n' +
+    '  Object.defineProperty(window, "sessionStorage", { value: mem({ davinci_session: JSON.stringify(__cfg.session) }) });\n' +
+    '  Object.defineProperty(window, "localStorage", { value: mem({}) });\n' +
+    '  window.alert = function(m){ parent.__alert(' + i + ', m); };\n' +
+    '  window.confirm = function(){ return true; };\n' +
+    '})();\n<\/script>';
+  html = html.replace('<head>', head);
+  // 모듈 안의 변수(pendingPlacementTile 등)를 봇과 검사기가 읽을 수 있게 구멍을 하나 뚫는다
+  const at = html.indexOf('<\/script>', html.indexOf('<script type="module">'));
+  html = html.slice(0, at) + '\nwindow.__ev = (s) => eval(s);\n' + html.slice(at);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'fw';
+  wrap.innerHTML = `<h2>${NAMES[i]} 의 화면 ${i === 0 ? '(방장)' : ''}</h2>`;
+  const f = document.createElement('iframe');
+  f.srcdoc = html;
+  wrap.appendChild(f);
+  $('frames').appendChild(wrap);
+  return { i, name: NAMES[i], pid: 'p' + i, f, wrap };
+}
+window.__cfgFor = i => ({
+  name: NAMES[i], uid: 'u' + i,
+  session: { currentRoomKey: ROOM, rawRoomCode: '7777', myPlayerId: 'p' + i, myNickname: NAMES[i],
+             isHost: i === 0, isSpectator: false, accountId: 'u' + i },
+});
+window.__alert = (i, m) => log(NAMES[i], '알림창 → ' + m, String(m).includes('오류') ? 'warn' : 'act');
+
+function seedTree(n) {
+  const users = {}, players = {};
+  for (let i = 0; i < n; i++) {
+    users['u' + i] = { username: 'sim' + i, nickname: NAMES[i], wins: 0, totalGames: 0 };
+    players['p' + i] = { name: NAMES[i], hand: [], isHost: i === 0, team: i % 2 ? 'B' : 'A', accountId: 'u' + i };
+  }
+  return { users, rooms: { [ROOM]: {
+    // 'beginner'는 알림을 창 대신 기록 목록으로 보여준다. 기본값이면 매 행동마다 알림창이 보드를 가린다.
+    gameState: 'waiting', hostId: 'p0', gameMode: 'solo', tileSetting: 'auto', logMode: 'beginner',
+    turnIndex: 0, lastLog: '대기실 생성', players,
+  } } };
+}
+
+const room = () => (server.tree.rooms || {})[ROOM] || {};
+const ev = (c, s) => { try { return c.f.contentWindow.__ev(s); } catch (e) { log(c.name, '봇 호출 실패: ' + e.message, 'warn'); return undefined; } };
+async function settle(max = 5000) {
+  await sleep(30);   // 게임 코드는 get().then(쓰기) 순서라, 바로 보면 아직 쓰기가 시작도 안 했다
+  const t0 = Date.now();
+  while (!server.quiet() && Date.now() - t0 < max) await sleep(10);
+  await sleep(5);
+}
+
+// ---- 검사기: 26장이 정확히 한 번씩 어딘가에 있어야 한다 ----
+function check(when) {
+  const r = room();
+  if (r.gameState !== 'playing') return true;
+  stats.checks++;
+  const where = {};
+  const put = (t, loc) => { if (!t) return; (where[t.id] = where[t.id] || []).push({ loc, t }); };
+  (r.blackDeck || []).forEach(t => put(t, '검정 더미'));
+  (r.whiteDeck || []).forEach(t => put(t, '흰 더미'));
+  const pools = {};
+  Object.entries(r.players || {}).forEach(([pid, p]) => {
+    (p.hand || []).forEach(t => put(t, p.name + '의 패'));
+    (p.unplacedPool || []).forEach(t => put(t, p.name + '의 남은 시작 타일'));
+    pools[pid] = new Set((p.unplacedPool || []).map(t => t.id));
+  });
+  // 손에 든(배치 대기) 타일: 같은 사람의 남은 시작 타일에 그대로 있으면 같은 타일을 가리키는 것뿐이다
+  clients.forEach(c => {
+    const pend = ev(c, 'pendingPlacementTile');
+    if (pend && !(pools[c.pid] && pools[c.pid].has(pend.id))) put(pend, c.name + '가 손에 든 타일');
+  });
+
+  const errs = [];
+  const all = [];
+  for (let i = 0; i <= 11; i++) all.push('b_tile_' + i, 'w_tile_' + i);
+  all.push('b_joker', 'w_joker');
+  all.forEach(id => {
+    const w = where[id] || [];
+    if (w.length > 1) errs.push(`중복: ${label(w[0].t)} 이(가) ${w.map(x => x.loc).join(' + ')}`);
+    if (w.length === 0) errs.push(`누락: ${id} 가 어디에도 없음`);
+  });
+  Object.values(r.players || {}).forEach(p => {
+    const nj = (p.hand || []).filter(t => t.num !== -1);
+    for (let i = 1; i < nj.length; i++) if (key(nj[i - 1]) >= key(nj[i])) {
+      errs.push(`순서: ${p.name}의 패 ${nj.map(label).join(',')}`); break;
+    }
+  });
+  if (errs.length) {
+    stats.bad += errs.length;
+    errs.forEach(e => log('검사 ' + when, e, 'err'));
+    clients.forEach(c => c.wrap.classList.toggle('hit', errs.some(e => e.includes(c.name))));
+    $('verdict').className = 'bad';
+    $('verdict').textContent = '오류 발견 — ' + errs[0];
+    return false;
+  }
+  return true;
+}
+
+// ---- 봇 한 명의 한 수 ----
+async function botStep(c) {
+  const r = room();
+  if (r.gameState !== 'playing' || r.isGameOver) return;
+  const ids = Object.keys(r.players || {});
+  const me = r.players[c.pid];
+  if (!me) return;
+  const hand = me.hand || [];
+  const pend = ev(c, 'pendingPlacementTile');
+  const w = c.f.contentWindow;
+
+  if (pend) {
+    const slots = ev(c, `legalSlotsFor(${JSON.stringify(hand)}, ${JSON.stringify(pend)})`) || [0];
+    const idx = pick(slots);
+    log(c.name, `${label(pend)} 를 ${idx}번 자리에 배치`);
+    w.insertTileAt(idx);
+    if (cfg.dbl && Math.random() < 0.5) { stats.dbl++; log(c.name, '└ 같은 자리 연타'); setTimeout(() => w.insertTileAt(idx), tapGap()); }
+    stats.actions++;
+    return;
+  }
+  if (ids[r.turnIndex] !== c.pid) return;
+  if (hand.length && hand.every(t => t.revealed)) return;
+  const st = ev(c, '({drawn: hasDrawnThisTurn, ok: hasGuessedSuccessThisTurn})') || {};
+  const b = (r.blackDeck || []).length, wh = (r.whiteDeck || []).length;
+
+  if (!st.drawn && (b || wh)) {
+    const color = !b ? 'white' : !wh ? 'black' : pick(['black', 'white']);
+    log(c.name, `${color === 'black' ? '검정' : '흰'} 더미에서 뽑기`);
+    ev(c, `handleDrawTile('${color}')`);
+    if (cfg.dbl && Math.random() < 0.5) { stats.dbl++; log(c.name, '└ 더미 연타'); setTimeout(() => ev(c, `handleDrawTile('${color}')`), tapGap()); }
+    stats.actions++;
+    return;
+  }
+  if (st.ok && Math.random() < 0.35) { log(c.name, '턴 넘기기'); ev(c, 'handlePassTurn()'); stats.actions++; return; }
+
+  // 지목: 화면에 보이는 순서(sortHandForDisplay) 기준 인덱스를 넘긴다. 실제 클릭과 같은 경로다.
+  const targets = [];
+  ids.forEach(pid => {
+    if (pid === c.pid) return;
+    const h = r.players[pid].hand || [];
+    if (h.length && h.every(t => t.revealed)) return;
+    (ev(c, `sortHandForDisplay(${JSON.stringify(h)})`) || []).forEach((t, i) => { if (!t.revealed) targets.push({ pid, i, t }); });
+  });
+  if (!targets.length) return;
+  const tg = pick(targets);
+  const right = Math.random() < 0.55;
+  const num = right ? tg.t.num : pick([-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].filter(x => x !== tg.t.num));
+  log(c.name, `${r.players[tg.pid].name}의 ${tg.i + 1}번째(${label(tg.t)}) 를 ${num === -1 ? '조커' : num} 로 지목 ${right ? '(맞히기)' : '(틀리기)'}`);
+  ev(c, `executeGuess('${tg.pid}', ${tg.i}, ${num})`);
+  stats.actions++;
+  await settle();
+  // 정답이면 바로 그 타일이 공개되어야 한다
+  const after = ((room().players || {})[tg.pid] || {}).hand || [];
+  const t = after.find(x => x.id === tg.t.id);
+  if (right && t && !t.revealed && !room().isGameOver) {
+    stats.bad++;
+    log('검사', `지목 어긋남: ${label(tg.t)} 를 맞혔는데 그 타일이 공개되지 않음`, 'err');
+  }
+}
+
+function startGame() {
+  const btn = clients[0].f.contentDocument.getElementById('start-game-btn');
+  log('나', '게임 시작 버튼 클릭');
+  btn.click();
+  if (cfg.dblStart && Math.random() < 0.6) { stats.dblStart++; log('나', '└ 시작 버튼 한 번 더 (더블클릭)', 'warn'); setTimeout(() => btn.click(), tapGap()); }
+  stats.games++;
+}
+
+async function run() {
+  if (running) return;
+  running = true;
+  stats = { games: 0, actions: 0, checks: 0, bad: 0, dbl: 0, dblStart: 0 };
+  cfg = { dbl: $('dbl').checked, dblStart: $('dblStart').checked };
+  const n = +$('n').value, lat = +$('lat').value, speed = () => +$('speed').value;
+  server.latency = () => Math.round(lat * (0.4 + Math.random() * 1.2));
+  server.reset(seedTree(n));
+  $('frames').innerHTML = ''; $('log').innerHTML = '';
+  $('verdict').className = ''; $('verdict').textContent = '실행 중…';
+  log('', `버전: ${$('ver').selectedOptions[0].text} / ${n}인 / 지연 ${lat}ms`, 'ok');
+
+  clients = [];
+  for (let i = 0; i < n; i++) clients.push(await makeFrame($('ver').value, i));
+  // 창마다 게임 코드가 다 뜰 때까지 기다린다
+  for (let t = 0; t < 200 && clients.some(c => !c.f.contentWindow || !c.f.contentWindow.__ev || !c.f.contentWindow.insertTileAt); t++) await sleep(50);
+  await sleep(800);
+
+  while (running) {
+    const r = room();
+    if (r.gameState !== 'playing') { startGame(); await sleep(200); await settle(); await sleep(speed()); continue; }
+    if (r.isGameOver) {
+      log('', '게임 종료 → 대기실로', 'ok');
+      await sleep(Math.max(600, speed() * 2));
+      ev(clients[0], 'forceReturnToWaitingRoom()');
+      await settle(); await sleep(400);
+      continue;
+    }
+    // 같은 순간에 모두 움직인다 (시작 타일 배치는 원래 동시에 한다)
+    await Promise.all(clients.map(c => botStep(c)));
+    await sleep(200);   // 연타가 다 들어온 뒤에 검사한다
+    await settle();
+    const ok = check('행동 ' + stats.actions);
+    renderStats();
+    if (!ok && $('stopOnBad').checked) { running = false; log('', '오류에서 멈췄습니다. 빨간 테두리 화면을 확인하세요.', 'err'); break; }
+    await sleep(speed());
+  }
+  renderStats();
+  if (!stats.bad) { $('verdict').className = 'ok'; $('verdict').textContent = `오류 없음 — ${stats.games}판, 행동 ${stats.actions}번, 검사 ${stats.checks}회 통과`; }
+}
+$('run').onclick = run;
+$('stop').onclick = () => { running = false; };
+</script>
+</body>
+</html>
