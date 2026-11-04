@@ -304,7 +304,8 @@ window.Board3D = (() => {
       if (p.pending) {
         const t = p.pending; live.add(t.id);
         const m = getMesh(t, deckSpawn(t.color));
-        const pos = st.d.clone().multiplyScalar(st.Rs - (pi === 0 ? 3.0 : 2.4)); pos.y = pi === 0 ? 2.2 : 1.6;
+        // 내 쪽으로 더 당긴다. 테이블 가운데로 보내면 덱 더미와 겹쳐 둘 다 안 보인다.
+        const pos = st.d.clone().multiplyScalar(st.Rs - (pi === 0 ? 1.5 : 2.4)); pos.y = pi === 0 ? 1.9 : 1.6;
         Object.assign(m.userData, { tgt: pos, scT: pi === 0 ? 1.15 : 0.8, tiltT: -0.55, pi, idx: -1, pick: null });
         m.rotation.y = st.th;
         setFaces(m, t, pi === 0 ? 'face' : 'cover', 'cover');
@@ -368,8 +369,9 @@ window.Board3D = (() => {
     S.players.forEach((p, pi) => {
       const el = document.getElementById('b3d-pl-' + pi); if (!el) return;
       const st = seats[pi];
-      const a = st.d.clone().multiplyScalar(pi === 0 ? st.Rs - 0.4 : st.Rs + 1.15);
-      a.y = pi === 0 ? 2.05 : 1.15;
+      // 내 이름표는 패 위가 아니라 패 앞(화면 아래)에 둔다. 위에 두면 내 타일 숫자를 가린다.
+      const a = st.d.clone().multiplyScalar(pi === 0 ? st.Rs + 1.6 : st.Rs + 1.15);
+      a.y = pi === 0 ? 0.35 : 1.15;
       const q = project(a), W = appEl.clientWidth, hw = el.offsetWidth / 2 + 4;
       el.style.left = Math.min(Math.max(q.x, hw), W - hw) + 'px'; el.style.top = q.y + 'px';
     });
