@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>기록·채팅 샘플</title>
+<style>
+  :root { --gold:#d4af37; --gold-light:#f0e3c8; --wood-mid:#6b4226; --wood-dark:#2b1810; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:#0f3b24; color:var(--gold-light); font:14px/1.5 system-ui, "Malgun Gothic", sans-serif; }
+  .wrap { max-width:960px; margin:0 auto; padding:12px 16px 40px; }
+  h1 { font-size:18px; margin:4px 0 6px; }
+  .hint { color:#b9d6c4; font-size:13px; margin:0 0 10px; }
+  .ctrl { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:8px; }
+  .ctrl .lab { color:#b9d6c4; font-weight:700; min-width:80px; }
+  .seg { display:inline-flex; border:1px solid #8a5a2e; border-radius:8px; overflow:hidden; }
+  .seg button { border:0; background:#3a2414; color:#c9b48f; padding:7px 12px; font:inherit; font-weight:700; cursor:pointer; }
+  .seg button.on { background:var(--gold); color:var(--wood-dark); }
+  .btn-plain { background:var(--wood-mid); color:var(--gold-light); border:1px solid #8a5a2e; border-radius:6px; padding:7px 12px; font:inherit; font-weight:700; cursor:pointer; }
+
+  #board3d-wrap { position:relative; width:100%; height:70vh; min-height:400px; border-radius:10px; overflow:hidden; border:2px solid var(--wood-dark); background:#1b0f07; }
+  #board3d-wrap.narrow { width:390px; max-width:100%; margin:0 auto; }
+  #board3d-gl { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+  #board3d-labels { position:absolute; inset:0; pointer-events:none; }
+  .b3d-pl, .b3d-dl { position:absolute; transform:translate(-50%,-50%); white-space:nowrap; background:rgba(30,18,8,.85); border:1px solid var(--wood-mid);
+    border-radius:999px; padding:3px 9px; font-size:12px; font-weight:700; color:var(--gold-light); }
+  .b3d-pl.turn { border-color:var(--gold); }
+  /* 미공개 현황판은 오른쪽 위로 옮긴다 */
+  .b3d-sb { position:absolute; right:8px; top:8px; background:rgba(30,18,8,.72); border:1px solid var(--wood-mid); border-radius:8px;
+    padding:5px 9px; font-size:12px; line-height:1.55; color:#d9c98f; text-align:left; }
+  .b3d-sb b { color:var(--gold-light); } .b3d-sb .turn b { color:var(--gold); } .b3d-sb .turn::before { content:'▶ '; color:var(--gold); }
+
+  /* ---- 기록·채팅 창 (왼쪽 위) ---- */
+  #feed { position:absolute; left:8px; top:8px; z-index:4; width:min(300px, 52%); display:flex; flex-direction:column; }
+  #feed .tabs { display:flex; gap:4px; margin-bottom:4px; }
+  #feed .tabs button { border:1px solid var(--wood-mid); background:rgba(30,18,8,.75); color:#c9b48f; border-radius:999px; padding:2px 11px;
+    font:inherit; font-size:12px; font-weight:800; cursor:pointer; position:relative; }
+  #feed .tabs button.on { background:var(--gold); color:var(--wood-dark); border-color:var(--gold); }
+  #feed .tabs .fold { padding:2px 8px; }
+  #feed .badge { position:absolute; top:-6px; right:-6px; min-width:16px; height:16px; padding:0 4px; border-radius:8px; background:#e74c3c; color:#fff; font-size:10px; line-height:16px; }
+  #feed .badge[hidden] { display:none; }
+  #feed .lines { font-size:12px; line-height:1.45; overflow-y:auto; max-height:26vh; overscroll-behavior:contain; }
+  #feed .lines div { padding:1px 0; color:#d9c98f; opacity:.8; }
+  #feed .lines div:last-child { opacity:1; color:#fff; }
+  #feed .lines .who { color:var(--gold); font-weight:800; margin-right:4px; }
+  #feed .lines .me .who { color:#7fd3a0; }
+  #feed .lines .sys { color:#9cc7ae; }
+  #feed .send { display:flex; gap:4px; margin-top:4px; }
+  #feed .send input { flex:1; min-width:0; border:1px solid var(--wood-mid); background:rgba(0,0,0,.45); color:#fff; border-radius:6px; padding:5px 8px; font:inherit; font-size:13px; }
+  #feed .send button { border:1px solid var(--gold); background:var(--wood-mid); color:var(--gold-light); border-radius:6px; padding:0 10px; font:inherit; font-size:12px; font-weight:800; cursor:pointer; }
+  #feed .send[hidden], #feed.folded .lines, #feed.folded .send { display:none; }
+  /* A는 글자 아래 타일도 눌리게 한다(대신 기록을 손으로 올려 볼 수는 없다) */
+  #feed.styleA .lines { pointer-events:none; }
+
+  /* A: 글자만 (예전 예시처럼) */
+  #feed.styleA .lines { text-shadow:0 1px 2px #000, 0 0 6px #000; }
+  /* B: 반투명 판 위에 */
+  #feed.styleB { background:rgba(20,12,6,.72); border:1px solid var(--wood-mid); border-radius:10px; padding:6px 8px 8px; }
+  #feed.styleB .lines div { border-bottom:1px dashed rgba(240,227,200,.08); padding:2px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>기록 · 채팅 샘플 (왼쪽 위)</h1>
+  <p class="hint">기록이 몇 초마다 저절로 쌓이고, 가끔 친구 채팅이 옵니다. 직접 채팅을 쳐 봐도 됩니다.
+    기록 탭을 보고 있을 때 채팅이 오면 <b>채팅</b> 탭에 빨간 숫자가 붙습니다. 미공개 현황판은 오른쪽 위로 옮겼습니다.</p>
+  <div class="ctrl"><span class="lab">모양</span>
+    <span class="seg" data-k="style"><button data-v="A" class="on">A. 글자만 (예시처럼)</button><button data-v="B">B. 반투명 판</button></span>
+  </div>
+  <div class="ctrl"><span class="lab">화면 폭</span>
+    <span class="seg" data-k="width"><button data-v="wide" class="on">노트북</button><button data-v="narrow">폰 폭 (390)</button></span>
+    <button class="btn-plain" id="chat-now">친구 채팅 오게 하기</button>
+  </div>
+
+  <div id="board3d-wrap">
+    <canvas id="board3d-gl"></canvas>
+    <div id="board3d-labels"></div>
+    <div id="feed" class="styleA">
+      <div class="tabs">
+        <button type="button" data-tab="log" class="on">기록</button>
+        <button type="button" data-tab="chat">채팅<span class="badge" hidden>0</span></button>
+        <button type="button" class="fold" aria-label="접기/펴기">▾</button>
+      </div>
+      <div class="lines" id="lines"></div>
+      <form class="send" id="send" hidden><input id="msg" maxlength="50" placeholder="채팅 입력..." autocomplete="off"><button>전송</button></form>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../board3d.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const feed = $('feed');
+const logs = ['게임이 시작되었습니다! 처음 받은 타일을 원하는 위치에 배치하세요.'];
+const chats = [{ who: '시스템', text: '채팅방에 입장했습니다.', sys: true }];
+let tab = 'log', unread = 0;
+
+document.querySelectorAll('.seg').forEach(seg => seg.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  if (seg.dataset.k === 'style') feed.className = 'style' + b.dataset.v + (feed.classList.contains('folded') ? ' folded' : '');
+  if (seg.dataset.k === 'width') $('board3d-wrap').classList.toggle('narrow', b.dataset.v === 'narrow');
+}));
+feed.querySelector('.tabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.classList.contains('fold')) { feed.classList.toggle('folded'); b.textContent = feed.classList.contains('folded') ? '▸' : '▾'; return; }
+  tab = b.dataset.tab;
+  feed.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('on', x === b));
+  if (tab === 'chat') unread = 0;
+  render();
+});
+
+// 이름·채팅은 사용자가 쓴 글이라 textContent로만 넣는다
+function render() {
+  const box = $('lines'); box.textContent = '';
+  if (tab === 'log') {
+    logs.slice(-30).forEach(t => { const d = document.createElement('div'); d.textContent = t; box.appendChild(d); });
+  } else {
+    chats.slice(-30).forEach(c => {
+      const d = document.createElement('div');
+      if (c.sys) { d.className = 'sys'; d.textContent = c.text; }
+      else {
+        if (c.me) d.className = 'me';
+        const w = document.createElement('span'); w.className = 'who'; w.textContent = c.who;
+        d.append(w, document.createTextNode(c.text));
+      }
+      box.appendChild(d);
+    });
+  }
+  $('send').hidden = tab !== 'chat';
+  const badge = feed.querySelector('.badge'); badge.hidden = unread === 0; badge.textContent = unread;
+  box.scrollTop = box.scrollHeight;
+}
+function addLog(t) { logs.push(t); if (tab === 'log') render(); }
+function addChat(c) { chats.push(c); if (tab !== 'chat') unread++; render(); }
+$('send').addEventListener('submit', e => {
+  e.preventDefault();
+  const v = $('msg').value.trim(); if (!v) return;
+  addChat({ who: '나', text: v, me: true }); $('msg').value = '';
+});
+$('chat-now').onclick = () => addChat({ who: '지민', text: ['아 그거 7이었어?', 'ㅋㅋㅋ 운 좋네', '내 차례 언제와', '조커 누구한테 있음?'][Math.floor(Math.random() * 4)] });
+
+const script = [
+  '다빈치 님이 시작 타일 배치를 마쳤습니다.', '앨리스 님이 시작 타일 배치를 마쳤습니다.',
+  '나 님이 [검은색] 타일을 뽑았습니다.', '나 님이 [다빈치] 님의 2번째 타일을 [4](으)로 지목했습니다. 결과: 정답',
+  '나 님이 [앨리스] 님의 1번째 타일을 [3](으)로 지목했습니다. 결과: 실패 (턴 종료)',
+  '다빈치 님이 [흰색] 타일을 뽑았습니다.', '다빈치 님이 [나] 님의 3번째 타일을 [6](으)로 지목했습니다. 결과: 정답',
+  '다빈치 님이 턴을 종료했습니다.', '앨리스 님이 [검은색] 타일을 뽑았습니다.',
+];
+let k = 0;
+setInterval(() => { addLog(script[k % script.length]); k++; if (k % 4 === 0) $('chat-now').click(); }, 2600);
+
+const T = (id, color, num, revealed) => ({ id, color, num, revealed: !!revealed });
+Board3D.mount({ canvas: $('board3d-gl'), app: $('board3d-wrap'), labels: $('board3d-labels') });
+Board3D.setFit(0.88); Board3D.setGlyph(0.84);
+Board3D.update({
+  n: 3, mode: 'solo', over: false, turn: 0, phase: '',
+  players: [
+    { name: '나', hand: [T('a1', 'black', 1), T('a2', 'white', 3), T('a3', 'black', 6, true), T('a4', 'white', 9)] },
+    { name: '다빈치', hand: [T('b1', 'white', 0), T('b2', 'black', 4, true), T('b3', 'white', 7), T('b4', 'black', 10)] },
+    { name: '앨리스', hand: [T('c1', 'black', 2), T('c2', 'white', 5), T('c3', 'black', 8), T('c4', 'white', 11)] },
+  ],
+  decks: { black: 6, white: 7 }, slots: [], targets: [], canDraw: false,
+});
+render();
+</script>
+</body>
+</html>

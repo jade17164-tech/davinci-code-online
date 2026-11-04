@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>화면 크기 샘플</title>
+<style>
+  :root { --gold:#d4af37; --gold-light:#f0e3c8; --wood:#5c3319; --wood-mid:#6b4226; --wood-dark:#2b1810; --felt:#1f6b45; --felt-light:#2d8a5a; --felt-dark:#0f3b24; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; }
+  body { background:linear-gradient(165deg, var(--wood-mid), var(--wood-dark) 85%); background-attachment:fixed; color:var(--gold-light);
+    font:14px/1.5 system-ui, "Malgun Gothic", sans-serif; padding:10px; display:flex; justify-content:center; }
+  .game-container { width:100%; max-width:900px; text-align:center; display:flex; flex-direction:column; min-height:100dvh; }
+  h1 { font:800 16px Georgia, serif; letter-spacing:1px; margin:2px 0 8px; padding:8px 12px; border:2px solid var(--gold); border-radius:6px;
+    background:linear-gradient(180deg, #3d2110, #1c0f08); }
+  .card { background:radial-gradient(ellipse at 50% -15%, var(--felt-light), var(--felt) 55%, var(--felt-dark)); padding:12px 16px; border-radius:10px;
+    border:5px solid var(--wood); box-shadow:0 10px 24px rgba(0,0,0,.5), 0 0 0 2px var(--wood-dark); position:relative; }
+  .head { display:flex; align-items:center; gap:4px; font-size:13px; }
+  .head .code { margin-right:auto; } .head .code b { color:#f1c40f; }
+  .head button { border:0; border-radius:5px; padding:4px 8px; font:inherit; font-size:11px; font-weight:700; color:#fff; cursor:pointer; }
+  .b-sfx, .b-rules { background:#2563a8; } .b-exit { background:#c0392b; }
+  #turn-steps { display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:8px 10px; margin:8px 0;
+    background:linear-gradient(180deg, #3a2414, #24150b); border:2px solid var(--wood-mid); border-radius:10px; }
+  #turn-steps .who { font-weight:800; margin-right:6px; color:var(--gold); }
+  #turn-steps .step { padding:4px 10px; border-radius:999px; background:rgba(255,255,255,.06); color:#9c8a6c; font-weight:700; font-size:13px; }
+  #turn-steps .step.done { color:#7fb08f; } #turn-steps .step.done::before { content:'✓ '; }
+  #turn-steps .step.now { background:var(--gold); color:var(--wood-dark); }
+  #turn-steps .arrow { color:#6b5a40; }
+  #board3d-wrap { position:relative; width:100%; height:70vh; min-height:360px; margin:6px 0 10px; border-radius:10px; overflow:hidden;
+    border:2px solid var(--wood-dark); background:#1b0f07; }
+  #board3d-gl { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+  #board3d-labels { position:absolute; inset:0; pointer-events:none; }
+  .b3d-pl, .b3d-dl { position:absolute; transform:translate(-50%,-50%); white-space:nowrap; background:rgba(30,18,8,.85); border:1px solid var(--wood-mid);
+    border-radius:999px; padding:3px 9px; font-size:12px; font-weight:700; color:var(--gold-light); }
+  .b3d-pl.turn { border-color:var(--gold); }
+  .b3d-sb { position:absolute; right:8px; top:8px; background:rgba(30,18,8,.72); border:1px solid var(--wood-mid); border-radius:8px;
+    padding:5px 9px; font-size:12px; line-height:1.55; color:#d9c98f; text-align:left; }
+  .b3d-sb b { color:var(--gold-light); } .b3d-sb .turn b { color:var(--gold); } .b3d-sb .turn::before { content:'▶ '; color:var(--gold); }
+  #end-turn { width:100%; padding:12px; border:0; border-radius:6px; background:#27ae60; color:#fff; font:inherit; font-weight:800; opacity:.55; }
+
+  /* 기록·채팅 (B. 반투명 판) */
+  #feed { position:absolute; left:8px; top:8px; z-index:4; width:min(300px, 52%); background:rgba(20,12,6,.72); border:1px solid var(--wood-mid);
+    border-radius:10px; padding:6px 8px 8px; text-align:left; }
+  #feed .tabs { display:flex; gap:4px; margin-bottom:4px; }
+  #feed .tabs span { border:1px solid var(--wood-mid); background:rgba(30,18,8,.75); color:#c9b48f; border-radius:999px; padding:2px 11px; font-size:12px; font-weight:800; }
+  #feed .tabs .on { background:var(--gold); color:var(--wood-dark); border-color:var(--gold); }
+  #feed .lines { font-size:12px; line-height:1.45; }
+  #feed .lines div { color:#d9c98f; opacity:.8; border-bottom:1px dashed rgba(240,227,200,.08); padding:2px 0; }
+  #feed .lines div:last-child { opacity:1; color:#fff; }
+
+  /* ---- 샘플 1: 폭 제한을 풀고 보드가 남는 높이를 다 쓴다 ---- */
+  body.s1 .game-container { max-width:1400px; height:calc(100dvh - 20px); min-height:0; }
+  body.s1 .card { flex:1; display:flex; flex-direction:column; min-height:0; }
+  body.s1 #board3d-wrap { flex:1; height:auto; min-height:320px; }
+
+  /* ---- 샘플 2: 보드가 창 전체, 나머지는 보드 위에 얹는다 ---- */
+  body.s2 { padding:0; }
+  body.s2 .game-container { max-width:none; }
+  body.s2 .card { position:static; padding:0; border:0; background:none; box-shadow:none; }
+  body.s2 #board3d-wrap { position:fixed; inset:0; height:auto; margin:0; border:0; border-radius:0; }
+  body.s2 h1 { position:fixed; left:10px; top:10px; z-index:5; margin:0; padding:6px 14px; font-size:15px; }
+  body.s2 .head { position:fixed; right:10px; top:10px; z-index:5; gap:6px; }
+  body.s2 .head .code { margin-right:6px; background:rgba(30,18,8,.72); border:1px solid var(--wood-mid); border-radius:999px; padding:3px 10px; }
+  body.s2 #turn-steps { position:fixed; left:50%; bottom:12px; transform:translateX(-50%); z-index:5; margin:0; flex-wrap:nowrap; white-space:nowrap; }
+  body.s2 #end-turn { position:fixed; right:12px; bottom:12px; z-index:5; width:auto; padding:10px 16px; }
+  body.s2 #feed { top:58px; left:10px; }
+  body.s2 .b3d-sb { top:52px; right:10px; }
+
+  /* 샘플 고르는 버튼 (게임에는 없음) */
+  #pick { position:fixed; left:50%; top:4px; transform:translateX(-50%); z-index:50; display:flex; border:2px solid #fff; border-radius:999px; overflow:hidden; box-shadow:0 4px 16px rgba(0,0,0,.6); }
+  #pick button { border:0; background:#222; color:#ddd; padding:6px 14px; font:inherit; font-size:13px; font-weight:800; cursor:pointer; }
+  #pick button.on { background:#e74c3c; color:#fff; }
+  @media (max-width:640px) { body.s2 #turn-steps .step:not(.now), body.s2 #turn-steps .arrow { display:none; } body.s2 h1 { display:none; } body.s2 #feed { top:52px; } }
+</style>
+</head>
+<body>
+<div id="pick"><button data-v="" class="on">지금</button><button data-v="s1">샘플 1 · 넓히기</button><button data-v="s2">샘플 2 · 전체 화면</button></div>
+
+<div class="game-container">
+  <h1>다빈치 코드</h1>
+  <div class="card">
+    <div class="head">
+      <span class="code">방 코드: <b>7777</b></span>
+      <button class="b-sfx">🔊</button><button class="b-rules">게임 방법</button><button class="b-exit">나가기</button>
+    </div>
+    <div id="turn-steps"><span class="who">내 차례</span><span class="step done">1 뽑기</span><span class="arrow">›</span><span class="step done">2 배치</span><span class="arrow">›</span><span class="step now">3 추리</span><span class="arrow">›</span><span class="step">4 계속 / 넘기기</span></div>
+    <div id="board3d-wrap">
+      <canvas id="board3d-gl"></canvas>
+      <div id="board3d-labels"></div>
+      <div id="feed">
+        <div class="tabs"><span class="on">기록</span><span>채팅</span><span>▾</span></div>
+        <div class="lines">
+          <div>다빈치 님이 [흰색] 타일을 뽑았습니다.</div>
+          <div>다빈치 님이 [나] 님의 3번째 타일을 [6](으)로 지목했습니다. 결과: 정답</div>
+          <div>다빈치 님이 턴을 종료했습니다.</div>
+          <div>나 님이 [검은색] 타일을 뽑았습니다.</div>
+        </div>
+      </div>
+    </div>
+    <button id="end-turn" disabled>턴 넘기기 (종료)</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../board3d.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+$('pick').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  $('pick').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  document.body.className = b.dataset.v;
+  window.dispatchEvent(new Event('resize'));   // 렌더러는 창 크기가 바뀔 때만 다시 잰다
+});
+const T = (id, color, num, revealed) => ({ id, color, num, revealed: !!revealed });
+Board3D.mount({ canvas: $('board3d-gl'), app: $('board3d-wrap'), labels: $('board3d-labels') });
+Board3D.setFit(0.88); Board3D.setGlyph(0.84);
+Board3D.update({
+  n: 4, mode: 'solo', over: false, turn: 0, phase: '',
+  players: [
+    { name: '나', hand: [T('a1', 'black', 1), T('a2', 'white', 3), T('a3', 'black', 6, true), T('a4', 'white', 9), T('a5', 'black', 11)] },
+    { name: '다빈치', hand: [T('b1', 'white', 0), T('b2', 'black', 4, true), T('b3', 'white', 7), T('b4', 'black', 10)] },
+    { name: '지민', hand: [T('d1', 'white', 1), T('d2', 'black', 5), T('d3', 'white', 8), T('d4', 'black', 9)] },
+    { name: '앨리스', hand: [T('c1', 'black', 2), T('c2', 'white', 5), T('c3', 'black', 8), T('c4', 'white', 11)] },
+  ],
+  decks: { black: 3, white: 4 }, slots: [], targets: [], canDraw: false,
+});
+</script>
+</body>
+</html>

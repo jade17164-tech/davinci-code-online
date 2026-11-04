@@ -517,17 +517,63 @@ body.board3d #other-players, body.board3d #my-section-container, body.board3d #d
 #board3d-wrap.shake { animation: fxShake .35s ease; }
 @keyframes fxShake { 20% { transform: translate(-6px,2px); } 40% { transform: translate(5px,-3px); } 60% { transform: translate(-3px,2px); } 80% { transform: translate(2px,-1px); } }
 
-/* 게임 중 채팅은 버튼으로 연다. 옆에 붙여 두면 노트북에서 보드가 절반으로 줄어든다. */
-#game-chat { display: none; }
-#game-chat.open { display: flex; position: fixed; right: 16px; bottom: 72px; z-index: 50; margin: 0;
-  width: min(320px, calc(100vw - 32px)); height: min(50vh, 420px); max-height: none; max-width: none;
-  box-shadow: 0 10px 30px rgba(0,0,0,.55), inset 0 2px 6px rgba(0,0,0,.25); }
-#game-chat.open .chat-messages { max-height: none; flex: 1; }
-#chat-toggle { position: fixed; right: 16px; bottom: 16px; z-index: 51; border-radius: 999px; padding: 10px 18px;
-  font-size: 14px; font-weight: 800; box-shadow: 0 6px 16px rgba(0,0,0,.5); }
-#chat-badge { display: inline-block; min-width: 18px; margin-left: 4px; padding: 0 5px; border-radius: 999px;
-  background: var(--ruby); color: #fff; font-size: 11px; line-height: 18px; }
+/* 기록·채팅 창 (반투명 판) */
+#feed { position: relative; z-index: 20; margin: 6px 0; padding: 6px 8px 8px; text-align: left;
+  background: rgba(20,12,6,.72); border: 1px solid var(--wood-mid); border-radius: 10px; }
+.feed-tabs { display: flex; gap: 4px; }
+.feed-tabs button { position: relative; margin: 0; padding: 2px 11px; border: 1px solid var(--wood-mid); border-radius: 999px;
+  background: rgba(30,18,8,.75); color: #c9b48f; font-size: 12px; font-weight: 800; box-shadow: none; }
+.feed-tabs button.on { background: var(--gold); color: var(--wood-dark); border-color: var(--gold); }
+#chat-badge { position: absolute; top: -7px; right: -7px; min-width: 16px; padding: 0 4px; border-radius: 999px;
+  background: var(--ruby); color: #fff; font-size: 10px; line-height: 16px; }
 #chat-badge.hidden { display: none; }
+#feed #log-history { max-height: 26vh; margin-top: 4px; padding: 0; background: none; border: 0; border-radius: 0; box-shadow: none; overscroll-behavior: contain; }
+#feed .log-entry { display: block; padding: 2px 0; color: #d9c98f; opacity: .8; font-size: 12px; font-weight: 600; border-bottom: 1px dashed rgba(240,227,200,.08); }
+#feed .log-entry:last-child { opacity: 1; color: #fff; border-bottom: 0; }
+#feed #game-chat { margin: 4px 0 0; padding: 0; max-height: none; min-width: 0; max-width: none; background: none; border: 0; box-shadow: none; }
+#feed #game-chat .chat-messages { max-height: 26vh; overscroll-behavior: contain; }
+#feed #game-chat .chat-msg { background: rgba(255,255,255,.07); color: #eadfc6; }
+#feed #game-chat .chat-input-row input { background: rgba(0,0,0,.45); color: #fff; border: 1px solid var(--wood-mid); }
+#feed:not(.chat) #game-chat, #feed.chat #log-history, #feed.folded #log-history, #feed.folded #game-chat { display: none; }
+
+/* 전체 화면: 3D 보드가 창 전체를 쓰고, 나머지는 보드 위 가장자리에 얹는다 */
+body.in-game.board3d { padding: 0; }
+body.in-game.board3d .game-container { max-width: none; }
+body.in-game.board3d h1 { position: fixed; left: 10px; top: 10px; z-index: 20; margin: 0; padding: 6px 14px; font-size: 15px; }
+body.in-game.board3d #game-screen { padding: 0; margin: 0; border: 0; background: none; box-shadow: none; }
+body.in-game.board3d #game-screen hr { display: none; }
+body.in-game.board3d #board3d-wrap { position: fixed; inset: 0; width: auto; height: auto; min-height: 0; margin: 0; border: 0; border-radius: 0; }
+body.in-game.board3d #game-head { position: fixed; right: 10px; top: 10px; z-index: 20; display: flex; flex-direction: row-reverse; align-items: center; gap: 6px; }
+body.in-game.board3d #game-head > * { float: none; margin: 0; }
+body.in-game.board3d #room-code-tag { background: rgba(30,18,8,.72); border: 1px solid var(--wood-mid); border-radius: 999px; padding: 1px 10px; }
+body.in-game.board3d #feed { position: fixed; left: 10px; top: 58px; width: min(320px, 46vw); margin: 0; }
+body.in-game.board3d .b3d-sb { left: auto; right: 10px; top: 52px; }
+body.in-game.board3d #status-message, body.in-game.board3d #turn-steps { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 20; margin: 0;
+  width: max-content; max-width: min(640px, calc(100vw - 24px)); }
+body.in-game.board3d #turn-steps { flex-wrap: nowrap; white-space: nowrap; }
+body.in-game.board3d #drawn-preview-container { position: fixed; left: 50%; bottom: 64px; transform: translateX(-50%); z-index: 20; }
+body.in-game.board3d #action-buttons-container { position: fixed; right: 12px; bottom: 12px; z-index: 20; margin: 0 !important; }
+body.in-game.board3d #end-turn-btn { width: auto !important; padding: 10px 18px !important; }
+body.in-game.board3d #action-buttons-container:has(#end-turn-btn:disabled) { display: none; }   /* 넘길 수 있을 때만 보인다 */
+body.in-game.board3d #btn-return-lobby { position: fixed; left: 50%; bottom: 70px; transform: translateX(-50%); z-index: 20; width: min(320px, calc(100vw - 24px)); }
+@media (max-width: 640px) {
+  body.in-game.board3d h1 { display: none; }
+  body.in-game.board3d #feed { top: 52px; width: min(300px, 60vw); }
+  body.in-game.board3d #turn-steps .step:not(.now), body.in-game.board3d #turn-steps .arrow { display: none; }
+  body.in-game.board3d #drawn-preview-container { bottom: 96px; }   /* 안내문이 두세 줄로 길어져도 겹치지 않게 */
+  body.in-game.board3d #status-message, body.in-game.board3d #turn-steps { left: 12px; transform: none; max-width: calc(100vw - 150px); white-space: normal; }
+}
+/* 폰 가로: 세로가 짧으니 제목을 빼고 기록·채팅을 맨 위로 올린다 */
+@media (max-height: 500px) and (orientation: landscape) {
+  body.in-game.board3d h1 { display: none; }
+  body.in-game.board3d #feed { top: 10px; width: min(280px, 34vw); }
+  body.in-game.board3d #feed #log-history, body.in-game.board3d #feed #game-chat .chat-messages { max-height: 34vh; }
+  body.in-game.board3d .b3d-sb { top: 46px; }
+  body.in-game.board3d #turn-steps { bottom: 8px; padding: 4px 8px; }
+  body.in-game.board3d #turn-steps .step { padding: 2px 8px; font-size: 12px; }
+  body.in-game.board3d #action-buttons-container { bottom: 8px; }
+  body.in-game.board3d #drawn-preview-container { bottom: 52px; }
+}
 </style>
 </head>
 <body>
@@ -653,17 +699,37 @@ body.board3d #other-players, body.board3d #my-section-container, body.board3d #d
 
   <!-- 3. 인게임 화면 -->
   <div id="game-screen" class="card hidden">
-    <button id="reset-game-btn" class="btn-reset">나가기</button>
-    <button id="open-rules-game" class="btn-rules">게임 방법</button>
-    <button id="sfx-toggle" class="btn-rules" style="margin-right:4px;" aria-label="효과음 켜기/끄기">🔊</button>
-    <div style="font-size:13px; text-align:left; float:left; line-height:24px;">방 코드: <b id="display-room-code" style="color:#f1c40f;">-</b></div>
+    <div id="game-head">
+      <button id="reset-game-btn" class="btn-reset">나가기</button>
+      <button id="open-rules-game" class="btn-rules">게임 방법</button>
+      <button id="sfx-toggle" class="btn-rules" style="margin-right:4px;" aria-label="효과음 켜기/끄기">🔊</button>
+      <button id="landscape-btn" class="btn-rules hidden" style="margin-right:4px;">가로 화면</button>
+      <div id="room-code-tag" style="font-size:13px; text-align:left; float:left; line-height:24px;">방 코드: <b id="display-room-code" style="color:#f1c40f;">-</b></div>
+    </div>
 
     <div id="game-columns">
       <div id="game-main-column">
         <div id="status-message" class="status">게임 준비 중...</div>
 
-        <div id="log-history-container" class="hidden">
+        <!-- 기록과 채팅을 탭으로 나눈 한 창. 전체 화면에서는 보드 왼쪽 위에 뜬다 -->
+        <div id="feed">
+          <div class="feed-tabs">
+            <button type="button" data-feed="log" class="on">기록</button>
+            <button type="button" data-feed="chat">채팅<span id="chat-badge" class="hidden">0</span></button>
+            <button type="button" id="feed-fold" aria-label="기록·채팅 접기/펴기" aria-expanded="true">▾</button>
+          </div>
           <div id="log-history" class="log-history"></div>
+          <div id="game-chat" class="chat-container">
+            <div id="game-chat-tabs" class="chat-tab-group hidden">
+              <button class="chat-tab active" data-target="all">전체 채팅</button>
+              <button class="chat-tab" data-target="team">팀 채팅</button>
+            </div>
+            <div id="chat-messages-game" class="chat-messages"></div>
+            <div class="chat-input-row">
+              <input type="text" id="chat-input-game" placeholder="채팅 입력..." maxlength="50">
+              <button id="chat-send-game">전송</button>
+            </div>
+          </div>
         </div>
 
         <div id="turn-steps" class="hidden"></div>
@@ -708,20 +774,7 @@ body.board3d #other-players, body.board3d #my-section-container, body.board3d #d
 
         <button id="btn-return-lobby" class="btn-lobby-return">대기실로 돌아가기</button>
       </div>
-
-      <div id="game-chat" class="chat-container">
-        <div id="game-chat-tabs" class="chat-tab-group hidden">
-          <button class="chat-tab active" data-target="all">전체 채팅</button>
-          <button class="chat-tab" data-target="team">팀 채팅</button>
-        </div>
-        <div id="chat-messages-game" class="chat-messages"></div>
-        <div class="chat-input-row">
-          <input type="text" id="chat-input-game" placeholder="채팅 입력..." maxlength="50">
-          <button id="chat-send-game">전송</button>
-        </div>
-      </div>
     </div>
-    <button id="chat-toggle" type="button" aria-controls="game-chat" aria-expanded="false">채팅 <span id="chat-badge" class="hidden">0</span></button>
   </div>
 </div>
 
@@ -1594,18 +1647,54 @@ document.querySelectorAll('.chat-tab').forEach(tab => {
 document.getElementById('chat-send-waiting').addEventListener('click', sendChatMessage);
 document.getElementById('chat-input-waiting').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendChatMessage(); });
 document.getElementById('chat-send-game').addEventListener('click', sendChatMessage);
-document.getElementById('chat-toggle').addEventListener('click', () => {
-  const box = document.getElementById('game-chat');
-  const open = box.classList.toggle('open');
-  document.getElementById('chat-toggle').setAttribute('aria-expanded', open);
-  if (open) {
+// 기록·채팅 창: 탭으로 고르고 ▾로 접는다. 채팅 탭이 펼쳐져 보일 때만 '읽음'으로 친다.
+const feedEl = document.getElementById('feed');
+function setFeed(tab, folded) {
+  feedEl.classList.toggle('chat', tab === 'chat');
+  feedEl.classList.toggle('folded', folded);
+  feedEl.querySelectorAll('[data-feed]').forEach(b => b.classList.toggle('on', b.dataset.feed === tab));
+  const fold = document.getElementById('feed-fold');
+  fold.textContent = folded ? '▸' : '▾';
+  fold.setAttribute('aria-expanded', !folded);
+  const chatVisible = tab === 'chat' && !folded;
+  document.getElementById('game-chat').classList.toggle('open', chatVisible);
+  if (chatVisible) {
     unreadChats = 0;
     document.getElementById('chat-badge').classList.add('hidden');
     const msgs = document.getElementById('chat-messages-game');
     msgs.scrollTop = msgs.scrollHeight;
-    document.getElementById('chat-input-game').focus();
   }
-});
+  const log = document.getElementById('log-history');
+  log.scrollTop = log.scrollHeight;
+}
+feedEl.querySelectorAll('[data-feed]').forEach(b => b.addEventListener('click', () => setFeed(b.dataset.feed, false)));
+document.getElementById('feed-fold').addEventListener('click', () =>
+  setFeed(feedEl.classList.contains('chat') ? 'chat' : 'log', !feedEl.classList.contains('folded')));
+setFeed('log', matchMedia('(max-width: 640px), (max-height: 500px)').matches);   // 폰(세로·가로)에서는 보드를 덜 가리게 접어서 시작
+
+// 가로 화면: 폰에서 전체 화면으로 바꾸고 가로로 고정한다. 안드로이드 크롬만 된다(아이폰은 폰을 직접 돌리면 된다).
+const landscapeBtn = document.getElementById('landscape-btn');
+if (screen.orientation && screen.orientation.lock && document.documentElement.requestFullscreen && matchMedia('(pointer: coarse)').matches) {
+  landscapeBtn.classList.remove('hidden');
+  landscapeBtn.addEventListener('click', () => {
+    if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return; }
+    document.documentElement.requestFullscreen()
+      .then(() => screen.orientation.lock('landscape'))
+      .catch(() => {});
+  });
+  document.addEventListener('fullscreenchange', () => {
+    landscapeBtn.textContent = document.fullscreenElement ? '세로 화면' : '가로 화면';
+  });
+}
+
+// 게임 화면이 보이는 동안 body에 in-game을 단다. 3D 보드와 함께 전체 화면 배치를 켠다.
+const gameScreenEl = document.getElementById('game-screen');
+new MutationObserver(() => {
+  const was = document.body.classList.contains('in-game');
+  if (document.body.classList.toggle('in-game', !gameScreenEl.classList.contains('hidden')) !== was) {
+    window.dispatchEvent(new Event('resize'));   // 3D 렌더러는 창 크기가 바뀔 때만 다시 잰다
+  }
+}).observe(gameScreenEl, { attributes: true, attributeFilter: ['class'] });
 document.getElementById('chat-input-game').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendChatMessage(); });
 
 const modal = document.getElementById('rules-modal');
@@ -1889,7 +1978,6 @@ function listenToRoom() {
       document.getElementById('waiting-screen').classList.add('hidden');
       document.getElementById('game-screen').classList.remove('hidden');
       document.getElementById('display-room-code').innerText = rawRoomCode;
-      document.getElementById('log-history-container').classList.toggle('hidden', logMode !== 'beginner');
       updateGameUI(data);
 
       // 게임 종료 직후, 각자 자기 계정(users/{myAccountId})에만 이번 판 결과를 1회 반영한다
@@ -1923,10 +2011,10 @@ function handleLogUpdate(newLog) {
 
   if (isRoutineLog(newLog)) return;
 
-  if (logMode === 'beginner') {
-    logHistoryList.push(newLog);
-    renderLogHistory();
-  } else if (!/지목했습니다|턴을 종료했습니다/.test(newLog)) {
+  // 기록 탭에는 모드와 상관없이 쌓는다. 기본 모드는 지금처럼 알림창도 띄운다.
+  logHistoryList.push(newLog);
+  renderLogHistory();
+  if (logMode !== 'beginner' && !/지목했습니다|턴을 종료했습니다/.test(newLog)) {
     // 추리 결과와 차례 넘김은 보드 위 연출(결과창·차례 알림)이 보여준다. 창까지 띄우면 보드를 가린다.
     showLogModal(newLog);
   }
@@ -1935,9 +2023,14 @@ function handleLogUpdate(newLog) {
 function renderLogHistory() {
   const container = document.getElementById('log-history');
   if (!container) return;
-  container.innerHTML = logHistoryList.map((entry, idx) => `
-    <div class="log-entry"><span class="log-entry-index">${idx + 1}</span>${entry}</div>
-  `).join('');
+  // 기록에는 사용자가 정한 이름이 들어가므로 textContent로만 넣는다
+  container.textContent = '';
+  logHistoryList.forEach(entry => {
+    const d = document.createElement('div');
+    d.className = 'log-entry';
+    d.textContent = entry;
+    container.appendChild(d);
+  });
   container.scrollTop = container.scrollHeight;
 }
 
