@@ -283,9 +283,14 @@ window.Board3D = (() => {
       if (p.pending) {
         const t = p.pending; live.add(t.id);
         const m = getMesh(t, deckSpawn(t.color));
-        // 내 쪽으로 더 당긴다. 테이블 가운데로 보내면 덱 더미와 겹쳐 둘 다 안 보인다.
-        const pos = st.d.clone().multiplyScalar(st.Rs - (pi === 0 ? 1.5 : 2.4)); pos.y = pi === 0 ? 1.9 : 1.6;
-        Object.assign(m.userData, { tgt: pos, scT: pi === 0 ? 1.15 : 0.8, tiltT: -0.55, pi, idx: -1, pick: null });
+        // 내 뽑은 타일은 패 '옆'에 둔다. 거리로 띄우면 인원수에 따라 테이블 크기와 카메라가
+        // 달라져(2인은 테이블이 작아 카메라가 바짝 붙는다) 패 위로 겹쳐 보인다.
+        // 패 너비 기준으로 비켜놓으면 인원수와 무관하게 항상 옆에 선다.
+        const pos = pi === 0
+          ? st.d.clone().multiplyScalar(st.Rs).addScaledVector(st.r, ((len - 1) / 2 + 1.35) * sp)
+          : st.d.clone().multiplyScalar(st.Rs - 2.4);
+        pos.y = pi === 0 ? 0.14 + TH * sc / 2 : 1.6;
+        Object.assign(m.userData, { tgt: pos, scT: pi === 0 ? sc : 0.8, tiltT: pi === 0 ? -0.42 : -0.55, pi, idx: -1, pick: null });
         m.rotation.y = st.th;
         setFaces(m, t, pi === 0 ? 'face' : 'cover', 'cover');
       }
@@ -300,10 +305,11 @@ window.Board3D = (() => {
     if (me && me.pending && (s.slots || []).length) {
       const st = seats[0], len = (me.hand || []).length, sc = rowScale(0, len, s.n), sp = TW * 1.1 * sc;
       s.slots.forEach(idx => {
-        const spr = new THREE.Sprite(plusMat()); spr.scale.set(0.75, 0.75, 1);
+        const spr = new THREE.Sprite(plusMat()); spr.scale.set(0.62, 0.62, 1);
         const x = (idx - len / 2) * sp;
         spr.position.copy(st.d).multiplyScalar(st.Rs).addScaledVector(st.r, x);
-        spr.position.y = TH * sc + 0.75; spr.position.addScaledVector(st.d, 0.3);
+        // 타일 위로 충분히 띄우고 살짝 뒤로 민다. 가까이 두면 내 패 숫자를 덮는다.
+        spr.position.y = TH * sc + 1.5; spr.position.addScaledVector(st.d, -0.25);
         spr.userData.pick = { type: 'slot', idx };
         scene.add(spr); slotSprites.push(spr); picks.push(spr);
       });
