@@ -260,7 +260,8 @@ window.Board3D = (() => {
         const pos = st.d.clone().multiplyScalar(st.Rs - (flat ? 1.5 : 0)).addScaledVector(st.r, x);
         pos.y = flat ? TD * sc / 2 + 0.02 : 0.14 + TH * sc / 2 * Math.cos(tilt);
         Object.assign(m.userData, { tgt: pos, scT: sc, tiltT: tilt, pi, idx: i, pick: null });
-        m.rotation.y = st.yaw;
+        // 눕힌 공개 타일은 소유자가 아니라 보는 사람(나) 기준으로 숫자가 바로 서게 돌린다
+        m.rotation.y = (flat && pi > 0) ? st.yaw - Math.PI : st.yaw;
 
         const mine = pi === 0, reveal = t.revealed || s.over;
         const kind = reveal ? (t.revealed ? 'rev' : 'face') : (mine ? 'face' : (p.peek ? 'peek' : 'cover'));
