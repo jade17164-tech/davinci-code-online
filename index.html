@@ -469,7 +469,50 @@ body.board3d #other-players, body.board3d #my-section-container { display: none;
   .modal-content { max-height: 92vh; padding-top: 4vh; }
   .modal-overlay { padding-top: 3vh; }
 }
-  /* 게임 중 채팅은 버튼으로 연다. 옆에 붙여 두면 노트북에서 보드가 절반으로 줄어든다. */
+  /* 진행 연출: 단계 안내 바, 차례 알림, 추리 결과, 공개될 때 흔들림 */
+#turn-steps { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 8px 10px; margin: 8px 0;
+  background: linear-gradient(180deg, #3a2414, #24150b); border: 2px solid var(--wood-mid); border-radius: 10px; }
+#turn-steps.hidden { display: none; }
+#turn-steps .who { font-weight: 800; margin-right: 6px; color: var(--gold-light); }
+#turn-steps .who.me { color: var(--gold); }
+#turn-steps .step { padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.06); color: #9c8a6c; font-weight: 700; font-size: 13px; transition: all .25s; }
+#turn-steps .step.done { color: #7fb08f; }
+#turn-steps .step.done::before { content: '✓ '; }
+#turn-steps .step.now { background: var(--gold); color: var(--wood-dark); transform: scale(1.06); box-shadow: 0 0 0 3px rgba(212,175,55,.3); }
+#turn-steps .arrow { color: #6b5a40; }
+.fx-banner { position: absolute; left: 50%; top: 42%; z-index: 5; pointer-events: none; white-space: nowrap;
+  padding: 14px 34px; border-radius: 14px; font-weight: 900; font-size: clamp(20px, 5vw, 26px);
+  background: rgba(30,18,8,.9); border: 2px solid var(--wood-mid); color: var(--gold-light); animation: fxBanner 1.6s ease forwards; }
+.fx-banner.me { font-size: clamp(28px, 8vw, 40px); color: var(--wood-dark); background: linear-gradient(180deg, #ffe9a6, var(--gold));
+  border-color: #fff3c4; box-shadow: 0 0 40px rgba(212,175,55,.6); }
+@keyframes fxBanner {
+  0% { transform: translate(-50%,-50%) scale(.6); opacity: 0; }
+  15% { transform: translate(-50%,-50%) scale(1.08); opacity: 1; }
+  25% { transform: translate(-50%,-50%) scale(1); }
+  75% { opacity: 1; }
+  100% { transform: translate(-50%,-62%); opacity: 0; }
+}
+.fx-result { position: absolute; left: 50%; top: 42%; z-index: 6; pointer-events: none; white-space: nowrap;
+  display: flex; align-items: center; gap: 14px; padding: 10px 20px; border-radius: 16px; background: rgba(18,10,4,.92);
+  border: 3px solid var(--c); box-shadow: 0 12px 40px rgba(0,0,0,.6); animation: fxResult 1.8s ease forwards; }
+.fx-result.right { --c: #ffd54a; } .fx-result.wrong { --c: #ff6b5a; }
+.fx-result .big { display: block; font-weight: 900; font-size: clamp(26px, 7vw, 34px); color: var(--c); line-height: 1.1; }
+.fx-result .sub { display: block; font-size: 15px; font-weight: 700; color: #e8dcc4; }
+.fx-chip { display: inline-flex; align-items: center; justify-content: center; min-width: 52px; height: 70px; padding: 0 6px; border-radius: 9px;
+  font-size: 40px; font-weight: 900; font-family: Georgia, serif; border: 2px solid rgba(255,255,255,.55); position: relative; }
+.fx-chip.white { background: #f6f0e2; color: #1c1c20; } .fx-chip.black { background: #1c1c20; color: #f6f0e2; }
+.fx-chip.no::after { content: ''; position: absolute; left: -4px; right: -4px; top: 50%; height: 5px; background: #ff4a3a; transform: rotate(-30deg); border-radius: 2px; }
+@keyframes fxResult {
+  0% { transform: translate(-50%,-50%) scale(2.2); opacity: 0; }
+  16% { transform: translate(-50%,-50%) scale(.95); opacity: 1; }
+  24% { transform: translate(-50%,-50%) scale(1); }
+  80% { opacity: 1; }
+  100% { transform: translate(-50%,-50%); opacity: 0; }
+}
+#board3d-wrap.shake { animation: fxShake .35s ease; }
+@keyframes fxShake { 20% { transform: translate(-6px,2px); } 40% { transform: translate(5px,-3px); } 60% { transform: translate(-3px,2px); } 80% { transform: translate(2px,-1px); } }
+
+/* 게임 중 채팅은 버튼으로 연다. 옆에 붙여 두면 노트북에서 보드가 절반으로 줄어든다. */
 #game-chat { display: none; }
 #game-chat.open { display: flex; position: fixed; right: 16px; bottom: 72px; z-index: 50; margin: 0;
   width: min(320px, calc(100vw - 32px)); height: min(50vh, 420px); max-height: none; max-width: none;
@@ -607,6 +650,7 @@ body.board3d #other-players, body.board3d #my-section-container { display: none;
   <div id="game-screen" class="card hidden">
     <button id="reset-game-btn" class="btn-reset">나가기</button>
     <button id="open-rules-game" class="btn-rules">게임 방법</button>
+    <button id="sfx-toggle" class="btn-rules" style="margin-right:4px;" aria-label="효과음 켜기/끄기">🔊</button>
     <div style="font-size:13px; text-align:left; float:left; line-height:24px;">방 코드: <b id="display-room-code" style="color:#f1c40f;">-</b></div>
 
     <div id="game-columns">
@@ -616,6 +660,8 @@ body.board3d #other-players, body.board3d #my-section-container { display: none;
         <div id="log-history-container" class="hidden">
           <div id="log-history" class="log-history"></div>
         </div>
+
+        <div id="turn-steps" class="hidden"></div>
 
         <div id="board3d-wrap">
           <canvas id="board3d-gl"></canvas>
@@ -1873,7 +1919,8 @@ function handleLogUpdate(newLog) {
   if (logMode === 'beginner') {
     logHistoryList.push(newLog);
     renderLogHistory();
-  } else {
+  } else if (!/지목했습니다|턴을 종료했습니다/.test(newLog)) {
+    // 추리 결과와 차례 넘김은 보드 위 연출(결과창·차례 알림)이 보여준다. 창까지 띄우면 보드를 가린다.
     showLogModal(newLog);
   }
 }
@@ -2385,6 +2432,8 @@ function updateGameUI(data) {
     canGuess: isMyTurn && pendingPlacementTile === null && !isMyAllRevealed && (hasDrawnThisTurn || (blackLen === 0 && whiteLen === 0)),
     canDraw: isMyTurn && !isMyAllRevealed && !hasDrawnThisTurn && pendingPlacementTile === null,
   });
+  renderTurnSteps(data);
+  playTableFx(data);
 
   if (!data.isGameOver) {
     checkWinner(data);
@@ -2443,7 +2492,7 @@ function renderBoard3D(data, ctx) {
     const mine = !isSpectator && pid === myPlayerId;
     // 내 패는 내가 직접 배치한 순서가 곧 화면 순서다. 상대 패만 표시용으로 정렬한다.
     const hand = (mine ? (p.hand || []) : sortHandForDisplay(p.hand)).map((t, i) => ({
-      id: pid + ':' + i + ':' + t.color + ':' + t.num,   // 자리와 값이 같으면 같은 메쉬를 재사용
+      id: t.id,   // 고유 id로 이어 써야 끼워 넣을 때 옆 타일이 더미에서 다시 날아오지 않고 옆으로 밀린다
       color: t.color, num: t.num, revealed: !!t.revealed,
     }));
     return {
@@ -2452,7 +2501,7 @@ function renderBoard3D(data, ctx) {
       peek: isTeamMode && !isSpectator && !mine && p.team === myTeam,
       hand,
       pending: (mine && pendingPlacementTile) ? {
-        id: 'pending', color: pendingPlacementTile.color, num: pendingPlacementTile.num,
+        id: pendingPlacementTile.id, color: pendingPlacementTile.color, num: pendingPlacementTile.num,
       } : null,
     };
   });
@@ -2477,6 +2526,169 @@ function renderBoard3D(data, ctx) {
     slots: (!isSpectator && pendingPlacementTile) ? legalSlotsFor(seatPlayers[0].hand, pendingPlacementTile) : [],
     targets,
     canDraw: ctx.canDraw,
+  });
+}
+
+// ---- 진행 연출: 효과음, 차례 알림, 추리 결과, 단계 안내 ----
+// 효과음은 파일 없이 브라우저에서 합성한다. 브라우저는 첫 클릭 전에는 소리를 막는다.
+const Sfx = (() => {
+  let ctx = null, enabled = true;
+  try { enabled = localStorage.getItem('davinci_sfx') !== 'off'; } catch (e) {}
+  const ac = () => ctx || (ctx = new (window.AudioContext || window.webkitAudioContext)());
+  function env(g, t, peak, d) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.008 + d); }
+  function tone(f0, f1, dur, type, peak, at = 0) {
+    const c = ac(), t = c.currentTime + at, o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    env(g, t, peak, dur); o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + 0.05);
+  }
+  function noise(dur, f0, f1, q, peak, type = 'bandpass') {
+    const c = ac(), t = c.currentTime, n = Math.floor(c.sampleRate * dur);
+    const buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    src.buffer = buf; f.type = type; f.Q.value = q; f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    env(g, t, peak, dur); src.connect(f).connect(g).connect(c.destination); src.start(t);
+  }
+  const play = fn => { if (!enabled || !ctx) return; try { fn(); } catch (e) {} };
+  return {
+    get enabled() { return enabled; },
+    toggle() { enabled = !enabled; try { localStorage.setItem('davinci_sfx', enabled ? 'on' : 'off'); } catch (e) {} return enabled; },
+    unlock() { try { ac().resume(); } catch (e) {} },
+    draw:   () => play(() => noise(0.22, 600, 3200, 0.8, 0.22)),
+    place:  () => play(() => { noise(0.05, 2600, 1800, 2, 0.5); tone(220, 160, 0.06, 'triangle', 0.18); }),
+    thud:   () => play(() => { tone(140, 55, 0.28, 'sine', 0.5); noise(0.12, 400, 150, 1, 0.25, 'lowpass'); }),
+    right:  () => play(() => { tone(660, 660, 0.14, 'triangle', 0.22); tone(990, 990, 0.26, 'triangle', 0.22, 0.12); }),
+    wrong:  () => play(() => { tone(260, 150, 0.35, 'sawtooth', 0.09); tone(196, 110, 0.4, 'square', 0.05, 0.05); }),
+    turn:   () => play(() => tone(880, 880, 0.35, 'sine', 0.12)),
+    myturn: () => play(() => { tone(587, 587, 0.12, 'triangle', 0.18); tone(784, 784, 0.12, 'triangle', 0.18, 0.1); tone(1175, 1175, 0.3, 'triangle', 0.18, 0.2); }),
+  };
+})();
+document.addEventListener('pointerdown', () => Sfx.unlock(), { once: true });
+document.getElementById('sfx-toggle').textContent = Sfx.enabled ? '🔊' : '🔇';
+document.getElementById('sfx-toggle').addEventListener('click', () => {
+  document.getElementById('sfx-toggle').textContent = Sfx.toggle() ? '🔊' : '🔇';
+});
+
+// 보드 위에 잠깐 떴다 사라지는 것. 이름은 사용자가 정한 값이라 textContent로만 넣는다.
+function fxOverlay(el) {
+  const wrap = document.getElementById('board3d-wrap');
+  wrap.appendChild(el);
+  el.addEventListener('animationend', () => el.remove());
+}
+function fxTurnBanner(data) {
+  const pid = Object.keys(data.players || {})[data.turnIndex];
+  if (!pid) return;
+  const mine = !isSpectator && pid === myPlayerId;
+  const b = document.createElement('div');
+  b.className = 'fx-banner' + (mine ? ' me' : '');
+  b.textContent = mine ? '내 차례!' : `${data.players[pid].name}의 차례`;
+  fxOverlay(b);
+  mine ? Sfx.myturn() : Sfx.turn();
+}
+function fxGuessResult(g, data) {
+  const target = (data.players || {})[g.target];
+  if (!target) return;
+  const box = document.createElement('div');
+  box.className = 'fx-result ' + (g.right ? 'right' : 'wrong');
+  const chip = document.createElement('span');
+  chip.className = `fx-chip ${g.color === 'black' ? 'black' : 'white'}${g.right ? '' : ' no'}`;
+  chip.textContent = g.num === -1 ? '-' : g.num;
+  const txt = document.createElement('span');
+  const big = document.createElement('span'); big.className = 'big'; big.textContent = g.right ? '정답!' : '실패';
+  const sub = document.createElement('span'); sub.className = 'sub';
+  sub.textContent = `${g.target === myPlayerId && !isSpectator ? '내' : target.name + '의'} ${g.idx + 1}번째 타일`;
+  txt.append(big, sub);
+  box.append(chip, txt);
+  fxOverlay(box);
+  g.right ? Sfx.right() : Sfx.wrong();
+}
+// 타일이 눕는 데 걸리는 시간 뒤에 '쿵' + 보드 흔들림
+function fxLanding() {
+  setTimeout(() => {
+    Sfx.thud();
+    const wrap = document.getElementById('board3d-wrap');
+    wrap.classList.remove('shake'); void wrap.offsetWidth; wrap.classList.add('shake');
+  }, 260);
+}
+
+// 스냅샷이 바뀔 때마다 무엇이 달라졌는지 보고 연출을 고른다. 모든 사람 화면에서 똑같이 일어난다.
+let fxPrev = null;
+function fxSummary(data) {
+  const players = data.players || {};
+  const hands = {};
+  Object.keys(players).forEach(pid => {
+    const h = players[pid].hand || [];
+    hands[pid] = { len: h.length, rev: h.filter(t => t.revealed).map(t => t.id) };
+  });
+  return {
+    playing: data.gameState === 'playing', over: !!data.isGameOver, turn: data.turnIndex,
+    deck: (data.blackDeck || []).length + (data.whiteDeck || []).length,
+    guessAt: data.lastGuess ? data.lastGuess.at : null, hands,
+  };
+}
+function playTableFx(data) {
+  const cur = fxSummary(data), prev = fxPrev;
+  fxPrev = cur;
+  if (!cur.playing || cur.over) return;
+  if (!prev || !prev.playing) { fxTurnBanner(data); return; }   // 판이 막 시작됐다
+
+  if (cur.deck < prev.deck) Sfx.draw();
+  const ids = Object.keys(cur.hands);
+  if (ids.some(pid => prev.hands[pid] && cur.hands[pid].len > prev.hands[pid].len)) Sfx.place();
+  const newlyRevealed = ids.some(pid => prev.hands[pid] && cur.hands[pid].rev.some(id => !prev.hands[pid].rev.includes(id)));
+
+  const guessed = cur.guessAt && cur.guessAt !== prev.guessAt;
+  if (guessed) fxGuessResult(data.lastGuess, data);
+  if (newlyRevealed) fxLanding();
+  // 틀려서 차례가 넘어가면 결과창이 먼저 보이도록 차례 알림은 조금 늦춘다
+  if (cur.turn !== prev.turn) {
+    if (guessed) setTimeout(() => { if (fxPrev && fxPrev.turn === cur.turn && !fxPrev.over) fxTurnBanner(data); }, 1500);
+    else fxTurnBanner(data);
+  }
+}
+
+// 단계 안내 바. 내 차례는 내 상태로, 남의 차례는 차례가 시작될 때와 비교해 몇 단계인지 짐작한다.
+const TURN_STEPS = ['뽑기', '배치', '추리', '계속 / 넘기기'];
+let turnBase = null;
+function renderTurnSteps(data) {
+  const bar = document.getElementById('turn-steps');
+  const status = document.getElementById('status-message');
+  const players = data.players || {};
+  const pid = Object.keys(players)[data.turnIndex];
+  const p = players[pid];
+  const me = !isSpectator ? players[myPlayerId] : null;
+  const myDead = me && (me.hand || []).length > 0 && me.hand.every(t => t.revealed);
+  const placingStart = me && (me.unplacedPool || []).length > 0;
+  // 관전·탈락·시작 타일 배치·게임 끝은 기존 안내문이 더 많은 걸 알려준다
+  const show = data.gameState === 'playing' && !data.isGameOver && !!p && !!me && !myDead && !placingStart;
+  bar.classList.toggle('hidden', !show);
+  status.classList.toggle('hidden', show);
+  if (!show) return;
+
+  const deck = (data.blackDeck || []).length + (data.whiteDeck || []).length;
+  const guessAt = data.lastGuess ? data.lastGuess.at : null;
+  if (!turnBase || turnBase.turn !== data.turnIndex) turnBase = { turn: data.turnIndex, deck, len: (p.hand || []).length, guessAt };
+  const mine = pid === myPlayerId;
+  let now;
+  if (mine) {
+    now = pendingPlacementTile ? 1 : (!hasDrawnThisTurn && deck > 0) ? 0 : hasGuessedSuccessThisTurn ? 3 : 2;
+  } else {
+    const g = data.lastGuess;
+    const hit = g && g.at !== turnBase.guessAt && g.by === pid && g.right;
+    const placed = (p.hand || []).length > turnBase.len;
+    now = hit ? 3 : (placed || turnBase.deck === 0) ? 2 : deck < turnBase.deck ? 1 : 0;
+  }
+  bar.textContent = '';
+  const who = document.createElement('span');
+  who.className = 'who' + (mine ? ' me' : '');
+  who.textContent = mine ? '내 차례' : `${p.name} 차례`;
+  bar.appendChild(who);
+  TURN_STEPS.forEach((name, i) => {
+    if (i) { const a = document.createElement('span'); a.className = 'arrow'; a.textContent = '›'; bar.appendChild(a); }
+    const s = document.createElement('span');
+    s.className = 'step' + (i < now ? ' done' : i === now ? ' now' : '');
+    s.textContent = `${i + 1} ${name}`;
+    bar.appendChild(s);
   });
 }
 
@@ -2629,6 +2841,7 @@ function executeGuess(targetPlayerId, tileIdx, guessedNum) {
       updates[`players/${myPlayerId}/bestCorrectStreak`] = newBestStreak;
       updates[`players/${myPlayerId}/correctGuessCount`] = (myGuessData.correctGuessCount || 0) + 1;
       updates[`lastLog`] = logMsg;
+      updates[`lastGuess`] = { by: myPlayerId, target: targetPlayerId, idx: tileIdx, num: guessedNum, color: targetHand[tileIdx]?.color || 'white', right: true, at: Date.now() };
 
       update(roomRef, updates).then(() => {
         get(roomRef).then(snap => {
@@ -2662,6 +2875,7 @@ function executeGuess(targetPlayerId, tileIdx, guessedNum) {
       updates[`rooms/${currentRoomKey}/players/${myPlayerId}/wrongGuessCount`] = (myGuessData.wrongGuessCount || 0) + 1;
       updates[`rooms/${currentRoomKey}/turnIndex`] = nextTurnIndex;
       updates[`rooms/${currentRoomKey}/lastLog`] = logMsg;
+      updates[`rooms/${currentRoomKey}/lastGuess`] = { by: myPlayerId, target: targetPlayerId, idx: tileIdx, num: guessedNum, color: targetHand[tileIdx]?.color || 'white', right: false, at: Date.now() };
       update(ref(db), updates);
     }
   });

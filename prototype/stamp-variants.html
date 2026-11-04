@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>추리 결과 문구 시안</title>
+<style>
+  :root { --gold:#d4af37; --gold-light:#f0e3c8; --wood-mid:#6b4226; --wood-dark:#2b1810; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:#0f3b24; color:var(--gold-light); font:14px/1.5 system-ui, "Malgun Gothic", sans-serif; }
+  .wrap { max-width:980px; margin:0 auto; padding:12px 16px 48px; }
+  h1 { font-size:18px; margin:4px 0 6px; }
+  .hint { color:#b9d6c4; font-size:13px; margin:0 0 12px; }
+  button { background:var(--wood-mid); color:var(--gold-light); border:1px solid #8a5a2e; border-radius:6px; padding:6px 11px; font:inherit; font-weight:700; cursor:pointer; }
+
+  /* 실제 보드 */
+  #board3d-wrap { position:sticky; top:0; z-index:10; width:100%; height:42vh; min-height:260px; border-radius:10px; overflow:hidden; border:2px solid var(--wood-dark); background:#1b0f07; margin-bottom:14px; }
+  #board3d-gl { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  #board3d-labels { position:absolute; inset:0; pointer-events:none; }
+  .b3d-pl, .b3d-dl { position:absolute; transform:translate(-50%,-50%); white-space:nowrap; background:rgba(30,18,8,.85); border:1px solid var(--wood-mid);
+    border-radius:999px; padding:3px 9px; font-size:12px; font-weight:700; color:var(--gold-light); display:flex; gap:6px; align-items:center; }
+  .b3d-pl.turn { border-color:var(--gold); }
+  .b3d-sb { display:none; }
+
+  /* 시안 카드 */
+  .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:12px; }
+  .card { background:rgba(0,0,0,.25); border:1px solid #2f5a42; border-radius:10px; padding:10px; }
+  .card h2 { font-size:15px; margin:0 0 2px; }
+  .card p { margin:0 0 8px; color:#b9d6c4; font-size:12.5px; }
+  .stage { position:relative; isolation:isolate; height:150px; border-radius:8px; overflow:hidden; margin-bottom:8px;
+    background: repeating-linear-gradient(100deg, rgba(0,0,0,.06) 0 3px, transparent 3px 11px), radial-gradient(ellipse at 50% 60%, #c98b4d, #9a6332 70%, #6b4226); }
+  .stage .fx { animation:none !important; opacity:1 !important; }
+  .card .row { display:flex; gap:6px; flex-wrap:wrap; }
+
+  /* 공통: 타일 칩 */
+  .chip { display:inline-flex; align-items:center; justify-content:center; min-width:28px; height:36px; padding:0 6px; border-radius:6px; vertical-align:middle;
+    font-size:21px; font-weight:900; font-family:Georgia, serif; border:2px solid rgba(255,255,255,.55); }
+  .chip.white { background:#f6f0e2; color:#1c1c20; } .chip.black { background:#1c1c20; color:#f6f0e2; }
+  .chip.no { position:relative; }
+  .chip.no::after { content:''; position:absolute; left:-4px; right:-4px; top:50%; height:4px; background:#ff4a3a; transform:rotate(-30deg); border-radius:2px; }
+
+  .fx { position:absolute; left:50%; top:50%; z-index:6; pointer-events:none; white-space:nowrap; text-align:center; }
+  .fx.right { --c:#ffd54a; } .fx.wrong { --c:#ff6b5a; }
+
+  /* A. 도장 + 타일 칩 */
+  .A { padding:8px 22px 12px; border:5px solid var(--c); color:var(--c); border-radius:16px; background:rgba(18,10,4,.92);
+    box-shadow:0 12px 40px rgba(0,0,0,.6); transform:translate(-50%,-50%) rotate(-4deg); }
+  .A .big { display:block; font-weight:900; font-size:44px; line-height:1.1; letter-spacing:6px; }
+  .A .sub { display:flex; gap:7px; align-items:center; justify-content:center; margin-top:6px; font-size:16px; font-weight:800; color:#fff8e6; }
+
+  /* B. 말하듯 한 문장 */
+  .B { padding:10px 22px 12px; border-radius:14px; background:rgba(18,10,4,.92); border:3px solid var(--c);
+    box-shadow:0 12px 40px rgba(0,0,0,.6); transform:translate(-50%,-50%); }
+  .B .big { display:block; font-weight:900; font-size:38px; color:var(--c); line-height:1.15; }
+  .B .sub { display:block; margin-top:4px; font-size:17px; font-weight:800; color:#fff8e6; }
+  .B .sub em { font-style:normal; color:var(--c); }
+
+  /* C. 누가 누구를 (관전·다인전에서 한눈에) */
+  .C { padding:8px 18px 10px; border-radius:14px; background:rgba(18,10,4,.92); border:3px solid var(--c);
+    box-shadow:0 12px 40px rgba(0,0,0,.6); transform:translate(-50%,-50%); }
+  .C .big { display:block; font-weight:900; font-size:36px; color:var(--c); line-height:1.15; }
+  .C .sub { display:flex; gap:7px; align-items:center; justify-content:center; margin-top:6px; font-size:16px; font-weight:800; color:#fff8e6; }
+  .C .arrow { color:var(--c); }
+
+  /* D. 큰 타일 하나 */
+  .D { display:flex; align-items:center; gap:14px; padding:10px 20px; border-radius:16px; background:rgba(18,10,4,.92); border:3px solid var(--c);
+    box-shadow:0 12px 40px rgba(0,0,0,.6); transform:translate(-50%,-50%); }
+  .D .chip { min-width:52px; height:70px; font-size:40px; border-radius:9px; }
+  .D .txt { text-align:left; }
+  .D .big { display:block; font-weight:900; font-size:34px; color:var(--c); line-height:1.1; }
+  .D .sub { display:block; font-size:15px; font-weight:700; color:#e8dcc4; }
+
+  /* E. 가로 띠 */
+  .E { left:0; right:0; transform:translateY(-50%); display:flex; align-items:center; justify-content:center; gap:14px;
+    padding:12px 16px; background:linear-gradient(90deg, transparent, rgba(18,10,4,.94) 12%, rgba(18,10,4,.94) 88%, transparent);
+    border-top:3px solid var(--c); border-bottom:3px solid var(--c); }
+  .E .big { font-weight:900; font-size:30px; color:var(--c); }
+  .E .bar { width:2px; align-self:stretch; background:rgba(255,255,255,.25); }
+  .E .sub { display:flex; gap:7px; align-items:center; font-size:17px; font-weight:800; color:#fff8e6; }
+
+  /* 보드 위에 띄울 때 등장 효과 */
+  @keyframes popIn { 0% { opacity:0; scale:2.2; } 16% { opacity:1; scale:.95; } 24% { scale:1; } 80% { opacity:1; } 100% { opacity:0; } }
+  @keyframes slideIn { 0% { opacity:0; clip-path:inset(0 50% 0 50%); } 15% { opacity:1; clip-path:inset(0 0 0 0); } 80% { opacity:1; } 100% { opacity:0; } }
+  #board3d-wrap .fx { animation:popIn 1.8s ease forwards; }
+  #board3d-wrap .fx.E { animation:slideIn 1.8s ease forwards; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>추리 결과 문구 시안 5개</h1>
+  <p class="hint">카드 안은 멈춰 있는 모습이고, 「보드 위에서」 버튼을 누르면 위쪽 실제 3D 보드 위에 움직이며 뜹니다.
+    예시는 <b>앨리스의 2번째 타일(흰 5)을 맞힌 경우</b>와 <b>명관이 내 3번째 타일(검정)을 5로 찍어 틀린 경우</b>입니다.</p>
+
+  <div id="board3d-wrap">
+    <canvas id="board3d-gl"></canvas>
+    <div id="board3d-labels"></div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../board3d.js"></script>
+<script>
+const chip = (g, no) => `<span class="chip ${g.color}${no ? ' no' : ''}">${g.num === -1 ? '-' : g.num}</span>`;
+// 예시 두 개: 맞힌 경우 / 틀린 경우
+const RIGHT = { right: true, by: '나', who: '앨리스', nth: 2, num: 5, color: 'white' };
+const WRONG = { right: false, by: '명관', who: '나', nth: 3, num: 5, color: 'black' };
+const whose = g => g.who === '나' ? '내' : g.who + '의';
+
+const VARIANTS = [
+  { id: 'A', title: 'A. 도장 + 타일 칩', desc: '지금 샘플을 다듬은 것. 짧고 숫자가 타일 모양이라 한눈에 보임.',
+    html: g => `<span class="big">${g.right ? '정답!' : '실패'}</span>`
+      + `<span class="sub">${whose(g)} ${g.nth}번째 타일 ${chip(g, !g.right)}${g.right ? '' : ' 아님'}</span>` },
+  { id: 'B', title: 'B. 말하듯 한 문장', desc: '문장으로 풀어 씀. 처음 하는 사람도 바로 이해. 대신 조금 길다.',
+    html: g => g.right
+      ? `<span class="big">맞혔다!</span><span class="sub">${whose(g)} ${g.nth}번째 타일은 <em>${g.num}</em>이었어요</span>`
+      : `<span class="big">아쉬워요</span><span class="sub">${whose(g)} ${g.nth}번째 타일은 <em>${g.num}</em>가 아니에요</span>` },
+  { id: 'C', title: 'C. 누가 → 누구를', desc: '누가 찍었는지까지 보임. 3인 이상이나 관전할 때 상황 파악이 쉬움.',
+    html: g => `<span class="big">${g.right ? '적중!' : '빗나감'}</span>`
+      + `<span class="sub">${g.by} <span class="arrow">→</span> ${g.who}의 ${g.nth}번째 ${chip(g, !g.right)}</span>` },
+  { id: 'D', title: 'D. 큰 타일 하나', desc: '숫자 타일을 크게 보여줌. 글자보다 그림으로 읽힘.',
+    html: g => `${chip(g, !g.right)}<span class="txt"><span class="big">${g.right ? '정답!' : '실패'}</span>`
+      + `<span class="sub">${whose(g)} ${g.nth}번째 타일</span></span>` },
+  { id: 'E', title: 'E. 가로 띠', desc: '기울지 않은 띠가 보드를 가로지름. 가장 차분하고 가독성이 높음.',
+    html: g => `<span class="big">${g.right ? '✓ 정답' : '✕ 실패'}</span><span class="bar"></span>`
+      + `<span class="sub">${whose(g)} ${g.nth}번째 타일 ${chip(g, !g.right)}${g.right ? '' : ' 아님'}</span>` },
+];
+
+const fx = (v, g) => `<div class="fx ${v.id} ${g.right ? 'right' : 'wrong'}">${v.html(g)}</div>`;
+const grid = document.getElementById('grid');
+grid.innerHTML = VARIANTS.map(v => `
+  <div class="card">
+    <h2>${v.title}</h2><p>${v.desc}</p>
+    <div class="stage">${fx(v, RIGHT)}</div>
+    <div class="stage">${fx(v, WRONG)}</div>
+    <div class="row">
+      <button data-v="${v.id}" data-g="right">보드 위에서: 정답</button>
+      <button data-v="${v.id}" data-g="wrong">보드 위에서: 실패</button>
+    </div>
+  </div>`).join('');
+
+const wrapEl = document.getElementById('board3d-wrap');
+grid.addEventListener('click', e => {
+  const b = e.target.closest('button[data-v]'); if (!b) return;
+  wrapEl.querySelectorAll('.fx').forEach(x => x.remove());
+  const v = VARIANTS.find(x => x.id === b.dataset.v);
+  wrapEl.insertAdjacentHTML('beforeend', fx(v, b.dataset.g === 'right' ? RIGHT : WRONG));
+  const el = wrapEl.lastElementChild;
+  el.addEventListener('animationend', () => el.remove());
+  wrapEl.scrollIntoView({ block: 'nearest' });
+});
+
+// 배경 보드: 진행 샘플과 같은 판
+const T = (id, color, num, revealed) => ({ id, color, num, revealed: !!revealed });
+Board3D.mount({ canvas: document.getElementById('board3d-gl'), app: wrapEl, labels: document.getElementById('board3d-labels') });
+Board3D.setFit(0.88); Board3D.setGlyph(0.84);
+Board3D.update({
+  n: 3, mode: 'solo', over: false, turn: 0, phase: '',
+  players: [
+    { name: '나', hand: [T('a1', 'black', 1), T('a2', 'white', 3), T('a3', 'black', 6), T('a5', 'black', 7), T('a4', 'white', 9)] },
+    { name: '명관', hand: [T('b1', 'white', 0), T('b2', 'black', 4), T('b3', 'white', 7), T('b9', 'black', 9, true), T('b4', 'black', 10)] },
+    { name: '앨리스', hand: [T('c1', 'black', 2), T('c2', 'white', 5, true), T('c3', 'black', 8), T('c4', 'white', 11)] },
+  ],
+  decks: { black: 5, white: 7 }, slots: [], targets: [], canDraw: false,
+});
+</script>
+</body>
+</html>

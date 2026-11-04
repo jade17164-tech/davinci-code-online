@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>진행 연출 샘플</title>
+<style>
+  :root { --gold:#d4af37; --gold-light:#f0e3c8; --wood:#5c3319; --wood-mid:#6b4226; --wood-dark:#2b1810; --ruby:#c0392b; --emerald:#2ecc71; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; background:#0f3b24; color:var(--gold-light); font:14px/1.5 system-ui, "Malgun Gothic", sans-serif; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 12px 16px 40px; }
+  h1 { font-size:18px; margin:4px 0 10px; }
+  .ctrl { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px; }
+  .ctrl label { display:flex; gap:4px; align-items:center; background:rgba(0,0,0,.25); padding:4px 9px; border-radius:6px; }
+  button { background:var(--wood-mid); color:var(--gold-light); border:1px solid #8a5a2e; border-radius:6px; padding:7px 12px; font:inherit; font-weight:700; cursor:pointer; }
+  button.go { background:#2f6b45; border-color:#3f8a5a; font-size:15px; padding:8px 16px; }
+  button:disabled { opacity:.5; cursor:default; }
+  .hint { color:#b9d6c4; font-size:13px; margin:0 0 10px; }
+
+  /* ② 단계 안내 바 */
+  #steps { display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:8px 10px; margin-bottom:8px;
+    background:linear-gradient(180deg, #3a2414, #24150b); border:2px solid var(--wood-mid); border-radius:10px; }
+  #steps .who { font-weight:800; margin-right:6px; min-width:82px; }
+  #steps .who.me { color:var(--gold); }
+  .step { padding:4px 10px; border-radius:999px; background:rgba(255,255,255,.06); color:#9c8a6c; font-weight:700; font-size:13px; transition:all .25s; }
+  .step.done { color:#7fb08f; }
+  .step.done::before { content:'✓ '; }
+  .step.now { background:var(--gold); color:var(--wood-dark); transform:scale(1.08); box-shadow:0 0 0 3px rgba(212,175,55,.3); }
+  .arrow { color:#6b5a40; }
+  #steps.off { display:none; }
+
+  /* 보드 */
+  #board3d-wrap { position:relative; width:100%; height:62vh; min-height:360px; border-radius:10px; overflow:hidden; border:2px solid var(--wood-dark); background:#1b0f07; }
+  #board3d-gl { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+  #board3d-labels { position:absolute; inset:0; pointer-events:none; }
+  .b3d-pl, .b3d-dl { position:absolute; transform:translate(-50%,-50%); white-space:nowrap; background:rgba(30,18,8,.85); border:1px solid var(--wood-mid);
+    border-radius:999px; padding:3px 9px; font-size:12px; font-weight:700; color:var(--gold-light); display:flex; gap:6px; align-items:center; }
+  .b3d-pl.turn { border-color:var(--gold); box-shadow:0 0 0 2px rgba(212,175,55,.35); }
+  .b3d-pl.dead { opacity:.5; }
+  .b3d-tag { background:var(--wood); border-radius:6px; padding:1px 5px; font-size:10px; }
+  .b3d-sb { position:absolute; left:8px; top:8px; background:rgba(30,18,8,.72); border:1px solid var(--wood-mid); border-radius:8px; padding:4px 9px; font-size:11px; line-height:1.6; color:#c3b89f; text-align:left; }
+  .b3d-sb b { color:var(--gold-light); } .b3d-sb .turn b { color:var(--gold); } .b3d-sb .turn::before { content:'▶ '; color:var(--gold); } .b3d-sb .dead { opacity:.5; }
+
+  /* ① 차례 알림 */
+  .banner { position:absolute; left:50%; top:42%; transform:translate(-50%,-50%); pointer-events:none; z-index:5;
+    padding:14px 34px; border-radius:14px; font-weight:900; font-size:clamp(20px, 5vw, 26px); white-space:nowrap;
+    background:rgba(30,18,8,.9); border:2px solid var(--wood-mid); color:var(--gold-light);
+    animation: bannerIn 1.6s ease forwards; }
+  .banner.me { font-size:clamp(28px, 8vw, 40px); color:var(--wood-dark); background:linear-gradient(180deg, #ffe9a6, var(--gold)); border-color:#fff3c4;
+    box-shadow:0 0 40px rgba(212,175,55,.6); }
+  @keyframes bannerIn {
+    0% { transform:translate(-50%,-50%) scale(.6); opacity:0; }
+    15% { transform:translate(-50%,-50%) scale(1.08); opacity:1; }
+    25% { transform:translate(-50%,-50%) scale(1); }
+    75% { opacity:1; }
+    100% { transform:translate(-50%,-62%) scale(1); opacity:0; }
+  }
+
+  /* ③ 추리 결과 도장 */
+  /* 보드 무늬 위에서도 읽히도록 진한 바탕을 깔고, 기울기는 도장 느낌만 날 정도로 작게 */
+  .stamp { position:absolute; left:50%; top:40%; z-index:6; pointer-events:none; text-align:center; white-space:nowrap;
+    padding:10px 28px 14px; border:5px solid currentColor; border-radius:16px; background:rgba(18,10,4,.92);
+    box-shadow:0 12px 40px rgba(0,0,0,.6); transform:translate(-50%,-50%) rotate(-4deg); animation: stampIn 1.7s ease forwards; }
+  .stamp.right { color:#ffd54a; } .stamp.wrong { color:#ff6b5a; }
+  .stamp .big { display:block; font-weight:900; font-size:clamp(40px, 10vw, 60px); line-height:1.1; letter-spacing:6px; text-shadow:0 3px 0 rgba(0,0,0,.7); }
+  .stamp .sub { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px;
+    font-size:clamp(15px, 3.6vw, 19px); font-weight:800; color:#fff8e6; }
+  .chip { display:inline-flex; align-items:center; justify-content:center; min-width:30px; height:38px; padding:0 6px; border-radius:6px;
+    font-size:22px; font-weight:900; font-family:Georgia, serif; border:2px solid rgba(255,255,255,.55); }
+  .chip.white { background:#f6f0e2; color:#1c1c20; } .chip.black { background:#1c1c20; color:#f6f0e2; }
+  .chip.no { position:relative; opacity:.85; }
+  .chip.no::after { content:''; position:absolute; left:-4px; right:-4px; top:50%; height:4px; background:#ff4a3a; transform:rotate(-30deg); border-radius:2px; }
+  @keyframes stampIn {
+    0% { transform:translate(-50%,-50%) rotate(-4deg) scale(2.4); opacity:0; }
+    16% { transform:translate(-50%,-50%) rotate(-4deg) scale(.94); opacity:1; }
+    24% { transform:translate(-50%,-50%) rotate(-4deg) scale(1); }
+    80% { opacity:1; }
+    100% { transform:translate(-50%,-50%) rotate(-4deg) scale(1); opacity:0; }
+  }
+  .shake { animation: shake .35s ease; }
+  @keyframes shake { 20% { transform:translate(-6px,2px); } 40% { transform:translate(5px,-3px); } 60% { transform:translate(-3px,2px); } 80% { transform:translate(2px,-1px); } }
+
+  /* ④ 내 차례 버튼 (계속/넘기기) */
+  #actions { display:flex; gap:8px; margin-top:8px; }
+  #actions[hidden] { display:none; }
+  #actions button { flex:1; padding:11px; font-size:15px; }
+  #actions .pulse { animation: pulse 1.2s ease infinite; }
+  @keyframes pulse { 50% { box-shadow:0 0 0 4px rgba(212,175,55,.45); } }
+  #out { margin-top:10px; padding:8px 10px; background:rgba(0,0,0,.25); border-radius:8px; min-height:2.5em; color:#d9ecdf; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>게임 진행 연출 샘플 (4가지)</h1>
+  <p class="hint">「자동 진행」을 누르면 한 바퀴가 처음부터 진행됩니다. 체크를 끄고 다시 돌리면 그 연출만 빼고 볼 수 있습니다.
+    소리는 브라우저가 첫 클릭 뒤에만 낼 수 있습니다.</p>
+  <div class="ctrl">
+    <button class="go" id="play">▶ 자동 진행</button>
+    <label><input type="checkbox" id="f1" checked> ① 차례 알림</label>
+    <label><input type="checkbox" id="f2" checked> ② 단계 안내 바</label>
+    <label><input type="checkbox" id="f3" checked> ③ 추리 결과 연출</label>
+    <label><input type="checkbox" id="f4" checked> ④ 움직임 + 효과음</label>
+    <button id="mute">🔊 소리 켜짐</button>
+  </div>
+  <div class="ctrl">
+    <span style="color:#b9d6c4">하나씩 보기:</span>
+    <button data-solo="turn">차례 알림</button>
+    <button data-solo="myturn">내 차례 알림</button>
+    <button data-solo="right">정답!</button>
+    <button data-solo="wrong">실패</button>
+    <button data-solo="sfx">효과음 모음</button>
+  </div>
+
+  <div id="steps"></div>
+  <div id="board3d-wrap">
+    <canvas id="board3d-gl"></canvas>
+    <div id="board3d-labels"></div>
+  </div>
+  <div id="actions" hidden>
+    <button id="btn-more" class="pulse">계속 추리하기</button>
+    <button id="btn-pass" class="pulse">턴 넘기기</button>
+  </div>
+  <div id="out">대기 중</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../board3d.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const on = n => $('f' + n).checked;
+const wrapEl = $('board3d-wrap');
+
+/* ---------- ④ 효과음: 파일 없이 브라우저에서 합성한다 ---------- */
+const Sfx = (() => {
+  let ctx = null, enabled = true;
+  try { enabled = localStorage.getItem('dv_sfx') !== 'off'; } catch (e) {}
+  const ac = () => ctx || (ctx = new (window.AudioContext || window.webkitAudioContext)());
+  function env(g, t, a, peak, d) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); }
+  function tone(f0, f1, dur, type = 'sine', peak = 0.25, at = 0) {
+    const c = ac(), t = c.currentTime + at, o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    env(g, t, 0.008, peak, dur); o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + 0.05);
+  }
+  function noise(dur, f0, f1, q = 1, peak = 0.3, type = 'bandpass', at = 0) {
+    const c = ac(), t = c.currentTime + at, n = Math.floor(c.sampleRate * dur);
+    const buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = buf; f.type = type; f.Q.value = q; f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    env(g, t, 0.004, peak, dur); s.connect(f).connect(g).connect(c.destination); s.start(t);
+  }
+  const play = fn => { if (!enabled || !on(4)) return; try { fn(); } catch (e) {} };
+  return {
+    get enabled() { return enabled; },
+    toggle() { enabled = !enabled; try { localStorage.setItem('dv_sfx', enabled ? 'on' : 'off'); } catch (e) {} return enabled; },
+    unlock() { try { ac().resume(); } catch (e) {} },
+    draw:  () => play(() => noise(0.22, 600, 3200, 0.8, 0.22)),                                   // 슥
+    place: () => play(() => { noise(0.05, 2600, 1800, 2, 0.5); tone(220, 160, 0.06, 'triangle', 0.18); }), // 탁
+    thud:  () => play(() => { tone(140, 55, 0.28, 'sine', 0.5); noise(0.12, 400, 150, 1, 0.25, 'lowpass'); }), // 쿵
+    right: () => play(() => { tone(660, 660, 0.14, 'triangle', 0.22); tone(990, 990, 0.26, 'triangle', 0.22, 0.12); }),
+    wrong: () => play(() => { tone(260, 150, 0.35, 'sawtooth', 0.09); tone(196, 110, 0.4, 'square', 0.05, 0.05); }),
+    turn:  () => play(() => tone(880, 880, 0.35, 'sine', 0.12)),
+    myturn:() => play(() => { tone(587, 587, 0.12, 'triangle', 0.18); tone(784, 784, 0.12, 'triangle', 0.18, 0.1); tone(1175, 1175, 0.3, 'triangle', 0.18, 0.2); }),
+  };
+})();
+$('mute').onclick = () => { $('mute').textContent = Sfx.toggle() ? '🔊 소리 켜짐' : '🔇 소리 꺼짐'; };
+$('mute').textContent = Sfx.enabled ? '🔊 소리 켜짐' : '🔇 소리 꺼짐';
+
+/* ---------- ① 차례 알림, ③ 도장 ---------- */
+function banner(text, mine) {
+  if (!on(1)) return;
+  const b = document.createElement('div');
+  b.className = 'banner' + (mine ? ' me' : '');
+  b.textContent = text;
+  wrapEl.appendChild(b);
+  b.addEventListener('animationend', () => b.remove());
+  mine ? Sfx.myturn() : Sfx.turn();
+}
+// g: { who: '앨리스', nth: 2, num: 5, color: 'white' } — 누구의 몇 번째를 무엇으로 지목했는지
+function stamp(right, g) {
+  if (!on(3)) return;
+  const s = document.createElement('div');
+  s.className = 'stamp ' + (right ? 'right' : 'wrong');
+  const chip = `<span class="chip ${g.color}${right ? '' : ' no'}">${g.num === -1 ? '-' : g.num}</span>`;
+  s.innerHTML = `<span class="big">${right ? '정답!' : '실패'}</span>`
+    + `<span class="sub">${g.who}의 ${g.nth}번째 타일 ${chip}${right ? '' : ' 아님'}</span>`;
+  wrapEl.appendChild(s);
+  s.addEventListener('animationend', () => s.remove());
+  right ? Sfx.right() : Sfx.wrong();
+}
+// 타일이 눕는 데 걸리는 시간 뒤에 '쿵' + 보드 흔들림
+async function landing() {
+  await sleep(260);
+  Sfx.thud();
+  if (!on(3)) return;
+  wrapEl.classList.remove('shake'); void wrapEl.offsetWidth; wrapEl.classList.add('shake');
+}
+
+/* ---------- ② 단계 안내 바 ---------- */
+const STEPS = ['뽑기', '배치', '추리', '계속 / 넘기기'];
+function steps(who, mine, now) {
+  const el = $('steps');
+  el.classList.toggle('off', !on(2));
+  el.innerHTML = `<span class="who ${mine ? 'me' : ''}">${mine ? '내 차례' : who + ' 차례'}</span>` +
+    STEPS.map((s, i) => `<span class="step ${i < now ? 'done' : i === now ? 'now' : ''}">${i + 1} ${s}</span>`)
+      .join('<span class="arrow">›</span>');
+}
+
+/* ---------- 보드 상태 ---------- */
+const T = (id, color, num) => ({ id, color, num, revealed: false });
+let S;
+function fresh() {
+  S = {
+    names: ['나', '명관', '앨리스'],
+    hands: [
+      [T('a1', 'black', 1), T('a2', 'white', 3), T('a3', 'black', 6), T('a4', 'white', 9)],
+      [T('b1', 'white', 0), T('b2', 'black', 4), T('b3', 'white', 7), T('b4', 'black', 10)],
+      [T('c1', 'black', 2), T('c2', 'white', 5), T('c3', 'black', 8), T('c4', 'white', 11)],
+    ],
+    pending: [null, null, null], turn: 1, decks: { black: 7, white: 7 },
+    slots: [], targets: [], canDraw: false,
+  };
+}
+function draw() {
+  Board3D.update({
+    n: 3, mode: 'solo', over: false, turn: S.turn, phase: '',
+    players: S.names.map((name, i) => ({ name, team: null, hand: S.hands[i], pending: S.pending[i] })),
+    decks: S.decks, slots: S.slots, targets: S.targets, canDraw: S.canDraw,
+  });
+}
+const say = t => { $('out').textContent = t; };
+
+Board3D.mount({ canvas: $('board3d-gl'), app: wrapEl, labels: $('board3d-labels') });
+Board3D.setFit(0.88); Board3D.setGlyph(0.84);
+fresh(); draw(); steps('명관', false, -1);
+
+/* ---------- 자동 진행: 한 바퀴 ---------- */
+let playing = false;
+async function play() {
+  if (playing) return;
+  playing = true; $('play').disabled = true; Sfx.unlock();
+  fresh(); $('actions').hidden = true; draw();
+  const pace = 1;
+
+  // 명관 차례
+  S.turn = 1; draw(); banner('명관의 차례'); steps('명관', false, 0); say('명관의 차례가 시작됩니다.');
+  await sleep(1700 * pace);
+  S.decks.black--; S.pending[1] = T('b9', 'black', 9); draw(); Sfx.draw(); say('명관이 검은 더미에서 한 장 뽑았습니다.');
+  steps('명관', false, 1); await sleep(1300 * pace);
+  S.pending[1] = null; S.hands[1].splice(3, 0, T('b9', 'black', 9)); draw(); Sfx.place(); say('명관이 뽑은 타일을 자기 패에 놓았습니다.');
+  steps('명관', false, 2); await sleep(1300 * pace);
+  say('명관이 [나]의 3번째 타일을 5로 지목했습니다…'); await sleep(1100 * pace);
+  stamp(false, { who: '나', nth: 3, num: 5, color: 'black' }); say('틀렸습니다. 명관이 방금 뽑은 타일이 공개됩니다.');
+  await sleep(700 * pace);
+  S.hands[1][3].revealed = true; draw(); landing();
+  await sleep(1600 * pace);
+
+  // 내 차례
+  S.turn = 0; S.canDraw = true; draw(); banner('내 차례!', true); steps('', true, 0); say('내 차례입니다. 가운데 더미를 눌러 뽑으세요(자동으로 진행됩니다).');
+  await sleep(2000 * pace);
+  S.canDraw = false; S.decks.black--; S.pending[0] = T('a5', 'black', 7); S.slots = [3]; draw(); Sfx.draw();
+  steps('', true, 1); say('검은 7을 뽑았습니다. 들어갈 자리가 표시됩니다.'); await sleep(1700 * pace);
+  S.pending[0] = null; S.slots = []; S.hands[0].splice(3, 0, T('a5', 'black', 7)); draw(); Sfx.place();
+  steps('', true, 2); S.targets = S.hands[2].map((t, idx) => ({ pi: 2, idx })); draw();
+  say('배치 완료. 이제 상대 타일을 골라 추리합니다.'); await sleep(1600 * pace);
+  say('[앨리스]의 2번째 타일을 5로 지목!'); await sleep(1000 * pace);
+  S.targets = []; stamp(true, { who: '앨리스', nth: 2, num: 5, color: 'white' }); S.hands[2][1].revealed = true;
+  await sleep(250); draw(); landing();
+  steps('', true, 3); say('맞혔습니다! 계속 추리하거나 턴을 넘길 수 있습니다.');
+  $('actions').hidden = false;
+  await sleep(2600 * pace);
+  $('actions').hidden = true;
+  say('턴 넘기기');
+  S.turn = 2; draw(); banner('앨리스의 차례'); steps('앨리스', false, 0);
+  await sleep(1800);
+  say('한 바퀴 끝. 체크를 바꿔 다시 돌려보세요.');
+  playing = false; $('play').disabled = false;
+}
+$('play').onclick = play;
+$('btn-more').onclick = $('btn-pass').onclick = () => {};
+
+/* ---------- 하나씩 보기 ---------- */
+document.querySelectorAll('[data-solo]').forEach(b => b.onclick = async () => {
+  Sfx.unlock();
+  const k = b.dataset.solo;
+  if (k === 'turn') banner('명관의 차례');
+  if (k === 'myturn') banner('내 차례!', true);
+  if (k === 'right') { stamp(true, { who: '앨리스', nth: 2, num: 5, color: 'white' }); landing(); }
+  if (k === 'wrong') { stamp(false, { who: '나', nth: 3, num: 5, color: 'black' }); landing(); }
+  if (k === 'sfx') {
+    for (const [name, fn] of [['뽑기 (슥)', Sfx.draw], ['배치 (탁)', Sfx.place], ['공개 (쿵)', Sfx.thud], ['정답', Sfx.right], ['실패', Sfx.wrong], ['차례', Sfx.turn], ['내 차례', Sfx.myturn]]) {
+      say('효과음: ' + name); fn(); await sleep(900);
+    }
+    say('효과음 끝');
+  }
+});
+</script>
+</body>
+</html>
