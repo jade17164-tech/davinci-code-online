@@ -93,15 +93,21 @@ window.Board3D = (() => {
     }
     const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return t;
   }
-  let _plus = null;
-  function plusMat() {
-    if (_plus) return _plus;
-    const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
-    g.fillStyle = 'rgba(240,215,140,.96)'; g.beginPath(); g.arc(64, 64, 58, 0, 7); g.fill();
-    g.strokeStyle = '#7a5a10'; g.lineWidth = 6; g.stroke();
-    g.fillStyle = '#3d2110'; g.fillRect(34, 57, 60, 14); g.fillRect(57, 34, 14, 60);
-    _plus = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false, transparent: true });
-    return _plus;
+  let _ghost = null;
+  function ghostMat() {
+    if (_ghost) return _ghost;
+    const W = 220, H = 310, c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    g.clearRect(0, 0, W, H);
+    g.fillStyle = 'rgba(240,215,140,.14)'; rr(g, 10, 10, W - 20, H - 20, 16); g.fill();
+    g.strokeStyle = 'rgba(240,215,140,.95)'; g.lineWidth = 7; g.setLineDash([22, 16]);
+    rr(g, 10, 10, W - 20, H - 20, 16); g.stroke(); g.setLineDash([]);
+    g.strokeStyle = 'rgba(240,215,140,.95)'; g.lineWidth = 16; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(W / 2 - 42, H / 2); g.lineTo(W / 2 + 42, H / 2);
+    g.moveTo(W / 2, H / 2 - 42); g.lineTo(W / 2, H / 2 + 42); g.stroke();
+    const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding; tex.anisotropy = 8;
+    _ghost = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false });
+    return _ghost;
   }
 
   /* ---------- 좌석·탁자 ---------- */
@@ -174,11 +180,11 @@ window.Board3D = (() => {
   /* ---------- 상태 → 장면 ---------- */
   const hiddenCount = p => (p.hand || []).filter(t => !t.revealed).length;
   const isDead = p => (p.hand || []).length > 0 && (p.hand || []).every(t => t.revealed);
-  function rowScale(pi, len, n) {
+  function rowScale(pi, len, n, gap) {
     const st = seats[pi];
-    if (pi === 0) return Math.min(1.1, 10.8 / (Math.max(len, 1) * TW * 1.1));
+    if (pi === 0) return Math.min(1.1, 10.8 / (Math.max(len, 1) * TW * gap));
     const chord = n === 2 ? 10 : 2 * st.Rs * Math.sin(Math.PI / n) * 0.8;
-    return Math.min(n === 2 ? 0.9 : 0.74, chord / (Math.max(len, 1) * TW * 1.1));
+    return Math.min(n === 2 ? 0.9 : 0.74, chord / (Math.max(len, 1) * TW * gap));
   }
   const deckSpawn = color => new V3(color === 'black' ? -1.25 : 1.25, 0.6, 0);
   function getMesh(t, spawnAt) {
@@ -201,7 +207,9 @@ window.Board3D = (() => {
 
     s.players.forEach((p, pi) => {
       const st = seats[pi], hand = p.hand || [], len = hand.length;
-      const sc = rowScale(pi, len, s.n), sp = TW * 1.1 * sc;
+      // 배치 중인 내 패는 자리표시가 들어갈 만큼 간격을 벌린다
+      const gap = (pi === 0 && (s.slots || []).length) ? 2.05 : 1.1;
+      const sc = rowScale(pi, len, s.n, gap), sp = TW * gap * sc;
       const stand = pi === 0 ? -0.42 : 0.42;
       const rack = racks[pi]; rack.scale.x = Math.max(2.4, len * sp + 0.9);
 
@@ -231,10 +239,11 @@ window.Board3D = (() => {
         // 내 뽑은 타일은 패 '옆'에 둔다. 거리로 띄우면 인원수에 따라 테이블 크기와 카메라가
         // 달라져(2인은 테이블이 작아 카메라가 바짝 붙는다) 패 위로 겹쳐 보인다.
         // 패 너비 기준으로 비켜놓으면 인원수와 무관하게 항상 옆에 선다.
-        const pos = pi === 0
-          ? st.d.clone().multiplyScalar(st.Rs).addScaledVector(st.r, ((len - 1) / 2 + 1.35) * sp)
-          : st.d.clone().multiplyScalar(st.Rs - 2.4);
-        pos.y = pi === 0 ? 0.14 + TH * sc / 2 : 1.6;
+        // 자리표시가 줄 안으로 들어가 패 '위'가 비었으므로 거기에 띄운다.
+        // 테이블 가운데로 보내면 덱 더미와 겹치므로 내 자리 바로 위에 둔다.
+        const pos = st.d.clone().multiplyScalar(st.Rs - (pi === 0 ? 0 : 2.4));
+        if (pi === 0) pos.addScaledVector(st.d, 0.5);
+        pos.y = pi === 0 ? 0.14 + TH * sc * 2.15 : 1.6;
         Object.assign(m.userData, { tgt: pos, scT: pi === 0 ? sc : 0.8, tiltT: pi === 0 ? -0.42 : -0.55, pi, idx: -1, pick: null });
         m.rotation.y = st.th;
         setFaces(m, t, pi === 0 ? 'face' : 'cover', 'cover');
@@ -248,15 +257,16 @@ window.Board3D = (() => {
     slotSprites.forEach(sp => scene.remove(sp)); slotSprites = [];
     const me = s.players[0];
     if (me && me.pending && (s.slots || []).length) {
-      const st = seats[0], len = (me.hand || []).length, sc = rowScale(0, len, s.n), sp = TW * 1.1 * sc;
+      const st = seats[0], len = (me.hand || []).length, sc = rowScale(0, len, s.n, 2.05), sp = TW * 2.05 * sc;
       s.slots.forEach(idx => {
-        const spr = new THREE.Sprite(plusMat()); spr.scale.set(0.62, 0.62, 1);
-        const x = (idx - len / 2) * sp;
-        spr.position.copy(st.d).multiplyScalar(st.Rs).addScaledVector(st.r, x);
-        // 타일 위로 충분히 띄우고 살짝 뒤로 민다. 가까이 두면 내 패 숫자를 덮는다.
-        spr.position.y = TH * sc + 1.5; spr.position.addScaledVector(st.d, -0.25);
-        spr.userData.pick = { type: 'slot', idx };
-        scene.add(spr); slotSprites.push(spr); picks.push(spr);
+        const m = new THREE.Mesh(tileGeo, ghostMat());
+        m.renderOrder = 2;
+        m.scale.setScalar(sc * 0.92);
+        m.position.copy(st.d).multiplyScalar(st.Rs).addScaledVector(st.r, (idx - len / 2) * sp);
+        m.position.y = 0.14 + TH * sc * 0.92 / 2 * Math.cos(0.42);
+        m.rotation.order = 'YXZ'; m.rotation.y = st.th; m.rotation.x = -0.42;
+        m.userData.pick = { type: 'slot', idx };
+        scene.add(m); slotSprites.push(m); picks.push(m);
       });
     }
 
