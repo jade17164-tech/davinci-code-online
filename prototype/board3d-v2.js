@@ -121,7 +121,7 @@ window.Board3D = (() => {
    * TURN: 거치대를 중앙 대신 내 쪽으로 틀어주는 정도(0=정확히 중앙, 1=정면 고정 안 함). */
   const DECK_Z = -0.5;   // 덱을 살짝 맞은편으로 밀어, 내가 뽑은 타일이 덱을 가리지 않게 한다
   const tableR = n => n <= 2 ? 7.2 : n <= 4 ? 8.4 : 10;
-  const SPAN = [0, 0, 0, 96, 140, 170, 200];   // 인덱스 = 상대 수
+  const SPAN = [0, 0, 90, 96, 140, 170];   // 인덱스 = 상대 수(1명은 정면 고정)
   const TURN = 0.55;
   function seat(i, n) {
     const Rt = tableR(n), Rs = Rt - 1.7;
