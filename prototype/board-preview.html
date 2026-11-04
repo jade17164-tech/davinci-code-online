@@ -105,6 +105,7 @@ window.Board3D = (() => {
   const cam = { az: 0, pol: 0.92, rad: 20, tgt: new V3(0, 0, 0.4) };
   const tileMeshes = new Map();
   let seats = [], racks = [], deckMeshes = {}, slotSprites = [], builtN = 0;
+  let myRowX = {}, myRowSc = 1;   // 내 줄에서 자리표시가 들어갈 x 좌표
 
   /* ---------- 타일 면 텍스처 ---------- */
   const matCache = new Map();
@@ -283,16 +284,30 @@ window.Board3D = (() => {
 
     s.players.forEach((p, pi) => {
       const st = seats[pi], hand = p.hand || [], len = hand.length;
-      // 배치 중인 내 패는 자리표시가 들어갈 만큼 간격을 벌린다
-      const gap = (pi === 0 && (s.slots || []).length) ? 2.05 : 1.1;
-      const sc = rowScale(pi, len, s.n, gap), sp = TW * gap * sc;
+      // 자리표시는 들어갈 자리에만 생긴다. 줄 전체를 벌리면 자리가 없는 틈까지 비어 보이므로,
+      // 타일과 자리표시를 한 줄에 늘어놓고 들어가는 곳에서만 폭을 차지하게 한다.
+      const mySlots = pi === 0 ? (s.slots || []) : [];
+      const slotSet = new Set(mySlots);
+      const sc = rowScale(pi, len + slotSet.size, s.n, 1.1);
+      const unit = TW * sc, gapS = TW * 0.1 * sc;
+      const row = [];
+      for (let i = 0; i <= len; i++) {
+        if (slotSet.has(i)) row.push({ slot: i });
+        if (i < len) row.push({ tile: i });
+      }
+      const total = row.length * unit + Math.max(0, row.length - 1) * gapS;
+      let cur = -total / 2;
+      row.forEach(it => { it.x = cur + unit / 2; cur += unit + gapS; });
+      const tileX = {}, slotX = {};
+      row.forEach(it => { if (it.tile !== undefined) tileX[it.tile] = it.x; else slotX[it.slot] = it.x; });
+      if (pi === 0) { myRowX = slotX; myRowSc = sc; }
       const stand = pi === 0 ? -0.42 : 0.42;
-      const rack = racks[pi]; rack.scale.x = Math.max(2.4, len * sp + 0.9);
+      const rack = racks[pi]; rack.scale.x = Math.max(2.4, total + 0.9);
 
       hand.forEach((t, i) => {
         live.add(t.id);
         const m = getMesh(t, deckSpawn(t.color));
-        const x = (i - (len - 1) / 2) * sp;
+        const x = tileX[i];
         // 공개된 타일은 세우지 않고 눕힌다. 비스듬한 시점에서 세워두면 숫자가 찌그러져 읽기 어렵다.
         const flat = !!t.revealed;
         const tilt = flat ? -Math.PI / 2 : stand;
@@ -333,13 +348,14 @@ window.Board3D = (() => {
     slotSprites.forEach(sp => scene.remove(sp)); slotSprites = [];
     const me = s.players[0];
     if (me && me.pending && (s.slots || []).length) {
-      const st = seats[0], len = (me.hand || []).length, sc = rowScale(0, len, s.n, 2.05), sp = TW * 2.05 * sc;
+      const st = seats[0];
       s.slots.forEach(idx => {
+        if (myRowX[idx] === undefined) return;
         const m = new THREE.Mesh(tileGeo, ghostMat());
         m.renderOrder = 2;
-        m.scale.setScalar(sc * 0.92);
-        m.position.copy(st.d).multiplyScalar(st.Rs).addScaledVector(st.r, (idx - len / 2) * sp);
-        m.position.y = 0.14 + TH * sc * 0.92 / 2 * Math.cos(0.42);
+        m.scale.setScalar(myRowSc * 0.92);
+        m.position.copy(st.d).multiplyScalar(st.Rs).addScaledVector(st.r, myRowX[idx]);
+        m.position.y = 0.14 + TH * myRowSc * 0.92 / 2 * Math.cos(0.42);
         m.rotation.order = 'YXZ'; m.rotation.y = st.th; m.rotation.x = -0.42;
         m.userData.pick = { type: 'slot', idx };
         scene.add(m); slotSprites.push(m); picks.push(m);
