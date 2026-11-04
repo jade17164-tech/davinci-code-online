@@ -1593,7 +1593,12 @@ document.getElementById('reset-waiting-btn').addEventListener('click', handleExi
 document.getElementById('reset-game-btn').addEventListener('click', handleExitOrDestroyRoom);
 document.getElementById('btn-return-lobby').addEventListener('click', forceReturnToWaitingRoom);
 
+// 폰에서 보드 타일을 탭하면 손을 뗄 때 창이 뜨고, 이어서 브라우저가 같은 자리에 클릭을 한 번 더 보낸다.
+// 그 클릭이 방금 뜬 숫자 버튼에 떨어져 저절로 추리되지 않도록, 창이 뜬 직후의 누름은 무시한다.
+let guessModalOpenedAt = 0;
+const tooSoonAfterOpen = () => performance.now() - guessModalOpenedAt < 400;
 document.getElementById('guess-cancel-btn').addEventListener('click', () => {
+  if (tooSoonAfterOpen()) return;
   document.getElementById('guess-modal').classList.add('hidden');
 });
 for (let n = 0; n <= 12; n++) {
@@ -1602,6 +1607,7 @@ for (let n = 0; n <= 12; n++) {
   b.textContent = n === 12 ? '- 조커' : n;
   if (n === 12) b.className = 'joker';
   b.addEventListener('click', () => {
+    if (tooSoonAfterOpen()) return;
     document.getElementById('guess-modal').classList.add('hidden');
     executeGuess(currentGuessTarget.pid, currentGuessTarget.idx, n === 12 ? -1 : n);
   });
@@ -2901,6 +2907,7 @@ window.guessOtherTile = function(targetPlayerId, tileIdx) {
 
     currentGuessTarget = { pid: targetPlayerId, idx: tileIdx };
     document.getElementById('guess-modal-subtitle').textContent = `${targetName} 님의 ${tileIdx + 1}번째 ${color} 타일은 무엇일까요?`;
+    guessModalOpenedAt = performance.now();
     document.getElementById('guess-modal').classList.remove('hidden');
   });
 }
