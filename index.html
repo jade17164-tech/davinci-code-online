@@ -2119,6 +2119,24 @@ function startTileCountFor(data, playerCount) {
   return playerCount >= 5 ? 3 : 4;
 }
 
+// 뽑은 타일을 놓을 수 있는 자리. 오름차순을 지켜야 하고, 같은 숫자면 검은색이 왼쪽이다.
+// 조커는 어떤 값으로도 통하므로 어디든 놓을 수 있고, 그래서 조커를 사이에 둔 일반 타일의
+// 자리도 하나로 정해지지 않는다. 제약은 '일반 타일끼리의 오름차순'뿐이다.
+function legalSlotsFor(hand, tile) {
+  const h = hand || [];
+  const key = t => Number(t.num) * 2 + (t.color === 'black' ? 0 : 1);
+  const all = Array.from({ length: h.length + 1 }, (_, i) => i);
+  if (!tile || Number(tile.num) === -1) return all;
+  const k = key(tile);
+  const ok = all.filter(i => {
+    const left = h.slice(0, i).filter(t => Number(t.num) !== -1);
+    const right = h.slice(i).filter(t => Number(t.num) !== -1);
+    return left.every(t => key(t) < k) && right.every(t => key(t) > k);
+  });
+  // 어떤 이유로든 맞는 자리가 없으면 막지 말고 전부 열어준다 (놓지 못해 게임이 멈추는 것보다 낫다)
+  return ok.length ? ok : all;
+}
+
 function sortHandForDisplay(hand) {
   const withIdx = (hand || []).map((t, originalIdx) => ({ ...t, originalIdx }));
   const jokers = withIdx.filter(t => Number(t.num) === -1);
@@ -2415,7 +2433,7 @@ function renderBoard3D(data, ctx) {
     phase: '',
     players: seatPlayers,
     decks: { black: ctx.blackLen, white: ctx.whiteLen },
-    slots: (!isSpectator && pendingPlacementTile) ? Array.from({ length: myLen + 1 }, (_, i) => i) : [],
+    slots: (!isSpectator && pendingPlacementTile) ? legalSlotsFor(seatPlayers[0].hand, pendingPlacementTile) : [],
     targets,
     canDraw: ctx.canDraw,
   });

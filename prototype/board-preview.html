@@ -318,9 +318,9 @@ window.Board3D = (() => {
         // 자리표시가 줄 안으로 들어가 패 '위'가 비었으므로 거기에 띄운다.
         // 테이블 가운데로 보내면 덱 더미와 겹치므로 내 자리 바로 위에 둔다.
         const pos = st.d.clone().multiplyScalar(st.Rs - (pi === 0 ? 0 : 2.4));
-        if (pi === 0) pos.addScaledVector(st.d, 0.5);
         pos.y = pi === 0 ? 0.14 + TH * sc * 2.15 : 1.6;
-        Object.assign(m.userData, { tgt: pos, scT: pi === 0 ? sc : 0.8, tiltT: pi === 0 ? -0.42 : -0.55, pi, idx: -1, pick: null });
+        // 위로 띄우면 카메라에 가까워져 커 보인다. 패와 같은 크기로 보이도록 조금 줄인다.
+        Object.assign(m.userData, { tgt: pos, scT: pi === 0 ? sc * 0.82 : 0.8, tiltT: pi === 0 ? -0.42 : -0.55, pi, idx: -1, pick: null });
         m.rotation.y = st.th;
         setFaces(m, t, pi === 0 ? 'face' : 'cover', 'cover');
       }
