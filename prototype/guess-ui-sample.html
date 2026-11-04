@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>추리 입력 샘플</title>
+<style>
+  :root { --gold:#d4af37; --gold-light:#f0e3c8; --wood:#5c3319; --wood-mid:#6b4226; --wood-dark:#2b1810; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:#0f3b24; color:var(--gold-light); font:14px/1.5 system-ui, "Malgun Gothic", sans-serif; }
+  .wrap { max-width:960px; margin:0 auto; padding:12px 16px 40px; }
+  h1 { font-size:18px; margin:4px 0 6px; }
+  .hint { color:#b9d6c4; font-size:13px; margin:0 0 10px; }
+  .ctrl { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:8px; }
+  .ctrl .lab { color:#b9d6c4; font-weight:700; min-width:96px; }
+  .seg { display:inline-flex; border:1px solid #8a5a2e; border-radius:8px; overflow:hidden; }
+  .seg button { border:0; border-radius:0; background:#3a2414; color:#c9b48f; padding:7px 12px; font:inherit; font-weight:700; cursor:pointer; }
+  .seg button.on { background:var(--gold); color:var(--wood-dark); }
+  .btn-plain { background:var(--wood-mid); color:var(--gold-light); border:1px solid #8a5a2e; border-radius:6px; padding:7px 12px; font:inherit; font-weight:700; cursor:pointer; }
+
+  #board3d-wrap { position:relative; width:100%; height:64vh; min-height:380px; border-radius:10px; overflow:hidden; border:2px solid var(--wood-dark); background:#1b0f07; }
+  #board3d-gl { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+  #board3d-labels { position:absolute; inset:0; pointer-events:none; }
+  .b3d-pl, .b3d-dl { position:absolute; transform:translate(-50%,-50%); white-space:nowrap; background:rgba(30,18,8,.85); border:1px solid var(--wood-mid);
+    border-radius:999px; padding:3px 9px; font-size:12px; font-weight:700; color:var(--gold-light); display:flex; gap:6px; align-items:center; }
+  .b3d-pl.turn { border-color:var(--gold); }
+  .b3d-sb { display:none; }
+  #out { margin-top:8px; padding:8px 10px; background:rgba(0,0,0,.25); border-radius:8px; color:#d9ecdf; min-height:2.4em; }
+
+  /* ---- 숫자 추리 창 ---- */
+  .overlay { position:absolute; inset:0; z-index:20; display:flex; align-items:center; justify-content:center; padding:12px; background:rgba(0,0,0,.45); }
+  .overlay[hidden] { display:none; }
+  .pad { width:min(400px, 100%); padding:18px 18px 16px; border-radius:16px; border:3px solid var(--gold);
+    background:linear-gradient(180deg, #3a2414, #1f120a); box-shadow:0 20px 60px rgba(0,0,0,.6); }
+  .pad h2 { margin:0 0 4px; font-size:22px; color:var(--gold-light); display:flex; align-items:center; gap:10px; }
+  .pad .sub { margin:0 0 12px; color:#d8c7a4; font-size:14px; }
+  .pad .mini { display:inline-flex; align-items:center; justify-content:center; width:24px; height:32px; border-radius:4px; font:900 15px Georgia, serif;
+    border:2px solid rgba(255,255,255,.5); }
+  .pad .mini.black { background:#1c1c20; color:#f6f0e2; } .pad .mini.white { background:#f6f0e2; color:#1c1c20; }
+  .numgrid { display:grid; grid-template-columns:repeat(6, 1fr); gap:8px; margin-bottom:12px; }
+  .numgrid button { height:54px; border-radius:10px; cursor:pointer; font:900 20px Georgia, serif; transition:transform .08s; touch-action:manipulation; }
+  .numgrid button:active { transform:scale(.93); }
+  .numgrid button.joker { grid-column:span 2; font-family:system-ui, "Malgun Gothic", sans-serif; font-size:15px; }
+  /* A: 갈색 버튼 */
+  .padA .numgrid button { background:linear-gradient(180deg, #6b4226, #4a2c16); color:var(--gold-light); border:2px solid var(--gold); }
+  /* B: 상대 타일 색 그대로 */
+  .padB.black .numgrid button { background:#1c1c20; color:#f6f0e2; border:2px solid #5a5a62; box-shadow:0 3px 0 #000; }
+  .padB.white .numgrid button { background:#f6f0e2; color:#1c1c20; border:2px solid #c9bd9c; box-shadow:0 3px 0 #a8996f; }
+  .pad .cancel { width:100%; height:46px; border-radius:10px; background:transparent; color:var(--gold-light); border:2px solid #8a6a3a; font:inherit; font-weight:800; font-size:15px; cursor:pointer; }
+  .pad .peek { margin:-4px 0 10px; font-size:12px; color:#8fbf9f; }
+
+  /* ---- 결과창 (D) ---- */
+  .fx-result { position:absolute; left:50%; top:42%; z-index:6; pointer-events:none; white-space:nowrap; display:flex; align-items:center; gap:14px;
+    padding:10px 20px; border-radius:16px; background:rgba(18,10,4,.94); border:3px solid var(--c); box-shadow:0 12px 40px rgba(0,0,0,.6);
+    animation:fxResult var(--dur, 1.8s) ease forwards; }
+  .fx-result.right { --c:#ffd54a; } .fx-result.wrong { --c:#ff6b5a; }
+  .fx-result .big { display:block; font-weight:900; font-size:clamp(26px, 7vw, 34px); color:var(--c); line-height:1.1; }
+  .fx-result .sub { display:block; font-size:15px; font-weight:700; color:#e8dcc4; }
+  .fx-result .next { display:block; margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,.15); font-size:14px; font-weight:800; color:#fff3dc; }
+  .fx-result .swap { transition:opacity .25s; }
+  .fx-chip { display:inline-flex; align-items:center; justify-content:center; min-width:52px; height:70px; padding:0 6px; border-radius:9px;
+    font:900 40px Georgia, serif; border:2px solid rgba(255,255,255,.55); position:relative; }
+  .fx-chip.white { background:#f6f0e2; color:#1c1c20; } .fx-chip.black { background:#1c1c20; color:#f6f0e2; }
+  .fx-chip.no::after { content:''; position:absolute; left:-4px; right:-4px; top:50%; height:5px; background:#ff4a3a; transform:rotate(-30deg); border-radius:2px; }
+  @keyframes fxResult {
+    0% { transform:translate(-50%,-50%) scale(2.2); opacity:0; }
+    12% { transform:translate(-50%,-50%) scale(.95); opacity:1; }
+    18% { transform:translate(-50%,-50%) scale(1); }
+    85% { opacity:1; }
+    100% { transform:translate(-50%,-50%); opacity:0; }
+  }
+  #board3d-wrap.shake { animation:fxShake .35s ease; }
+  @keyframes fxShake { 20% { transform:translate(-6px,2px); } 40% { transform:translate(5px,-3px); } 60% { transform:translate(-3px,2px); } 80% { transform:translate(2px,-1px); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>추리 입력 · 실패 문구 샘플</h1>
+  <p class="hint">보드에서 <b>상대 타일(빛나는 것)</b>을 누르면 숫자 버튼 창이 뜹니다. 위에서 모양과 문구를 바꿔가며 눌러 보세요.
+    샘플이라 창 안에 정답을 작게 알려 줍니다(실제 게임엔 없음).</p>
+
+  <div class="ctrl"><span class="lab">숫자 버튼</span>
+    <span class="seg" data-k="pad"><button data-v="A" class="on">A. 갈색 버튼</button><button data-v="B">B. 타일 색 그대로</button></span>
+  </div>
+  <div class="ctrl"><span class="lab">실패 후 문구</span>
+    <span class="seg" data-k="fail"><button data-v="1">① 문구 없음</button><button data-v="2" class="on">② 아랫줄에 추가</button><button data-v="3">③ 이어서 바뀜</button></span>
+  </div>
+  <div class="ctrl"><span class="lab">보는 사람</span>
+    <span class="seg" data-k="viewer"><button data-v="me" class="on">추리한 나</button><button data-v="other">다른 사람</button></span>
+    <button class="btn-plain" id="reset">판 처음으로</button>
+  </div>
+
+  <div id="board3d-wrap">
+    <canvas id="board3d-gl"></canvas>
+    <div id="board3d-labels"></div>
+    <div class="overlay" id="guess" hidden>
+      <div class="pad padA" id="pad">
+        <h2>숫자 추리 <span class="mini" id="pad-mini"></span></h2>
+        <p class="sub" id="pad-sub"></p>
+        <div class="numgrid" id="numgrid"></div>
+        <p class="peek" id="pad-peek"></p>
+        <button class="cancel" id="pad-cancel" type="button">취소</button>
+      </div>
+    </div>
+  </div>
+  <div id="out">상대 타일을 눌러 보세요.</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../board3d.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const opt = { pad: 'A', fail: '2', viewer: 'me' };
+document.querySelectorAll('.seg').forEach(seg => seg.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  opt[seg.dataset.k] = b.dataset.v;
+}));
+
+const T = (id, color, num, revealed) => ({ id, color, num, revealed: !!revealed });
+let S;
+function fresh() {
+  S = {
+    names: ['나', '다빈치', '앨리스'],
+    hands: [
+      [T('a1', 'black', 1), T('a2', 'white', 3), T('a3', 'black', 6), T('a5', 'black', 7), T('a4', 'white', 9)],
+      [T('b1', 'white', 0), T('b2', 'black', 4), T('b3', 'white', 7), T('b4', 'black', 10)],
+      [T('c1', 'black', 2), T('c2', 'white', 5), T('c3', 'black', 8), T('c4', 'white', 11)],
+    ],
+    drawn: 'a5', turn: 0,
+  };
+  draw();
+  $('out').textContent = '내 차례 · 검은 7을 뽑아 놓았습니다. 상대 타일을 눌러 추리하세요.';
+}
+// 상대 패는 실제 게임처럼 화면 순서(정렬)대로 보여준다 — 샘플 패는 이미 정렬돼 있다
+function draw() {
+  const targets = [];
+  if (S.turn === 0) [1, 2].forEach(pi => S.hands[pi].forEach((t, idx) => { if (!t.revealed) targets.push({ pi, idx }); }));
+  Board3D.update({
+    n: 3, mode: 'solo', over: false, turn: S.turn, phase: '',
+    players: S.names.map((name, i) => ({ name, hand: S.hands[i] })),
+    decks: { black: 6, white: 7 }, slots: [], targets, canDraw: false,
+  });
+}
+
+// ---- 숫자 추리 창 ----
+let target = null;
+function openGuess(pi, idx) {
+  const t = S.hands[pi][idx];
+  target = { pi, idx };
+  const pad = $('pad');
+  pad.className = 'pad pad' + opt.pad + ' ' + t.color;
+  $('pad-mini').className = 'mini ' + t.color; $('pad-mini').textContent = '?';
+  $('pad-sub').textContent = `${S.names[pi]} 님의 ${idx + 1}번째 ${t.color === 'black' ? '검은색' : '흰색'} 타일은 무엇일까요?`;
+  $('pad-peek').textContent = `(샘플용: 정답은 ${t.num === -1 ? '조커(-)' : t.num})`;
+  $('guess').hidden = false;
+}
+(function buildGrid() {
+  const g = $('numgrid');
+  for (let n = 0; n <= 12; n++) {
+    const b = document.createElement('button'); b.type = 'button';
+    const num = n === 12 ? -1 : n;
+    b.textContent = n === 12 ? '- 조커' : n;
+    if (n === 12) b.className = 'joker';
+    b.onclick = () => submit(num);
+    g.appendChild(b);
+  }
+})();
+$('pad-cancel').onclick = () => { $('guess').hidden = true; target = null; };
+
+function submit(num) {
+  $('guess').hidden = true;
+  if (!target) return;
+  const { pi, idx } = target; target = null;
+  const t = S.hands[pi][idx];
+  const right = num === t.num;
+  const g = { right, num, color: t.color, who: S.names[pi], nth: idx + 1 };
+  if (right) {
+    t.revealed = true; draw(); landing();
+    showResult(g);
+    $('out').textContent = '정답! 계속 추리하거나 턴을 넘길 수 있습니다.';
+  } else {
+    showResult(g);
+    setTimeout(() => {
+      S.hands[0].find(x => x.id === S.drawn).revealed = true; S.turn = 1; draw(); landing();
+    }, opt.fail === '3' ? 900 : 500);
+    $('out').textContent = '틀렸습니다 — 브라우저 경고창 없이 결과창으로만 알려줍니다.';
+  }
+}
+
+function showResult(g) {
+  const box = document.createElement('div');
+  box.className = 'fx-result ' + (g.right ? 'right' : 'wrong');
+  const chip = document.createElement('span');
+  chip.className = `fx-chip ${g.color}${g.right ? '' : ' no'}`;
+  chip.textContent = g.num === -1 ? '-' : g.num;
+  const txt = document.createElement('span');
+  const big = document.createElement('span'); big.className = 'big'; big.textContent = g.right ? '정답!' : '실패';
+  const sub = document.createElement('span'); sub.className = 'sub'; sub.textContent = `${g.who}의 ${g.nth}번째 타일`;
+  txt.append(big, sub);
+  // 실패하면 무슨 일이 이어지는지: 추리한 사람에겐 '내가', 다른 사람에겐 그 사람 이름으로
+  const guesser = opt.viewer === 'me' ? '내가' : '지민이';  // 샘플: 다른 사람 화면에선 추리한 사람 이름
+  const nextText = `${guesser} 뽑은 타일이 공개되고 차례가 넘어갑니다`;
+  if (!g.right && opt.fail === '2') {
+    const next = document.createElement('span'); next.className = 'next'; next.textContent = '→ ' + nextText;
+    txt.appendChild(next);
+    box.style.setProperty('--dur', '2.6s');
+  }
+  if (!g.right && opt.fail === '3') {
+    box.style.setProperty('--dur', '3s');
+    setTimeout(() => {
+      big.classList.add('swap'); sub.classList.add('swap');
+      big.style.opacity = 0; sub.style.opacity = 0;
+      setTimeout(() => {
+        big.textContent = '차례 넘김'; sub.textContent = `${guesser} 뽑은 타일 공개`;
+        big.style.opacity = 1; sub.style.opacity = 1;
+      }, 250);
+    }, 1100);
+  }
+  if (g.right) box.style.setProperty('--dur', '1.8s');
+  box.append(chip, txt);
+  $('board3d-wrap').appendChild(box);
+  box.addEventListener('animationend', () => box.remove());
+}
+function landing() {
+  setTimeout(() => {
+    const w = $('board3d-wrap'); w.classList.remove('shake'); void w.offsetWidth; w.classList.add('shake');
+  }, 260);
+}
+
+Board3D.mount({ canvas: $('board3d-gl'), app: $('board3d-wrap'), labels: $('board3d-labels') });
+Board3D.setFit(0.88); Board3D.setGlyph(0.84);
+Board3D.onPick(p => { if (p.type === 'target') openGuess(p.pi, p.idx); });
+$('reset').onclick = fresh;
+fresh();
+</script>
+</body>
+</html>

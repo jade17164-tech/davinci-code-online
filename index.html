@@ -410,6 +410,11 @@ body.board3d #other-players, body.board3d #my-section-container { display: none;
   box-shadow: 0 20px 45px rgba(0,0,0,0.6), inset 0 0 0 2px rgba(212,175,55,.3);
   animation: modalIn .18s ease;
 }
+.guess-numgrid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 12px; }
+.guess-numgrid button { height: 54px; margin: 0; padding: 0; border-radius: 10px; font: 900 20px Georgia, serif; color: var(--gold-light);
+  background: linear-gradient(180deg, #6b4226, #4a2c16); border: 2px solid var(--gold); touch-action: manipulation; }
+.guess-numgrid button:active { transform: scale(.93); }
+.guess-numgrid button.joker { grid-column: span 2; font-family: inherit; font-size: 15px; }
 @keyframes modalIn { from { opacity: 0; transform: translateY(-8px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .modal-content::-webkit-scrollbar { width: 6px; }
 .modal-content::-webkit-scrollbar-thumb { background: var(--wood); border-radius: 4px; }
@@ -809,15 +814,10 @@ body.board3d #other-players, body.board3d #my-section-container { display: none;
 <!-- 추리 입력용 커스텀 모달 -->
 <div id="guess-modal" class="modal-overlay hidden">
   <div class="modal-content" style="text-align: center;">
-    <h2 id="guess-modal-title">타일 추리하기</h2>
-    <p id="guess-modal-subtitle" style="font-size: 13px; color: #aaa; margin-bottom: 15px;"></p>
-
-    <input type="text" id="guess-input-field" placeholder="숫자 0~11 또는 -" maxlength="2" style="font-size: 20px; font-weight: bold; width: 60%; margin-bottom: 15px;">
-
-    <div class="btn-group">
-      <button id="guess-cancel-btn" style="background: #7f8c8d; flex: 1;">취소</button>
-      <button id="guess-submit-btn" style="background: #2ecc71; flex: 1;">확인</button>
-    </div>
+    <h2 id="guess-modal-title">숫자 추리</h2>
+    <p id="guess-modal-subtitle" style="font-size: 14px; margin-bottom: 12px;"></p>
+    <div id="guess-numgrid" class="guess-numgrid"></div>
+    <button id="guess-cancel-btn" style="background: #7f8c8d; width: 100%;">취소</button>
   </div>
 </div>
 
@@ -1543,10 +1543,17 @@ document.getElementById('btn-return-lobby').addEventListener('click', forceRetur
 document.getElementById('guess-cancel-btn').addEventListener('click', () => {
   document.getElementById('guess-modal').classList.add('hidden');
 });
-document.getElementById('guess-submit-btn').addEventListener('click', processGuessInput);
-document.getElementById('guess-input-field').addEventListener('keypress', (e) => {
-  if(e.key === 'Enter') processGuessInput();
-});
+for (let n = 0; n <= 12; n++) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = n === 12 ? '- 조커' : n;
+  if (n === 12) b.className = 'joker';
+  b.addEventListener('click', () => {
+    document.getElementById('guess-modal').classList.add('hidden');
+    executeGuess(currentGuessTarget.pid, currentGuessTarget.idx, n === 12 ? -1 : n);
+  });
+  document.getElementById('guess-numgrid').appendChild(b);
+}
 
 document.getElementById('confirm-cancel-btn').addEventListener('click', () => {
   document.getElementById('confirm-modal').classList.add('hidden');
@@ -2599,6 +2606,19 @@ function fxGuessResult(g, data) {
   sub.textContent = `${g.target === myPlayerId && !isSpectator ? '내' : target.name + '의'} ${g.idx + 1}번째 타일`;
   txt.append(big, sub);
   box.append(chip, txt);
+  // 결과 뒤에 무슨 일이 이어지는지로 바꿔 보여준다
+  box.style.animationDuration = '3s';
+  const mine = g.by === myPlayerId && !isSpectator;
+  const who = mine ? '내가' : `${(data.players[g.by] || {}).name || '상대'} 님이`;
+  setTimeout(() => {
+    big.style.transition = sub.style.transition = 'opacity .25s';
+    big.style.opacity = sub.style.opacity = 0;
+    setTimeout(() => {
+      big.textContent = g.right ? '한 번 더!' : '차례 넘김';
+      sub.textContent = g.right ? (mine ? '계속 추리하거나 턴 넘기기' : `${who} 계속 추리하거나 넘김`) : `${who} 뽑은 타일 공개`;
+      big.style.opacity = sub.style.opacity = 1;
+    }, 250);
+  }, 1100);
   fxOverlay(box);
   g.right ? Sfx.right() : Sfx.wrong();
 }
@@ -2642,7 +2662,7 @@ function playTableFx(data) {
   if (newlyRevealed) fxLanding();
   // 틀려서 차례가 넘어가면 결과창이 먼저 보이도록 차례 알림은 조금 늦춘다
   if (cur.turn !== prev.turn) {
-    if (guessed) setTimeout(() => { if (fxPrev && fxPrev.turn === cur.turn && !fxPrev.over) fxTurnBanner(data); }, 1500);
+    if (guessed) setTimeout(() => { if (fxPrev && fxPrev.turn === cur.turn && !fxPrev.over) fxTurnBanner(data); }, 3000);
     else fxTurnBanner(data);
   }
 }
@@ -2784,35 +2804,12 @@ window.guessOtherTile = function(targetPlayerId, tileIdx) {
     const data = snapshot.val();
     if (!data) return;
     const targetName = data.players[targetPlayerId]?.name || "상대방";
+    const color = data.players[targetPlayerId]?.hand?.[tileIdx]?.color === 'black' ? '검은색' : '흰색';
 
     currentGuessTarget = { pid: targetPlayerId, idx: tileIdx };
-    document.getElementById('guess-modal-subtitle').innerText = `${targetName} 님의 ${tileIdx + 1}번째 타일을 맞춰보세요`;
-    const inputField = document.getElementById('guess-input-field');
-    inputField.value = "";
+    document.getElementById('guess-modal-subtitle').textContent = `${targetName} 님의 ${tileIdx + 1}번째 ${color} 타일은 무엇일까요?`;
     document.getElementById('guess-modal').classList.remove('hidden');
-    setTimeout(() => inputField.focus(), 100);
   });
-}
-
-function processGuessInput() {
-  const inputField = document.getElementById('guess-input-field');
-  let guess = inputField.value.trim();
-
-  if (guess === '-') {
-    guess = -1;
-  } else if (!isNaN(guess) && guess !== "") {
-    guess = parseInt(guess);
-    if (guess < 0 || guess > 11) {
-      alert("[오류] 올바르지 않은 숫자입니다! 0~11 또는 '-'를 입력하세요.");
-      return;
-    }
-  } else {
-    alert("[오류] 올바르지 않은 입력입니다! 0~11 또는 '-'를 입력하세요.");
-    return;
-  }
-
-  document.getElementById('guess-modal').classList.add('hidden');
-  executeGuess(currentGuessTarget.pid, currentGuessTarget.idx, guess);
 }
 
 function executeGuess(targetPlayerId, tileIdx, guessedNum) {
@@ -2849,8 +2846,6 @@ function executeGuess(targetPlayerId, tileIdx, guessedNum) {
         });
       });
     } else {
-      alert("[오류] 틀렸습니다! 방금 뽑은 내 타일이 공개되고 턴이 넘어갑니다.");
-
       // [버그 수정] 내 손패에서 방금 뽑은 타일(lastDrawnTileId)을 정확히 찾아 revealed: true로 변경
       let myHand = data.players[myPlayerId]?.hand || [];
       if (lastDrawnTileId) {
