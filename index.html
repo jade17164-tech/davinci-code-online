@@ -563,6 +563,72 @@ body.in-game.board3d #btn-return-lobby { position: fixed; left: 50%; bottom: 70p
   body.in-game.board3d #drawn-preview-container { bottom: 96px; }   /* 안내문이 두세 줄로 길어져도 겹치지 않게 */
   body.in-game.board3d #status-message, body.in-game.board3d #turn-steps { left: 12px; transform: none; max-width: calc(100vw - 150px); white-space: normal; }
 }
+/* ---- 로비 (A: 메인 메뉴형) ---- */
+body.in-lobby h1 { display: none; }
+body.in-lobby .game-container { max-width: 440px; }
+#lobby-screen { display: flex; flex-direction: column; min-height: calc(100dvh - 20px); padding: 14px 18px 22px; overflow: hidden; }
+#lobby-screen.hidden { display: none; }
+.lb-top { display: flex; align-items: center; gap: 8px; }
+.lb-prof { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; border-radius: 999px; cursor: pointer;
+  background: rgba(0,0,0,.35); border: 1px solid rgba(240,215,140,.25); text-align: left; font-size: 14px; font-weight: 900; color: var(--gold-light); }
+.lb-prof:active { transform: scale(.97); }
+.lb-prof .lb-ava { flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--gold), var(--wood-light)); color: var(--wood-dark); font-weight: 900; }
+.lb-prof .st { display: block; font-size: 11px; font-weight: 800; color: #c9b48f; }
+.lb-prof .st::after { content: ' ›'; color: var(--gold); }
+.lb-icon { flex-shrink: 0; width: 40px; height: 40px; margin: 0; padding: 0; border-radius: 12px; font-size: 18px; box-shadow: none;
+  background: rgba(0,0,0,.35); border: 1px solid rgba(240,215,140,.25); color: var(--gold-light); }
+.lb-hero { position: relative; flex: 1; min-height: 190px; display: flex; align-items: center; justify-content: center; }
+.lb-logo { font: 900 34px 'Cinzel', serif; letter-spacing: 2px; color: #fff3c4; line-height: 1; text-shadow: 0 3px 0 #5e4508, 0 0 24px rgba(212,175,55,.6); }
+.lb-logo small { display: block; margin-top: 6px; font: 800 13px 'Nunito', sans-serif; letter-spacing: 6px; color: var(--gold); }
+.lb-tile { position: absolute; display: flex; align-items: center; justify-content: center; width: 34px; height: 48px; border-radius: 6px;
+  font: 900 22px Georgia, serif; transform: rotate(var(--r)); animation: lbBob 3.2s ease-in-out infinite;
+  box-shadow: 0 4px 0 rgba(0,0,0,.45), 0 8px 14px rgba(0,0,0,.4); }
+.lb-tile.b { background: #1c1c20; color: #f6f0e2; border: 1px solid #444; }
+.lb-tile.w { background: #f6f0e2; color: #1c1c20; border: 1px solid #c9bd9c; }
+@keyframes lbBob { 50% { transform: translateY(-8px) rotate(var(--r)); } }
+.lb-menu { display: flex; flex-direction: column; gap: 12px; }
+.lb-code { width: 100%; margin: 0; padding: 10px 0 10px 22px; border-radius: 14px; text-align: center; letter-spacing: 22px;
+  font: 900 30px Georgia, serif; color: var(--wood-dark); background: var(--parchment); border: 3px solid var(--wood-dark);
+  box-shadow: inset 0 3px 6px rgba(0,0,0,.2); user-select: text; -webkit-user-select: text; }
+.lb-code:focus { outline: none; border-color: var(--gold); }
+.lb-code::placeholder { color: #b5a27a; }
+.lb-big { width: 100%; margin: 0; padding: 15px; border-radius: 16px; font-size: 18px; font-weight: 900; letter-spacing: .5px; color: #fff; border: 0; }
+.lb-big:active { transform: translateY(3px); }
+.lb-big small { display: block; font-size: 12px; font-weight: 700; opacity: .85; }
+.lb-big.green { background: linear-gradient(180deg, #5be08a, #1f7a45 60%, #0c4a29); box-shadow: 0 5px 0 #062815, 0 10px 18px rgba(0,0,0,.45); }
+.lb-big.gold { background: linear-gradient(180deg, #ffe9a6, var(--gold) 55%, #9a7414); color: var(--wood-dark); box-shadow: 0 5px 0 #5e4508, 0 10px 18px rgba(0,0,0,.45); }
+.lb-big.wood { background: linear-gradient(180deg, var(--wood-highlight), var(--wood-mid) 55%, var(--wood-dark)); color: var(--gold-light); box-shadow: 0 5px 0 #1a0d06, 0 10px 18px rgba(0,0,0,.45); }
+.lb-check { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: -2px; font-size: 13px; font-weight: 800; color: #c9b48f; cursor: pointer; }
+.lb-check input { width: 18px; height: 18px; margin: 0; accent-color: var(--gold); }
+.lb-dim { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .3s; }
+.lb-dim.open { opacity: 1; pointer-events: auto; }
+.lb-sheet { position: fixed; left: 50%; bottom: 0; z-index: 91; width: min(440px, 100%); max-height: 92dvh; overflow-y: auto; padding: 14px 18px 24px;
+  border-radius: 24px 24px 0 0; background: linear-gradient(180deg, #3a2414, #1f120a); border-top: 3px solid var(--gold); text-align: left;
+  transform: translate(-50%, 105%); transition: transform .3s cubic-bezier(.2,.9,.3,1); }
+.lb-sheet.open { transform: translate(-50%, 0); }
+.lb-sheet h3 { margin: 0 0 4px; font-size: 18px; text-align: center; color: var(--gold-light); }
+.lb-grab { width: 44px; height: 5px; margin: 0 auto 10px; border-radius: 3px; background: #6b5a40; }
+.lb-label { margin: 12px 0 6px; font-size: 12px; font-weight: 900; color: #c9b48f; letter-spacing: .5px; }
+.lb-coderow { display: flex; gap: 10px; align-items: center; }
+.lb-dice { width: 54px; height: 54px; font-size: 26px; }
+.lb-chips { display: flex; gap: 6px; }
+.lb-chips button { flex: 1; min-width: 0; margin: 0; padding: 9px 4px; border-radius: 12px; font-size: 13px; font-weight: 900; line-height: 1.2; box-shadow: none;
+  background: rgba(0,0,0,.28); color: #c9b48f; border: 2px solid rgba(240,215,140,.18); }
+.lb-chips button small { display: block; font-size: 10px; font-weight: 700; opacity: .8; }
+.lb-chips button.on { background: linear-gradient(180deg, #ffe9a6, var(--gold)); color: var(--wood-dark); border-color: #fff3c4; box-shadow: 0 3px 0 #8a6a1a; }
+.lb-sheet .lb-check { margin-top: 12px; }
+.room-choice-list { display: flex; flex-direction: column; gap: 10px; margin: 10px 0; }
+/* 프로필 카드: 승률 원 */
+.pf-ring { --p: 0; position: relative; width: 130px; height: 130px; margin: 10px auto; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: conic-gradient(var(--gold) calc(var(--p) * 1%), rgba(43,24,16,.18) 0); }
+.pf-ring::before { content: ''; position: absolute; inset: 12px; border-radius: 50%; background: var(--parchment); }
+.pf-ring b { position: relative; font: 900 34px Georgia, serif; color: var(--wood-dark); line-height: 1; }
+.pf-ring b small { display: block; margin-top: 4px; font: 800 12px 'Nunito', sans-serif; color: #7a5a2c; }
+.pf-stats { display: flex; gap: 8px; margin-bottom: 8px; }
+.pf-stats div { flex: 1; padding: 8px 4px; border-radius: 10px; background: rgba(43,24,16,.08); font-size: 12px; font-weight: 800; color: #7a5a2c; }
+.pf-stats b { display: block; font: 900 20px Georgia, serif; color: var(--wood-dark); }
+
 /* 폰 가로: 세로가 짧으니 제목을 빼고 기록·채팅을 맨 위로 올린다 */
 @media (max-height: 500px) and (orientation: landscape) {
   body.in-game.board3d h1 { display: none; }
@@ -620,44 +686,69 @@ body.in-game.board3d #btn-return-lobby { position: fixed; left: 50%; bottom: 70p
 
   <!-- 1. 메인 로비 -->
   <div id="lobby-screen" class="card hidden">
-    <button id="open-rules-lobby" class="btn-rules">게임 방법</button>
-    <button id="btn-logout" class="btn-kick" style="float:right; margin-bottom:8px;">로그아웃</button>
-    <h3 style="clear:both;">게임 입장하기</h3>
-    <div id="account-bar" style="font-size:13px; color:#f1c40f; margin-bottom:6px;"></div>
-    <input type="text" id="room-input" placeholder="방 코드 (숫자 4자리, 예: 1234)" maxlength="4" inputmode="numeric" pattern="[0-9]*">
-
-    <div style="margin: 8px 0; font-size: 13px; color: #f1c40f; background: #252525; padding: 8px; border-radius: 8px; display: inline-block; width: 80%;">
-      <label style="cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
-        <input type="checkbox" id="spectator-mode-checkbox" style="width: 16px; height: 16px; margin: 0; cursor: pointer;">
-        관전 모드로 참여하기
-      </label>
+    <div class="lb-top">
+      <div id="account-bar" class="lb-prof" role="button" tabindex="0" aria-label="내 프로필 보기"></div>
+      <button id="open-rules-lobby" class="lb-icon" title="게임 방법" aria-label="게임 방법">?</button>
+      <button id="btn-logout" class="lb-icon" title="로그아웃" aria-label="로그아웃">⎋</button>
+    </div>
+    <div class="lb-hero" aria-hidden="true">
+      <span class="lb-tile b" style="left:12%;top:16%;--r:-12deg">7</span>
+      <span class="lb-tile w" style="right:14%;top:10%;--r:10deg;animation-delay:-1s">3</span>
+      <span class="lb-tile w" style="left:20%;bottom:8%;--r:8deg;animation-delay:-2s">-</span>
+      <span class="lb-tile b" style="right:18%;bottom:12%;--r:-8deg;animation-delay:-.5s">11</span>
+      <div class="lb-logo">DA VINCI<small>CODE</small></div>
+    </div>
+    <div class="lb-menu">
+      <input type="text" id="room-input" class="lb-code" placeholder="····" maxlength="4" inputmode="numeric" pattern="[0-9]*" aria-label="방 코드 4자리" autocomplete="off">
+      <button id="btn-join-room" class="lb-big green">방 참가하기<small>방 코드 4자리를 넣고 눌러요</small></button>
+      <label class="lb-check"><input type="checkbox" id="spectator-mode-checkbox"> 관전으로 참가</label>
+      <button id="btn-open-create" class="lb-big gold">방 만들기</button>
+      <button id="btn-open-room-list" class="lb-big wood">방 목록</button>
     </div>
 
-    <h3 style="clear:both; margin-top: 14px;">새 방 만들기 옵션</h3>
-    <div style="margin-top: 6px; font-size: 12px; color: #aaa; text-align: left; padding-left: 10%;">게임 모드:</div>
-    <select id="game-mode-select">
-      <option value="solo">개인전 (2~6인)</option>
-      <option value="team">2:2 팀전 (4인 전용)</option>
-    </select>
-
-    <div style="margin-top: 6px; font-size: 12px; color: #aaa; text-align: left; padding-left: 10%;">타일 분배 방식:</div>
-    <select id="tile-count-select">
-      <option value="auto">인원수별 자동 조절 (2~4인: 4장 / 5~6인: 3장)</option>
-      <option value="3">무조건 3장씩 시작</option>
-      <option value="4">무조건 4장씩 시작</option>
-      <option value="5">무조건 5장씩 시작</option>
-    </select>
-
-    <div style="margin-top: 6px; font-size: 12px; color: #aaa; text-align: left; padding-left: 10%;">난이도 (로그 표시 방식):</div>
-    <select id="difficulty-select">
-      <option value="default">기본 모드 (로그를 모달 알림으로만 표시)</option>
-      <option value="beginner">초보자 모드 (로그 기록이 목록으로 누적 표시)</option>
-    </select>
-
-    <div class="btn-group">
-      <button id="btn-open-room-list">방 목록</button>
-      <button id="btn-create-room">방 만들기</button>
-      <button id="btn-join-room">방 참가하기</button>
+    <!-- 방 만들기: 아래에서 올라오는 설정 창. 칩은 숨겨 둔 select의 값을 바꾼다 -->
+    <div id="create-dim" class="lb-dim"></div>
+    <div id="create-sheet" class="lb-sheet" role="dialog" aria-label="새 방 만들기">
+      <div class="lb-grab"></div>
+      <h3>새 방 만들기</h3>
+      <div class="lb-label">방 코드 · 친구에게 알려 줄 번호</div>
+      <div class="lb-coderow">
+        <input type="text" id="create-room-input" class="lb-code" maxlength="4" inputmode="numeric" pattern="[0-9]*" aria-label="새 방 코드 4자리" autocomplete="off">
+        <button id="btn-dice" type="button" class="lb-icon lb-dice" title="아무 번호나" aria-label="아무 번호나 넣기">🎲</button>
+      </div>
+      <div class="lb-label">게임 모드</div>
+      <div class="lb-chips" data-for="game-mode-select">
+        <button type="button" data-value="solo">개인전<small>2~6인</small></button>
+        <button type="button" data-value="team">2:2 팀전<small>4인</small></button>
+      </div>
+      <div class="lb-label">시작 타일</div>
+      <div class="lb-chips" data-for="tile-count-select">
+        <button type="button" data-value="auto">자동<small>4인↓ 4장 · 5인↑ 3장</small></button>
+        <button type="button" data-value="3">3장</button>
+        <button type="button" data-value="4">4장</button>
+        <button type="button" data-value="5">5장</button>
+      </div>
+      <div class="lb-label">기록 보기</div>
+      <div class="lb-chips" data-for="difficulty-select">
+        <button type="button" data-value="default">기본<small>알림창</small></button>
+        <button type="button" data-value="beginner">초보자<small>목록으로 쌓기</small></button>
+      </div>
+      <label class="lb-check"><input type="checkbox" id="create-spectate"> 나는 관전만 하기</label>
+      <button id="btn-create-room" class="lb-big gold" style="margin-top:12px;">방 만들기</button>
+      <select id="game-mode-select" hidden>
+        <option value="solo">개인전 (2~6인)</option>
+        <option value="team">2:2 팀전 (4인 전용)</option>
+      </select>
+      <select id="tile-count-select" hidden>
+        <option value="auto">인원수별 자동 조절 (2~4인: 4장 / 5~6인: 3장)</option>
+        <option value="3">무조건 3장씩 시작</option>
+        <option value="4">무조건 4장씩 시작</option>
+        <option value="5">무조건 5장씩 시작</option>
+      </select>
+      <select id="difficulty-select" hidden>
+        <option value="default">기본 모드 (로그를 모달 알림으로만 표시)</option>
+        <option value="beginner">초보자 모드 (로그 기록이 목록으로 누적 표시)</option>
+      </select>
     </div>
   </div>
 
@@ -852,13 +943,25 @@ body.in-game.board3d #btn-return-lobby { position: fixed; left: 50%; bottom: 70p
   </div>
 </div>
 
+<!-- 같은 코드의 방이 여러 개일 때 고르는 창 -->
+<div id="room-choice-modal" class="modal-overlay hidden">
+  <div class="modal-content" style="text-align: center;">
+    <h2 id="room-choice-title">방 고르기</h2>
+    <div id="room-choice-list" class="room-choice-list"></div>
+    <button id="room-choice-cancel" class="close-btn">취소</button>
+  </div>
+</div>
+
 <!-- 프로필 조회 모달 -->
 <div id="profile-modal" class="modal-overlay hidden">
   <div class="modal-content" style="text-align: center;">
     <h2 id="profile-modal-nickname">닉네임</h2>
-    <p style="font-size: 14px; color: #444; margin: 10px 0;">총 게임 수: <b id="profile-modal-total">0</b>판</p>
-    <p style="font-size: 14px; color: #444; margin: 10px 0;">승수: <b id="profile-modal-wins">0</b>승</p>
-    <p style="font-size: 14px; color: #444; margin: 10px 0;">승률: <b id="profile-modal-winrate">0%</b></p>
+    <div id="profile-ring" class="pf-ring"><b><span id="profile-modal-winrate">0%</span><small>승률</small></b></div>
+    <div class="pf-stats">
+      <div><b id="profile-modal-total">0</b>판</div>
+      <div><b id="profile-modal-wins">0</b>승</div>
+      <div><b id="profile-modal-losses">0</b>패</div>
+    </div>
     <div id="profile-modal-titles"></div>
     <button id="profile-modal-close-btn" class="close-btn">닫기</button>
   </div>
@@ -1309,7 +1412,10 @@ function updateAccountBar() {
   if (!bar) return;
   const prof = (myAccountId && profileCache[myAccountId]) || myProfile;
   if (!prof) { bar.innerHTML = ''; return; }
-  bar.innerHTML = `${prof.nickname} ${titleBadgeHtml(prof.equippedTitle)} - 승 ${prof.wins || 0} / 총 ${prof.totalGames || 0}판`;
+  // 닉네임은 사용자가 정한 값이라 textContent로, 칭호 배지만 HTML로 넣는다
+  bar.innerHTML = `<span class="lb-ava"></span><span><span class="nm"></span> ${titleBadgeHtml(prof.equippedTitle)}<span class="st">승 ${prof.wins || 0} · ${prof.totalGames || 0}판</span></span>`;
+  bar.querySelector('.lb-ava').textContent = (prof.nickname || '?').slice(0, 1);
+  bar.querySelector('.nm').textContent = prof.nickname || '';
 }
 
 // 대기실/인게임에 표시되는 상대 닉네임 옆 칭호·승수, 프로필 모달 내용은 users/{accountId}를 실시간 구독해서 갱신한다
@@ -1385,7 +1491,10 @@ window.showProfile = function(accountId) {
     document.getElementById('profile-modal-nickname').innerText = prof.nickname;
     document.getElementById('profile-modal-wins').innerText = wins;
     document.getElementById('profile-modal-total').innerText = totalGames;
-    document.getElementById('profile-modal-winrate').innerText = totalGames > 0 ? Math.round(wins / totalGames * 100) + '%' : '0%';
+    const rate = totalGames > 0 ? Math.round(wins / totalGames * 100) : 0;
+    document.getElementById('profile-modal-winrate').innerText = rate + '%';
+    document.getElementById('profile-modal-losses').innerText = Math.max(0, totalGames - wins);
+    document.getElementById('profile-ring').style.setProperty('--p', rate);
     document.getElementById('profile-modal-titles').innerHTML = renderTitleList(prof, accountId === myAccountId);
     document.getElementById('profile-modal').classList.remove('hidden');
   });
@@ -1578,8 +1687,6 @@ document.getElementById('room-code-verify-input').addEventListener('keypress', (
   if (e.key === 'Enter') submitRoomCodeVerify();
 });
 
-document.getElementById('btn-create-room').addEventListener('click', () => handleJoinRoom(true));
-document.getElementById('btn-join-room').addEventListener('click', () => handleJoinRoom(false));
 document.getElementById('start-game-btn').addEventListener('click', handleStartGame);
 
 document.getElementById('draw-black-btn').addEventListener('click', () => handleDrawTile('black'));
@@ -1701,6 +1808,13 @@ new MutationObserver(() => {
     window.dispatchEvent(new Event('resize'));   // 3D 렌더러는 창 크기가 바뀔 때만 다시 잰다
   }
 }).observe(gameScreenEl, { attributes: true, attributeFilter: ['class'] });
+// 로비가 보이는 동안 body에 in-lobby. 로비를 떠나면 방 만들기 창은 닫아 둔다.
+const lobbyScreenEl = document.getElementById('lobby-screen');
+new MutationObserver(() => {
+  const shown = !lobbyScreenEl.classList.contains('hidden');
+  document.body.classList.toggle('in-lobby', shown);
+  if (!shown) setCreateSheet(false);
+}).observe(lobbyScreenEl, { attributes: true, attributeFilter: ['class'] });
 document.getElementById('chat-input-game').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendChatMessage(); });
 
 const modal = document.getElementById('rules-modal');
@@ -1709,11 +1823,88 @@ const modal = document.getElementById('rules-modal');
 });
 document.getElementById('close-rules-btn').addEventListener('click', () => modal.classList.add('hidden'));
 
-function handleJoinRoom(hostFlag) {
-  rawRoomCode = document.getElementById('room-input').value.trim();
+// ---- 로비 (A: 메인 메뉴형) ----
+const createSheet = document.getElementById('create-sheet');
+const createDim = document.getElementById('create-dim');
+const createCodeInput = document.getElementById('create-room-input');
+function setCreateSheet(open) {
+  createSheet.classList.toggle('open', open);
+  createDim.classList.toggle('open', open);
+  if (open && !/^\d{4}$/.test(createCodeInput.value)) rollRoomCode();
+}
+function rollRoomCode() { createCodeInput.value = String(Math.floor(Math.random() * 10000)).padStart(4, '0'); }
+document.getElementById('btn-open-create').addEventListener('click', () => setCreateSheet(true));
+createDim.addEventListener('click', () => setCreateSheet(false));
+document.getElementById('btn-dice').addEventListener('click', rollRoomCode);
+// 숫자만 남긴다 (폰 키보드에 따라 다른 글자가 들어올 수 있다)
+['room-input', 'create-room-input'].forEach(id => document.getElementById(id).addEventListener('input', e => {
+  e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4);
+}));
+// 칩은 숨겨 둔 select 값을 바꾼다. 나머지 코드는 지금처럼 select를 읽는다.
+document.querySelectorAll('.lb-chips').forEach(group => {
+  const sel = document.getElementById(group.dataset.for);
+  const sync = () => group.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.value === sel.value));
+  group.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    sel.value = b.dataset.value;
+    sel.dispatchEvent(new Event('change'));
+    sync();
+  });
+  sync();
+});
+const accountBarEl = document.getElementById('account-bar');
+accountBarEl.addEventListener('click', () => window.showProfile(myAccountId));
+accountBarEl.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') window.showProfile(myAccountId); });
+
+document.getElementById('btn-create-room').addEventListener('click', () => {
+  handleJoinRoom(true, createCodeInput.value, document.getElementById('create-spectate').checked);
+});
+document.getElementById('btn-join-room').addEventListener('click', joinByCode);
+
+// 방 주소는 '모드_타일_코드'라서 같은 코드라도 설정마다 다른 방이다.
+// 코드만으로 참가할 수 있게 모든 설정 조합에서 그 코드의 방을 찾는다.
+const ROOM_MODES = ['solo', 'team'], ROOM_TILES = ['auto', '3', '4', '5'];
+function joinByCode() {
+  const code = document.getElementById('room-input').value.trim();
+  if (!/^\d{4}$/.test(code)) return alert("[오류] 방 코드는 숫자 4자리입니다! (예: 1234)");
+  const combos = ROOM_MODES.flatMap(m => ROOM_TILES.map(t => ({ m, t })));
+  Promise.all(combos.map(c => get(ref(db, `rooms/${c.m}_${c.t}_${code}`)))).then(snaps => {
+    const found = combos.filter((c, i) => {
+      const d = snaps[i].val();
+      return d && (Object.keys(d.players || {}).length > 0 || Object.keys(d.spectators || {}).length > 0);
+    });
+    if (found.length === 0) return alert(`[오류] ${code}번 방이 없습니다. 번호를 확인해 주세요.`);
+    const go = c => {
+      document.getElementById('game-mode-select').value = c.m;
+      document.getElementById('tile-count-select').value = c.t;
+      handleJoinRoom(false);
+    };
+    if (found.length === 1) return go(found[0]);
+    showRoomChoice(code, found, go);
+  });
+}
+// 같은 번호의 방이 설정만 다르게 여러 개일 때 고르게 한다
+function showRoomChoice(code, list, go) {
+  const box = document.getElementById('room-choice-list');
+  box.textContent = '';
+  document.getElementById('room-choice-title').textContent = `${code}번 방이 ${list.length}개 있어요`;
+  list.forEach(c => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'lb-big wood';
+    b.textContent = `${c.m === 'team' ? '2:2 팀전' : '개인전'} · ${c.t === 'auto' ? '자동' : c.t + '장'}`;
+    b.addEventListener('click', () => { document.getElementById('room-choice-modal').classList.add('hidden'); go(c); });
+    box.appendChild(b);
+  });
+  document.getElementById('room-choice-modal').classList.remove('hidden');
+}
+document.getElementById('room-choice-cancel').addEventListener('click', () => document.getElementById('room-choice-modal').classList.add('hidden'));
+
+function handleJoinRoom(hostFlag, codeOverride, spectateOverride) {
+  rawRoomCode = (codeOverride !== undefined ? codeOverride : document.getElementById('room-input').value).trim();
   const gameMode = document.getElementById('game-mode-select').value;
   const tileSetting = document.getElementById('tile-count-select').value;
-  const wantSpectate = document.getElementById('spectator-mode-checkbox').checked;
+  const wantSpectate = spectateOverride !== undefined ? spectateOverride : document.getElementById('spectator-mode-checkbox').checked;
 
   if (!rawRoomCode) return alert("방 코드를 입력해주세요!");
   if (!/^\d{4}$/.test(rawRoomCode)) return alert("[오류] 방 코드는 반드시 숫자 4자리여야 합니다! (예: 1234)");

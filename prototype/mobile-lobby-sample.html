@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>모바일 로비 샘플</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+<style>
+  :root { --felt:#0b5e3f; --felt-light:#167a53; --felt-dark:#063d29; --wood-dark:#2b1810; --wood:#5c3319; --wood-mid:#6b4226;
+    --wood-light:#8a5a2e; --wood-hi:#b98342; --gold:#d4af37; --gold-light:#f0d78c; --parch:#f2e8d0; --ruby:#c0392b; --sapphire:#2563a8; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; padding:20px 16px 40px; background:#1a0f08; color:var(--gold-light); font-family:'Nunito', "Malgun Gothic", sans-serif; }
+  .intro { max-width:1240px; margin:0 auto 18px; }
+  .intro h1 { font-size:20px; margin:0 0 4px; } .intro p { margin:0; color:#c9b48f; font-size:14px; }
+  .row { display:flex; flex-wrap:wrap; gap:28px; justify-content:center; }
+  .col { display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .col h2 { margin:0; font-size:17px; } .col p.d { margin:0; max-width:360px; font-size:13px; color:#c9b48f; text-align:center; }
+
+  /* 폰 틀 */
+  .phone { position:relative; width:375px; height:760px; border-radius:42px; padding:12px; background:#000; box-shadow:0 0 0 2px #333, 0 20px 50px rgba(0,0,0,.7); }
+  .screen { position:relative; width:100%; height:100%; border-radius:32px; overflow:hidden; display:flex; flex-direction:column; }
+  .notch { position:absolute; left:50%; top:8px; transform:translateX(-50%); width:110px; height:26px; border-radius:14px; background:#000; z-index:30; }
+  button { font:inherit; cursor:pointer; border:0; }
+
+  /* 공통 조각 */
+  .tile { display:inline-flex; align-items:center; justify-content:center; width:34px; height:48px; border-radius:6px; font:900 22px Georgia, serif;
+    box-shadow:0 4px 0 rgba(0,0,0,.45), 0 8px 14px rgba(0,0,0,.4); }
+  .tile.b { background:#1c1c20; color:#f6f0e2; border:1px solid #444; } .tile.w { background:#f6f0e2; color:#1c1c20; border:1px solid #c9bd9c; }
+  .badge { display:inline-flex; align-items:center; gap:3px; padding:1px 8px; border-radius:999px; font-size:11px; font-weight:900; color:#fff;
+    background:linear-gradient(90deg, #ff8a5b, #e8505b); }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; }
+  .chip { flex:1; min-width:0; padding:9px 6px; border-radius:12px; font-size:13px; font-weight:900; line-height:1.2;
+    background:rgba(0,0,0,.28); color:#c9b48f; border:2px solid rgba(240,215,140,.18); }
+  .chip small { display:block; font-size:10px; font-weight:700; opacity:.8; }
+  .chip.on { background:linear-gradient(180deg, #ffe9a6, var(--gold)); color:var(--wood-dark); border-color:#fff3c4; box-shadow:0 3px 0 #8a6a1a; }
+  .label { font-size:12px; font-weight:900; color:#c9b48f; letter-spacing:.5px; margin:12px 0 6px; text-align:left; }
+  .code { display:flex; gap:8px; justify-content:center; }
+  .code input { width:52px; height:62px; border-radius:12px; text-align:center; font:900 28px Georgia, serif; color:var(--wood-dark);
+    background:var(--parch); border:3px solid var(--wood-dark); box-shadow:inset 0 3px 6px rgba(0,0,0,.2); outline:none; }
+  .code input:focus { border-color:var(--gold); }
+  .big { width:100%; border-radius:16px; padding:15px; font-size:18px; font-weight:900; color:#fff; letter-spacing:.5px; transition:transform .08s; }
+  .big:active { transform:translateY(3px); }
+  .big.green { background:linear-gradient(180deg, #5be08a, #1f7a45 60%, #0c4a29); box-shadow:0 5px 0 #062815, 0 10px 18px rgba(0,0,0,.45); }
+  .big.gold { background:linear-gradient(180deg, #ffe9a6, var(--gold) 55%, #9a7414); color:var(--wood-dark); box-shadow:0 5px 0 #5e4508, 0 10px 18px rgba(0,0,0,.45); }
+  .big.wood { background:linear-gradient(180deg, var(--wood-hi), var(--wood-mid) 55%, var(--wood-dark)); box-shadow:0 5px 0 #1a0d06, 0 10px 18px rgba(0,0,0,.45); color:var(--gold-light); }
+  .big small { display:block; font-size:12px; font-weight:700; opacity:.85; }
+  .icon-btn { width:38px; height:38px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; font-size:18px;
+    background:rgba(0,0,0,.35); border:1px solid rgba(240,215,140,.25); color:var(--gold-light); }
+  .spect { display:flex; align-items:center; justify-content:center; gap:8px; font-size:13px; font-weight:800; color:#c9b48f; margin-top:10px; }
+  .spect input { width:18px; height:18px; accent-color:var(--gold); }
+
+  /* ---- A: 메인 메뉴형 ---- */
+  .A .screen { background:radial-gradient(ellipse at 50% 30%, var(--felt-light), var(--felt) 45%, var(--felt-dark)); }
+  .A .top { display:flex; align-items:center; gap:8px; padding:44px 14px 0; }
+  .A .prof { flex:1; display:flex; align-items:center; gap:8px; padding:6px 10px 6px 6px; border-radius:999px; background:rgba(0,0,0,.35); border:1px solid rgba(240,215,140,.25); }
+  .A .ava { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg, var(--gold), var(--wood-light)); display:flex; align-items:center; justify-content:center; font-weight:900; color:var(--wood-dark); }
+  .A .prof .nm { font-weight:900; font-size:14px; line-height:1.1; } .A .prof .st { font-size:11px; color:#c9b48f; }
+  .A .hero { position:relative; height:250px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .A .logo { font:900 34px 'Cinzel', serif; letter-spacing:2px; color:#fff3c4; text-shadow:0 3px 0 #5e4508, 0 0 24px rgba(212,175,55,.6); line-height:1; }
+  .A .logo small { display:block; font:800 13px 'Nunito', sans-serif; letter-spacing:6px; color:var(--gold); margin-top:6px; text-align:center; }
+  .A .fly { position:absolute; animation:bob 3.2s ease-in-out infinite; }
+  @keyframes bob { 50% { transform:translateY(-8px) rotate(var(--r)); } }
+  .A .menu { flex:1; padding:0 22px 26px; display:flex; flex-direction:column; justify-content:flex-end; gap:12px; }
+  .A .sheet { position:absolute; left:0; right:0; bottom:0; z-index:20; padding:16px 18px 26px; border-radius:24px 24px 0 0;
+    background:linear-gradient(180deg, #3a2414, #1f120a); border-top:3px solid var(--gold); transform:translateY(105%); transition:transform .3s cubic-bezier(.2,.9,.3,1); }
+  .A .sheet.open { transform:none; }
+  .A .sheet h3 { margin:0 0 4px; font-size:18px; text-align:center; }
+  .A .grab { width:44px; height:5px; border-radius:3px; background:#6b5a40; margin:0 auto 10px; }
+  .A .dim { position:absolute; inset:0; z-index:15; background:rgba(0,0,0,.5); opacity:0; pointer-events:none; transition:opacity .3s; }
+  .A .dim.open { opacity:1; pointer-events:auto; }
+  .A .coderow { display:flex; align-items:center; justify-content:center; gap:10px; } .A .dice { width:48px; height:48px; font-size:24px; }
+  .A .rlist .r { display:flex; align-items:center; gap:10px; padding:10px; border-radius:14px; background:rgba(0,0,0,.3); margin-bottom:8px; text-align:left; }
+  .A .rlist .c { font:900 20px Georgia, serif; color:var(--gold); min-width:58px; }
+  .A .rlist .i { flex:1; font-size:12px; color:#c9b48f; } .A .rlist .i b { display:block; color:var(--gold-light); font-size:14px; }
+  .A .rlist em { font-style:normal; font-weight:900; } .A .rlist em.wait { color:#7fd3a0; } .A .rlist em.play { color:#ff9b7a; }
+  .A .rlist button { padding:9px 16px; border-radius:10px; font-weight:900; background:var(--gold); color:var(--wood-dark); box-shadow:0 3px 0 #5e4508; }
+  .A .rlist button.spec { background:var(--sapphire); color:#fff; box-shadow:0 3px 0 #123a5c; }
+  .A .two2 { display:flex; gap:8px; margin-top:12px; } .A .two2 .big { padding:12px; font-size:16px; }
+  .A .shake { animation:shk .35s; } @keyframes shk { 25% { transform:translateX(-6px); } 50% { transform:translateX(6px); } 75% { transform:translateX(-3px); } }
+  .A .toast { position:absolute; left:50%; top:96px; z-index:40; transform:translate(-50%,-10px); opacity:0; pointer-events:none; white-space:nowrap;
+    padding:10px 16px; border-radius:999px; background:rgba(20,12,6,.95); border:2px solid var(--gold); font-size:13px; font-weight:900; transition:all .25s; }
+  .A .toast.show { opacity:1; transform:translate(-50%,0); }
+  .A .toast.bad { border-color:#ff6b5a; }
+  .A .prof { cursor:pointer; } .A .prof:active { transform:scale(.97); }
+  .A .prof .st::after { content:' ›'; color:var(--gold); }
+  /* 내 프로필 카드 */
+  .A .pcard { text-align:center; }
+  .A .pcard .ava { width:64px; height:64px; margin:0 auto 6px; font-size:28px; }
+  .A .pcard .nm { font-size:19px; font-weight:900; }
+  .A .ring { --p:34; position:relative; width:140px; height:140px; margin:14px auto 10px; border-radius:50%;
+    background:conic-gradient(var(--gold) calc(var(--p) * 1%), rgba(0,0,0,.35) 0); display:flex; align-items:center; justify-content:center; }
+  .A .ring::before { content:''; position:absolute; inset:12px; border-radius:50%; background:#24150b; }
+  .A .ring b { position:relative; font:900 38px Georgia, serif; color:#fff3c4; line-height:1; }
+  .A .ring b small { display:block; font:800 12px 'Nunito', sans-serif; color:#c9b48f; margin-top:4px; }
+  .A .stats { display:flex; gap:8px; margin-bottom:12px; }
+  .A .stats div { flex:1; padding:8px 4px; border-radius:12px; background:rgba(0,0,0,.3); font-size:11px; color:#c9b48f; font-weight:800; }
+  .A .stats div b { display:block; font:900 20px Georgia, serif; color:var(--gold-light); }
+  .A .titles { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
+  .A .titles span { padding:4px 10px; border-radius:999px; font-size:12px; font-weight:900; background:rgba(0,0,0,.3); color:#9c8a6c; border:1px solid rgba(240,215,140,.15); }
+  .A .titles span.own { color:var(--gold-light); border-color:rgba(240,215,140,.4); }
+  .A .titles span.eq { background:linear-gradient(90deg, #ff8a5b, #e8505b); color:#fff; border-color:transparent; }
+
+  /* ---- B: 하단 탭형 ---- */
+  .B .screen { background:linear-gradient(180deg, #24150b, #120a05); }
+  .B .head { padding:44px 16px 10px; display:flex; align-items:center; gap:10px; }
+  .B .head .logo { flex:1; font:900 20px 'Cinzel', serif; color:#fff3c4; letter-spacing:1px; }
+  .B .body { flex:1; overflow:auto; padding:0 16px 16px; }
+  .B .card { border-radius:20px; padding:14px; margin-bottom:12px; background:radial-gradient(ellipse at 50% -20%, var(--felt-light), var(--felt) 60%, var(--felt-dark));
+    border:2px solid rgba(240,215,140,.25); box-shadow:0 10px 20px rgba(0,0,0,.4); }
+  .B .card h3 { margin:0 0 10px; font-size:15px; display:flex; align-items:center; gap:6px; }
+  .B .me { display:flex; align-items:center; gap:12px; }
+  .B .me .ava { width:52px; height:52px; border-radius:16px; background:linear-gradient(135deg, var(--gold), var(--wood-light)); display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:900; color:var(--wood-dark); }
+  .B .me .nm { font-size:17px; font-weight:900; } .B .me .bar { height:8px; border-radius:4px; background:rgba(0,0,0,.35); overflow:hidden; margin-top:6px; width:180px; }
+  .B .me .bar i { display:block; height:100%; width:34%; background:linear-gradient(90deg, var(--gold), #ffe9a6); }
+  .B .me .st { font-size:12px; color:#c9b48f; margin-top:3px; }
+  .B .tabs { display:flex; padding:8px 8px 22px; background:#0d0704; border-top:1px solid #3a2414; }
+  .B .tabs button { flex:1; background:none; color:#7d6a4c; font-size:11px; font-weight:900; display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .B .tabs button b { font-size:21px; filter:grayscale(1); opacity:.7; }
+  .B .tabs button.on { color:var(--gold); } .B .tabs button.on b { filter:none; opacity:1; }
+  .B .rooms .r { display:flex; align-items:center; gap:10px; padding:10px; border-radius:14px; background:rgba(0,0,0,.25); margin-bottom:8px; }
+  .B .rooms .r .c { font:900 18px Georgia, serif; color:var(--gold); } .B .rooms .r .i { flex:1; font-size:12px; color:#c9b48f; }
+  .B .rooms .r .i b { display:block; color:var(--gold-light); font-size:14px; }
+  .B .rooms .r button { padding:8px 14px; border-radius:10px; font-weight:900; background:var(--gold); color:var(--wood-dark); }
+
+  /* ---- C: 지금 구성 그대로, 게임풍으로 ---- */
+  .C .screen { background:radial-gradient(ellipse at 50% 0%, var(--felt-light), var(--felt) 50%, var(--felt-dark)); }
+  .C .bar { display:flex; align-items:center; gap:8px; padding:44px 14px 10px; background:linear-gradient(180deg, #3d2110, #1c0f08); border-bottom:3px solid var(--gold); }
+  .C .bar .logo { flex:1; font:900 19px 'Cinzel', serif; color:#fff3c4; }
+  .C .body { flex:1; overflow:auto; padding:12px 16px 18px; }
+  .C .who { display:flex; align-items:center; justify-content:center; gap:6px; font-size:14px; font-weight:900; margin-bottom:12px; }
+  .C .who .st { color:#c9b48f; font-weight:800; }
+  .C .panel { border-radius:18px; padding:12px 14px 14px; background:rgba(0,0,0,.25); border:2px solid rgba(240,215,140,.2); margin-bottom:12px; }
+  .C .panel h3 { margin:0 0 8px; font-size:16px; text-align:center; color:#fff3c4; }
+  .C .two { display:flex; gap:8px; margin-top:12px; } .C .two .big { padding:13px 6px; font-size:16px; }
+</style>
+</head>
+<body>
+<div class="intro">
+  <h1>모바일 게임풍 로비 샘플</h1>
+  <p>세 화면 모두 지금 로비에 있는 것(방 코드 입장, 관전, 게임 모드·타일 분배·난이도, 방 목록·만들기·참가, 로그아웃, 게임 방법)을 그대로 담았습니다. 버튼·칩은 눌러 볼 수 있습니다.</p>
+</div>
+
+<div class="row">
+  <!-- A -->
+  <div class="col">
+    <h2>A. 메인 메뉴형</h2>
+    <p class="d">게임 첫 화면처럼 로고와 큰 버튼만. "방 만들기"를 누르면 설정이 아래에서 올라옵니다.</p>
+    <div class="phone A"><div class="screen"><div class="notch"></div>
+      <div class="top">
+        <div class="prof" data-open="profile" role="button" tabindex="0" aria-label="내 프로필 보기"><div class="ava">명</div><div><div class="nm">명관 <span class="badge">🌅 불사조</span></div><div class="st">승 12 · 35판</div></div></div>
+        <button class="icon-btn" title="게임 방법">?</button><button class="icon-btn" title="로그아웃">⎋</button>
+      </div>
+      <div class="hero">
+        <span class="tile b fly" style="left:40px;top:40px;--r:-12deg;transform:rotate(-12deg)">7</span>
+        <span class="tile w fly" style="right:46px;top:30px;--r:10deg;transform:rotate(10deg);animation-delay:-1s">3</span>
+        <span class="tile w fly" style="left:70px;bottom:20px;--r:8deg;transform:rotate(8deg);animation-delay:-2s">-</span>
+        <span class="tile b fly" style="right:64px;bottom:30px;--r:-8deg;transform:rotate(-8deg);animation-delay:-.5s">11</span>
+        <div class="logo">DA VINCI<small>CODE</small></div>
+      </div>
+      <div class="menu">
+        <div class="code" data-code><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"></div>
+        <button class="big green" data-join>방 참가하기<small>방 코드 4자리를 넣고 눌러요</small></button>
+        <label class="spect" style="margin-top:-4px"><input type="checkbox"> 관전으로 참가</label>
+        <button class="big gold" data-open="create">방 만들기</button>
+        <button class="big wood" data-open="rooms">방 목록</button>
+      </div>
+      <div class="toast" id="a-toast"></div>
+      <div class="dim" data-close-sheet></div>
+      <div class="sheet pcard" data-sheet="profile">
+        <div class="grab"></div>
+        <div class="ava" style="border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--wood-light));display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--wood-dark)">명</div>
+        <div class="nm">명관 <span class="badge">🌅 불사조</span></div>
+        <div class="ring" style="--p:34"><b>34%<small>승률</small></b></div>
+        <div class="stats"><div><b>35</b>판</div><div><b>12</b>승</div><div><b>23</b>패</div></div>
+        <div class="label" style="text-align:center">칭호 · 눌러서 달기</div>
+        <div class="titles"><span class="eq">🌅 불사조</span><span class="own">🎯 명사수</span><span class="own">🔥 연승왕</span><span>🃏 조커 사냥꾼</span><span>👑 전설</span></div>
+        <button class="big wood" style="margin-top:16px" data-close-sheet>닫기</button>
+      </div>
+      <div class="sheet" data-sheet="create">
+        <div class="grab"></div>
+        <h3>새 방 만들기</h3>
+        <div class="label">방 코드 · 친구에게 알려 줄 번호</div>
+        <div class="coderow"><div class="code" data-code id="a-newcode"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"></div>
+          <button class="icon-btn dice" type="button" title="아무 번호나" data-dice>🎲</button></div>
+        <div class="label">게임 모드</div>
+        <div class="chips"><button class="chip on">개인전<small>2~6인</small></button><button class="chip">2:2 팀전<small>4인</small></button></div>
+        <div class="label">시작 타일</div>
+        <div class="chips"><button class="chip on">자동<small>2~4인 4장 · 5~6인 3장</small></button><button class="chip">3장</button><button class="chip">4장</button><button class="chip">5장</button></div>
+        <div class="label">기록 보기</div>
+        <div class="chips"><button class="chip on">기본<small>알림창</small></button><button class="chip">초보자<small>목록으로 쌓기</small></button></div>
+        <label class="spect"><input type="checkbox"> 나는 관전만 하기</label>
+        <button class="big gold" style="margin-top:12px" data-create>방 만들기</button>
+      </div>
+      <div class="sheet" data-sheet="rooms">
+        <div class="grab"></div>
+        <h3>방 목록</h3>
+        <div class="rlist">
+          <div class="r"><span class="c">77••</span><span class="i"><b>개인전 · 자동</b><em class="wait">대기 중</em> · 3/6명</span><button data-pick="7777">참가</button></div>
+          <div class="r"><span class="c">12••</span><span class="i"><b>2:2 팀전 · 4장</b><em class="wait">대기 중</em> · 2/4명</span><button data-pick="1234">참가</button></div>
+          <div class="r"><span class="c">04••</span><span class="i"><b>개인전 · 3장</b><em class="play">게임 중</em> · 5명</span><button data-pick="0420" class="spec">관전</button></div>
+        </div>
+        <div class="verify" hidden>
+          <div class="label" style="text-align:center;margin-top:4px"><b id="a-vtitle">77••</b> 방 코드 뒤 두 자리까지 넣어 주세요</div>
+          <div class="code" data-code id="a-vcode"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"></div>
+          <div class="two2"><button class="big wood" type="button" data-vback>뒤로</button><button class="big green" type="button" data-vgo>들어가기</button></div>
+        </div>
+        <button class="big wood" style="margin-top:12px" data-close-sheet data-rclose>닫기</button>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- B -->
+  <div class="col">
+    <h2>B. 하단 탭형</h2>
+    <p class="d">앱처럼 아래에 탭(홈·방 목록·내 기록·설정). 홈에서 바로 입장하고, 방 목록은 탭 하나로.</p>
+    <div class="phone B"><div class="screen"><div class="notch"></div>
+      <div class="head"><div class="logo">DA VINCI CODE</div><button class="icon-btn" title="게임 방법">?</button></div>
+      <div class="body" data-tabbody="home">
+        <div class="card"><div class="me"><div class="ava">명</div><div><div class="nm">명관 <span class="badge">🌅 불사조</span></div><div class="bar"><i></i></div><div class="st">승률 34% · 승 12 / 35판</div></div></div></div>
+        <div class="card">
+          <h3>🔑 방 코드로 입장</h3>
+          <div class="code" data-code><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"></div>
+          <label class="spect"><input type="checkbox"> 관전으로 참가</label>
+          <button class="big green" style="margin-top:10px">입장</button>
+        </div>
+        <div class="card">
+          <h3>➕ 새 방 만들기</h3>
+          <div class="chips"><button class="chip on">개인전<small>2~6인</small></button><button class="chip">2:2 팀전<small>4인</small></button></div>
+          <div class="label">시작 타일</div>
+          <div class="chips"><button class="chip on">자동</button><button class="chip">3장</button><button class="chip">4장</button><button class="chip">5장</button></div>
+          <div class="label">기록 보기</div>
+          <div class="chips"><button class="chip on">기본</button><button class="chip">초보자</button></div>
+          <button class="big gold" style="margin-top:14px">방 만들기</button>
+        </div>
+      </div>
+      <div class="body rooms" data-tabbody="rooms" hidden>
+        <div class="card">
+          <h3>🃏 열린 방</h3>
+          <div class="r"><span class="c">7777</span><span class="i"><b>개인전 · 자동</b>3/6명 대기 중</span><button>참가</button></div>
+          <div class="r"><span class="c">1234</span><span class="i"><b>팀전 2:2</b>2/4명 대기 중</span><button>참가</button></div>
+          <div class="r"><span class="c">0420</span><span class="i"><b>개인전 · 초보자</b>게임 중 · 관전 가능</span><button>관전</button></div>
+        </div>
+      </div>
+      <div class="body" data-tabbody="me" hidden><div class="card"><h3>📊 내 기록</h3><div style="font-size:13px;color:#c9b48f">칭호, 승률, 최고 연속 정답 같은 걸 여기 모을 수 있어요.</div></div></div>
+      <div class="body" data-tabbody="set" hidden><div class="card"><h3>⚙️ 설정</h3><div class="chips"><button class="chip on">효과음 켬</button><button class="chip">끔</button></div><button class="big wood" style="margin-top:14px">로그아웃</button></div></div>
+      <div class="tabs">
+        <button class="on" data-tab="home"><b>🏠</b>홈</button><button data-tab="rooms"><b>🃏</b>방 목록</button><button data-tab="me"><b>📊</b>내 기록</button><button data-tab="set"><b>⚙️</b>설정</button>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- C -->
+  <div class="col">
+    <h2>C. 지금 구성 그대로</h2>
+    <p class="d">순서와 내용은 지금과 같고, 겉모양만 게임풍으로. 드롭다운 대신 칩, 방 코드는 네 칸. 바꾸는 양이 가장 적습니다.</p>
+    <div class="phone C"><div class="screen"><div class="notch"></div>
+      <div class="bar"><div class="logo">다빈치 코드</div><button class="icon-btn" title="게임 방법">?</button><button class="icon-btn" title="로그아웃">⎋</button></div>
+      <div class="body">
+        <div class="who">명관 <span class="badge">🌅 불사조</span> <span class="st">승 12 / 35판</span></div>
+        <div class="panel">
+          <h3>게임 입장하기</h3>
+          <div class="code" data-code><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"></div>
+          <label class="spect"><input type="checkbox"> 관전 모드로 참여하기</label>
+        </div>
+        <div class="panel">
+          <h3>새 방 만들기 옵션</h3>
+          <div class="label" style="margin-top:0">게임 모드</div>
+          <div class="chips"><button class="chip on">개인전<small>2~6인</small></button><button class="chip">2:2 팀전<small>4인</small></button></div>
+          <div class="label">타일 분배</div>
+          <div class="chips"><button class="chip on">자동<small>4인↓ 4장 · 5인↑ 3장</small></button><button class="chip">3장</button><button class="chip">4장</button><button class="chip">5장</button></div>
+          <div class="label">난이도</div>
+          <div class="chips"><button class="chip on">기본<small>알림창</small></button><button class="chip">초보자<small>목록</small></button></div>
+        </div>
+        <div class="two"><button class="big wood">방 목록</button><button class="big gold">방 만들기</button><button class="big green">참가하기</button></div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<script>
+// 칩: 같은 줄에서 하나만 켜진다
+document.querySelectorAll('.chips').forEach(g => g.addEventListener('click', e => {
+  const c = e.target.closest('.chip'); if (!c) return;
+  g.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === c));
+}));
+// 방 코드 네 칸: 숫자를 넣으면 다음 칸으로, 지우면 앞 칸으로
+document.querySelectorAll('[data-code]').forEach(box => {
+  const ins = [...box.querySelectorAll('input')];
+  ins.forEach((inp, i) => {
+    inp.addEventListener('input', () => { inp.value = inp.value.replace(/\D/g, '').slice(-1); if (inp.value && ins[i + 1]) ins[i + 1].focus(); });
+    inp.addEventListener('keydown', e => { if (e.key === 'Backspace' && !inp.value && ins[i - 1]) ins[i - 1].focus(); });
+  });
+});
+// A: 아래에서 올라오는 설정 시트
+const A = document.querySelector('.A');
+const sheet = (name) => {
+  A.querySelectorAll('[data-sheet]').forEach(s => s.classList.toggle('open', s.dataset.sheet === name));
+  A.querySelector('.dim').classList.toggle('open', !!name);
+};
+A.querySelectorAll('[data-open]').forEach(b => b.onclick = () => sheet(b.dataset.open));
+A.querySelectorAll('[data-close-sheet]').forEach(b => b.onclick = () => sheet(null));
+// 샘플용: 실제로는 서버에서 방을 찾고 대기실로 넘어간다
+const codeOf = el => [...el.querySelectorAll('input')].map(i => i.value).join('');
+const setCode = (el, s) => el.querySelectorAll('input').forEach((i, k) => i.value = s[k] || '');
+let toastT;
+function toast(msg, bad) {
+  const t = document.getElementById('a-toast'); t.textContent = msg; t.classList.toggle('bad', !!bad); t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2200);
+}
+function shake(el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+A.querySelector('[data-join]').onclick = () => {
+  const box = A.querySelector('.menu [data-code]'), c = codeOf(box);
+  if (c.length < 4) { shake(box); return toast('방 코드 4자리를 넣어 주세요', true); }
+  toast(`${c}번 방으로 들어갑니다… (대기실로 이동)`);
+};
+A.querySelector('[data-dice]').onclick = () => setCode(document.getElementById('a-newcode'), String(Math.floor(Math.random() * 10000)).padStart(4, '0'));
+A.querySelector('[data-create]').onclick = () => {
+  const box = document.getElementById('a-newcode'), c = codeOf(box);
+  if (c.length < 4) { shake(box); return toast('방 코드 4자리를 정해 주세요 (🎲를 눌러도 돼요)', true); }
+  sheet(null); toast(`${c}번 방을 만들었어요! 친구에게 번호를 알려 주세요`);
+};
+document.querySelector('.A [data-open="create"]').addEventListener('click', () => {
+  const box = document.getElementById('a-newcode'); if (codeOf(box).length < 4) A.querySelector('[data-dice]').click();
+});
+let picked = null;
+const showVerify = on => { A.querySelector('.rlist').hidden = on; A.querySelector('.verify').hidden = !on; A.querySelector('[data-rclose]').hidden = on; };
+A.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
+  picked = b.dataset.pick; document.getElementById('a-vtitle').textContent = picked.slice(0, 2) + '••';
+  setCode(document.getElementById('a-vcode'), picked.slice(0, 2)); showVerify(true);
+  document.getElementById('a-vcode').querySelectorAll('input')[2].focus();
+});
+A.querySelector('[data-vback]').onclick = () => showVerify(false);
+A.querySelector('[data-vgo]').onclick = () => {
+  const box = document.getElementById('a-vcode');
+  if (codeOf(box) !== picked) { shake(box); return toast('방 코드가 맞지 않아요', true); }
+  showVerify(false); sheet(null); toast(`${picked}번 방으로 들어갑니다…`);
+};
+// 칭호: 가진 것만 눌러서 달고 뗄 수 있다
+A.querySelector('.titles').addEventListener('click', e => {
+  const t = e.target.closest('span'); if (!t || !(t.classList.contains('own') || t.classList.contains('eq'))) return;
+  const on = !t.classList.contains('eq');
+  A.querySelectorAll('.titles span.eq').forEach(x => { x.classList.remove('eq'); x.classList.add('own'); });
+  if (on) { t.classList.remove('own'); t.classList.add('eq'); }
+  A.querySelectorAll('.prof .badge, .pcard .nm .badge').forEach(b => { b.hidden = !on; if (on) b.textContent = t.textContent; });
+});
+// B: 하단 탭
+const B = document.querySelector('.B');
+B.querySelectorAll('[data-tab]').forEach(t => t.onclick = () => {
+  B.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('on', x === t));
+  B.querySelectorAll('[data-tabbody]').forEach(b => b.hidden = b.dataset.tabbody !== t.dataset.tab);
+});
+</script>
+</body>
+</html>
