@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>로고·배경 샘플</title>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Cinzel:wght@700;900&family=Cinzel+Decorative:wght@700;900&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root { --gold:#d4af37; --gold-light:#f0d78c; --wood-dark:#2b1810; --wood-mid:#6b4226; --wood-hi:#b98342; --parch:#f2e8d0; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:18px 16px 40px; background:#140c06; color:var(--gold-light); font-family:'Nunito', "Malgun Gothic", sans-serif; }
+  .intro { max-width:1240px; margin:0 auto 10px; } .intro h1 { font-size:20px; margin:0 0 4px; } .intro p { margin:0 0 10px; color:#c9b48f; font-size:14px; }
+  .bgpick { display:flex; flex-wrap:wrap; gap:8px; max-width:1240px; margin:0 auto 18px; }
+  .bgpick button { display:flex; align-items:center; gap:8px; padding:7px 12px 7px 7px; border-radius:999px; border:2px solid #4a3420; background:#24150b;
+    color:#c9b48f; font:inherit; font-weight:900; font-size:13px; cursor:pointer; }
+  .bgpick button i { width:24px; height:24px; border-radius:50%; border:1px solid rgba(255,255,255,.3); }
+  .bgpick button.on { border-color:var(--gold); color:#fff3c4; }
+  .row { display:flex; flex-wrap:wrap; gap:26px; justify-content:center; }
+  .col { display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .col h2 { margin:0; font-size:17px; } .col p { margin:0; max-width:340px; text-align:center; font-size:13px; color:#c9b48f; }
+
+  /* 배경 (body의 data-bg로 바뀐다) */
+  body[data-bg="felt"]   { --bg:radial-gradient(ellipse at 50% 30%, #167a53, #0b5e3f 45%, #063d29); }
+  body[data-bg="wine"]   { --bg:radial-gradient(ellipse at 50% 30%, #8a2433, #5e1420 45%, #2e070d); }
+  body[data-bg="navy"]   { --bg:radial-gradient(ellipse at 50% 30%, #23406e, #142848 45%, #070f1f); }
+  body[data-bg="walnut"] { --bg:repeating-linear-gradient(95deg, rgba(255,255,255,.025) 0 1px, transparent 1px 5px), radial-gradient(ellipse at 50% 30%, #6b4226, #3d2110 50%, #1a0d06); }
+  body[data-bg="noir"]   { --bg:radial-gradient(ellipse at 50% 30%, #34302a, #1d1b18 50%, #0a0908); }
+  body[data-bg="sepia"]  { --bg:radial-gradient(ellipse at 50% 30%, #7a5a32, #4e3519 50%, #24170a); }
+
+  .phone { width:340px; height:690px; border-radius:40px; padding:11px; background:#000; box-shadow:0 0 0 2px #333, 0 20px 50px rgba(0,0,0,.7); }
+  .screen { position:relative; height:100%; border-radius:30px; overflow:hidden; display:flex; flex-direction:column; padding:40px 16px 20px; background:var(--bg); }
+  .notch { position:absolute; left:50%; top:8px; transform:translateX(-50%); width:100px; height:24px; border-radius:14px; background:#000; }
+  .top { display:flex; gap:8px; align-items:center; }
+  .prof { flex:1; display:flex; align-items:center; gap:8px; padding:5px 12px 5px 5px; border-radius:999px; background:rgba(0,0,0,.35); border:1px solid rgba(240,215,140,.25); font-size:13px; font-weight:900; }
+  .prof .ava { width:30px; height:30px; border-radius:50%; background:linear-gradient(135deg, var(--gold), #8a5a2e); color:var(--wood-dark); display:flex; align-items:center; justify-content:center; }
+  .prof small { display:block; font-size:10px; color:#c9b48f; }
+  .ic { width:36px; height:36px; border-radius:11px; background:rgba(0,0,0,.35); border:1px solid rgba(240,215,140,.25); display:flex; align-items:center; justify-content:center; font-weight:900; }
+  .hero { position:relative; flex:1; display:flex; align-items:center; justify-content:center; }
+  .t { position:absolute; display:flex; align-items:center; justify-content:center; width:32px; height:45px; border-radius:6px; font:900 20px Georgia, serif;
+    transform:rotate(var(--r)); animation:bob 3.2s ease-in-out infinite; box-shadow:0 4px 0 rgba(0,0,0,.45), 0 8px 14px rgba(0,0,0,.4); }
+  .t.b { background:#1c1c20; color:#f6f0e2; border:1px solid #444; } .t.w { background:#f6f0e2; color:#1c1c20; border:1px solid #c9bd9c; }
+  @keyframes bob { 50% { transform:translateY(-8px) rotate(var(--r)); } }
+  .menu { display:flex; flex-direction:column; gap:11px; }
+  .big { border-radius:15px; padding:13px; text-align:center; font-size:17px; font-weight:900; }
+  .big small { display:block; font-size:11px; font-weight:700; opacity:.85; }
+  .big.green { color:#fff; background:linear-gradient(180deg, #5be08a, #1f7a45 60%, #0c4a29); box-shadow:0 5px 0 #062815; }
+  .big.gold { color:var(--wood-dark); background:linear-gradient(180deg, #ffe9a6, var(--gold) 55%, #9a7414); box-shadow:0 5px 0 #5e4508; }
+  .big.wood { color:var(--gold-light); background:linear-gradient(180deg, var(--wood-hi), var(--wood-mid) 55%, var(--wood-dark)); box-shadow:0 5px 0 #1a0d06; }
+
+  /* ---- 로고 A: 금박 각인 ---- */
+  .logoA { text-align:center; }
+  .logoA .main { font:900 38px 'Cinzel', serif; letter-spacing:3px; line-height:1;
+    background:linear-gradient(180deg, #fff6d0 0%, #f3d77a 38%, #b8862a 52%, #f6e3a1 70%, #a8781f 100%); -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 2px 0 #4a3206) drop-shadow(0 0 14px rgba(212,175,55,.45)); }
+  .logoA .sub { display:flex; align-items:center; gap:10px; justify-content:center; margin-top:10px; font:900 14px 'Cinzel', serif; letter-spacing:9px; color:var(--gold); padding-left:9px; }
+  .logoA .sub::before, .logoA .sub::after { content:''; width:46px; height:2px; background:linear-gradient(90deg, transparent, var(--gold)); }
+  .logoA .sub::after { transform:scaleX(-1); }
+  .logoA .gem { display:block; width:9px; height:9px; margin:10px auto 0; transform:rotate(45deg); background:var(--gold); box-shadow:0 0 10px var(--gold); }
+
+  /* ---- 로고 B: CODE를 타일로 ---- */
+  .logoB { text-align:center; }
+  .logoB .main { font:900 36px 'Cinzel Decorative', 'Cinzel', serif; letter-spacing:2px; color:#fff3c4; line-height:1;
+    text-shadow:0 2px 0 #8a6a1a, 0 4px 0 #4a3206, 0 0 22px rgba(212,175,55,.5); }
+  .logoB .tiles { display:flex; gap:7px; justify-content:center; margin-top:14px; }
+  .logoB .tiles span { width:38px; height:52px; border-radius:7px; display:flex; align-items:center; justify-content:center; font:900 26px 'Cinzel', serif;
+    box-shadow:0 4px 0 rgba(0,0,0,.5), 0 8px 16px rgba(0,0,0,.4); }
+  .logoB .tiles span:nth-child(odd) { background:#1c1c20; color:#f3d77a; border:1px solid #555; transform:rotate(-4deg); }
+  .logoB .tiles span:nth-child(even) { background:#f6f0e2; color:#1c1c20; border:1px solid #c9bd9c; transform:rotate(4deg) translateY(-3px); }
+
+  /* ---- 로고 C: 한글 타이틀 ---- */
+  .logoC { text-align:center; }
+  .logoC .main { font:400 50px 'Black Han Sans', sans-serif; line-height:1; letter-spacing:1px;
+    background:linear-gradient(180deg, #fffbe6, #ffe08a 45%, #e0a92e 55%, #ffe9a6); -webkit-background-clip:text; background-clip:text; color:transparent;
+    -webkit-text-stroke:1px rgba(74,50,6,.6); filter:drop-shadow(0 4px 0 #3d2604) drop-shadow(0 0 16px rgba(255,214,90,.35)); }
+  .logoC .sub { display:inline-block; margin-top:10px; padding:3px 14px; border-radius:999px; font:900 12px 'Cinzel', serif; letter-spacing:4px;
+    color:var(--wood-dark); background:linear-gradient(180deg, #ffe9a6, var(--gold)); box-shadow:0 3px 0 #5e4508; }
+</style>
+</head>
+<body data-bg="felt">
+<div class="intro">
+  <h1>로고 문구 · 배경색 샘플</h1>
+  <p>위에서 배경을 고르면 세 화면이 같이 바뀝니다. 로고와 배경을 따로 골라 주시면 됩니다.</p>
+</div>
+<div class="bgpick" id="bgpick">
+  <button data-bg="felt" class="on"><i style="background:#0b5e3f"></i>초록 펠트 (지금)</button>
+  <button data-bg="wine"><i style="background:#5e1420"></i>와인 레드 벨벳</button>
+  <button data-bg="navy"><i style="background:#142848"></i>밤하늘 남색</button>
+  <button data-bg="walnut"><i style="background:#3d2110"></i>호두나무</button>
+  <button data-bg="noir"><i style="background:#1d1b18"></i>흑단 (검정·금)</button>
+  <button data-bg="sepia"><i style="background:#4e3519"></i>르네상스 세피아</button>
+</div>
+
+<div class="row" id="row"></div>
+
+<template id="phone">
+  <div class="phone"><div class="screen"><div class="notch"></div>
+    <div class="top"><div class="prof"><span class="ava">명</span><span>명관<small>승 13 · 36판 ›</small></span></div><span class="ic">?</span><span class="ic">⎋</span></div>
+    <div class="hero">
+      <span class="t b" style="left:8%;top:12%;--r:-12deg">7</span>
+      <span class="t w" style="right:10%;top:8%;--r:10deg;animation-delay:-1s">3</span>
+      <span class="t w" style="left:14%;bottom:8%;--r:8deg;animation-delay:-2s">-</span>
+      <span class="t b" style="right:12%;bottom:12%;--r:-8deg;animation-delay:-.5s">11</span>
+      <div class="slot"></div>
+    </div>
+    <div class="menu">
+      <div class="big green">방 참가하기<small>친구에게 받은 방 코드로 들어가요</small></div>
+      <div class="big gold">방 만들기</div>
+      <div class="big wood">방 목록</div>
+    </div>
+  </div></div>
+</template>
+
+<script>
+const logos = [
+  { name: 'A. 금박 각인', desc: '금박을 눌러 새긴 듯한 영문 로고. 양옆 금선 사이에 CODE, 아래 작은 보석.',
+    html: '<div class="logoA"><div class="main">DA VINCI</div><div class="sub">CODE</div><span class="gem"></span></div>' },
+  { name: 'B. CODE를 타일로', desc: '게임 타일 네 장(검·흰 번갈아)이 C·O·D·E를 이룹니다. 다빈치 코드다운 느낌.',
+    html: '<div class="logoB"><div class="main">DA VINCI</div><div class="tiles"><span>C</span><span>O</span><span>D</span><span>E</span></div></div>' },
+  { name: 'C. 한글 타이틀', desc: '굵은 한글 "다빈치 코드"를 금색 입체로. 영문은 아래 작은 금색 띠. 국산 모바일 게임 느낌.',
+    html: '<div class="logoC"><div class="main">다빈치 코드</div><div class="sub">DA VINCI CODE</div></div>' },
+];
+const row = document.getElementById('row'), tpl = document.getElementById('phone');
+logos.forEach(l => {
+  const col = document.createElement('div'); col.className = 'col';
+  const h = document.createElement('h2'); h.textContent = l.name;
+  const p = document.createElement('p'); p.textContent = l.desc;
+  const ph = tpl.content.cloneNode(true);
+  ph.querySelector('.slot').outerHTML = l.html;   // 샘플 내부의 고정된 마크업만 넣는다
+  col.append(h, p, ph); row.appendChild(col);
+});
+document.getElementById('bgpick').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  document.querySelectorAll('#bgpick button').forEach(x => x.classList.toggle('on', x === b));
+  document.body.dataset.bg = b.dataset.bg;
+});
+</script>
+</body>
+</html>

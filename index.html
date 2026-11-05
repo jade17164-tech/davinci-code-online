@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>다빈치 코드 온라인 (모드 및 타일 분배 방식별 방 분리)</title>
   <style>
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap');
 
 :root {
   --felt: #0b5e3f;
@@ -28,6 +28,12 @@
   --sapphire: #2563a8;
   --sapphire-dark: #123a5c;
 }
+/* 배경색 고르기 (설정). 카드의 펠트 색 세 개만 바꾼다. 기본은 위의 초록 펠트 */
+html[data-bg="wine"]   { --felt-light: #8a2433; --felt: #5e1420; --felt-dark: #2e070d; }
+html[data-bg="navy"]   { --felt-light: #23406e; --felt: #142848; --felt-dark: #070f1f; }
+html[data-bg="walnut"] { --felt-light: #6b4226; --felt: #3d2110; --felt-dark: #1a0d06; }
+html[data-bg="noir"]   { --felt-light: #34302a; --felt: #1d1b18; --felt-dark: #0a0908; }
+html[data-bg="sepia"]  { --felt-light: #7a5a32; --felt: #4e3519; --felt-dark: #24170a; }
 
 * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
 
@@ -578,9 +584,23 @@ body.in-lobby .game-container { max-width: 440px; }
 .lb-prof .st::after { content: ' ›'; color: var(--gold); }
 .lb-icon { flex-shrink: 0; width: 40px; height: 40px; margin: 0; padding: 0; border-radius: 12px; font-size: 18px; box-shadow: none;
   background: rgba(0,0,0,.35); border: 1px solid rgba(240,215,140,.25); color: var(--gold-light); }
-.lb-hero { position: relative; flex: 1; min-height: 190px; display: flex; align-items: center; justify-content: center; }
-.lb-logo { font: 900 34px 'Cinzel', serif; letter-spacing: 2px; color: #fff3c4; line-height: 1; text-shadow: 0 3px 0 #5e4508, 0 0 24px rgba(212,175,55,.6); }
-.lb-logo small { display: block; margin-top: 6px; font: 800 13px 'Nunito', sans-serif; letter-spacing: 6px; color: var(--gold); }
+.lb-hero { position: relative; flex: 1; min-height: 190px; display: flex; align-items: center; justify-content: center; container-type: size; }
+/* 로고가 들어갈 자리가 낮으면(가로 화면) 떠 있는 타일을 양옆으로 비킨다 */
+@container (max-height: 300px) { .lb-tile { top: auto !important; bottom: auto !important; } .lb-tile:nth-child(odd) { left: 3% !important; } .lb-tile:nth-child(even) { right: 3% !important; }
+  .lb-tile:nth-child(1), .lb-tile:nth-child(2) { top: 8% !important; } .lb-tile:nth-child(3), .lb-tile:nth-child(4) { bottom: 8% !important; } }
+.lb-logo { text-align: center; }
+.lb-logo .main { font: 900 38px 'Cinzel', serif; font-size: clamp(30px, min(15cqw, 25cqh), 72px); letter-spacing: 3px; line-height: 1;
+  background: linear-gradient(180deg, #fff6d0 0%, #f3d77a 38%, #b8862a 52%, #f6e3a1 70%, #a8781f 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 2px 0 #4a3206) drop-shadow(0 0 14px rgba(212,175,55,.45)); }
+.lb-logo .sub { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 12px; padding-left: 12px; font: 900 14px 'Cinzel', serif; font-size: clamp(12px, min(5cqw, 7cqh), 24px); letter-spacing: 12px; color: var(--gold); }
+.lb-logo .sub::before, .lb-logo .sub::after { content: ''; width: clamp(30px, 16cqw, 90px); height: 2px; background: linear-gradient(90deg, transparent, var(--gold)); }
+.lb-logo .sub::after { transform: scaleX(-1); }
+.lb-logo .gem { display: block; width: 12px; height: 12px; margin: 14px auto 0; transform: rotate(45deg); background: var(--gold); box-shadow: 0 0 10px var(--gold); }
+.lb-swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.lb-swatches button { margin: 0; padding: 8px 4px 9px; border-radius: 14px; font-size: 12px; font-weight: 900; color: var(--gold-light); box-shadow: none;
+  background: rgba(0,0,0,.28); border: 2px solid rgba(240,215,140,.18); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.lb-swatches button i { width: 100%; height: 44px; border-radius: 9px; border: 1px solid rgba(255,255,255,.2); }
+.lb-swatches button.on { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(212,175,55,.35); }
 .lb-tile { position: absolute; display: flex; align-items: center; justify-content: center; width: 34px; height: 48px; border-radius: 6px;
   font: 900 22px Georgia, serif; transform: rotate(var(--r)); animation: lbBob 3.2s ease-in-out infinite;
   box-shadow: 0 4px 0 rgba(0,0,0,.45), 0 8px 14px rgba(0,0,0,.4); }
@@ -643,6 +663,7 @@ body.in-lobby .game-container { max-width: 440px; }
 </style>
 </head>
 <body>
+<script>try { const bg = localStorage.getItem('davinci_bg'); if (bg) document.documentElement.dataset.bg = bg; } catch (e) {}</script>
 
 <div class="game-container">
   <h1>다빈치 코드</h1>
@@ -688,6 +709,7 @@ body.in-lobby .game-container { max-width: 440px; }
   <div id="lobby-screen" class="card hidden">
     <div class="lb-top">
       <div id="account-bar" class="lb-prof" role="button" tabindex="0" aria-label="내 프로필 보기"></div>
+      <button id="btn-open-settings" class="lb-icon" title="설정" aria-label="설정">⚙</button>
       <button id="open-rules-lobby" class="lb-icon" title="게임 방법" aria-label="게임 방법">?</button>
       <button id="btn-logout" class="lb-icon" title="로그아웃" aria-label="로그아웃">⎋</button>
     </div>
@@ -696,12 +718,27 @@ body.in-lobby .game-container { max-width: 440px; }
       <span class="lb-tile w" style="right:14%;top:10%;--r:10deg;animation-delay:-1s">3</span>
       <span class="lb-tile w" style="left:20%;bottom:8%;--r:8deg;animation-delay:-2s">-</span>
       <span class="lb-tile b" style="right:18%;bottom:12%;--r:-8deg;animation-delay:-.5s">11</span>
-      <div class="lb-logo">DA VINCI<small>CODE</small></div>
+      <div class="lb-logo"><div class="main">DA VINCI</div><div class="sub">CODE</div><span class="gem"></span></div>
     </div>
     <div class="lb-menu">
       <button id="btn-open-join" class="lb-big green">방 참가하기<small>친구에게 받은 방 코드로 들어가요</small></button>
       <button id="btn-open-create" class="lb-big gold">방 만들기</button>
       <button id="btn-open-room-list" class="lb-big wood">방 목록</button>
+    </div>
+
+    <!-- 설정: 배경색. 기기마다 따로 저장된다 -->
+    <div id="settings-sheet" class="lb-sheet" role="dialog" aria-label="설정">
+      <div class="lb-grab"></div>
+      <h3>설정</h3>
+      <div class="lb-label">배경색</div>
+      <div class="lb-swatches" id="bg-swatches">
+        <button type="button" data-bg=""><i style="background:radial-gradient(ellipse at 50% 30%, #167a53, #063d29)"></i>초록 펠트</button>
+        <button type="button" data-bg="wine"><i style="background:radial-gradient(ellipse at 50% 30%, #8a2433, #2e070d)"></i>와인 레드</button>
+        <button type="button" data-bg="navy"><i style="background:radial-gradient(ellipse at 50% 30%, #23406e, #070f1f)"></i>밤하늘 남색</button>
+        <button type="button" data-bg="walnut"><i style="background:radial-gradient(ellipse at 50% 30%, #6b4226, #1a0d06)"></i>호두나무</button>
+        <button type="button" data-bg="noir"><i style="background:radial-gradient(ellipse at 50% 30%, #34302a, #0a0908)"></i>흑단</button>
+        <button type="button" data-bg="sepia"><i style="background:radial-gradient(ellipse at 50% 30%, #7a5a32, #24170a)"></i>세피아</button>
+      </div>
     </div>
 
     <!-- 방 참가하기: 코드 네 칸을 넣는 창 -->
@@ -1838,10 +1875,12 @@ const createSheet = document.getElementById('create-sheet');
 const createDim = document.getElementById('create-dim');
 const createCodeInput = document.getElementById('create-room-input');
 const joinSheet = document.getElementById('join-sheet');
+const settingsSheet = document.getElementById('settings-sheet');
 // which: 'join' | 'create' | null(닫기). 두 창이 어두운 배경 하나를 같이 쓴다.
 function setSheet(which) {
   joinSheet.classList.toggle('open', which === 'join');
   createSheet.classList.toggle('open', which === 'create');
+  settingsSheet.classList.toggle('open', which === 'settings');
   createDim.classList.toggle('open', !!which);
   if (which === 'create' && !/^\d{4}$/.test(createCodeInput.value)) rollRoomCode();
   // 폰 키보드가 뜨려면 누른 그 순간에 바로 포커스해야 한다
@@ -1852,6 +1891,17 @@ function setSheet(which) {
 }
 function rollRoomCode() { createCodeInput.value = String(Math.floor(Math.random() * 10000)).padStart(4, '0'); codeBoxRender['create-room-input'](); }
 document.getElementById('btn-open-join').addEventListener('click', () => setSheet('join'));
+document.getElementById('btn-open-settings').addEventListener('click', () => setSheet('settings'));
+// 배경색: <html data-bg>로 펠트 색을 바꾸고 이 기기에 기억한다 (처음 그리는 색은 <body> 바로 아래 스크립트가 맞춘다)
+const bgSwatches = document.getElementById('bg-swatches');
+const markBg = () => bgSwatches.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.bg === (document.documentElement.dataset.bg || '')));
+bgSwatches.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.bg) document.documentElement.dataset.bg = b.dataset.bg; else delete document.documentElement.dataset.bg;
+  try { localStorage.setItem('davinci_bg', b.dataset.bg); } catch (err) {}
+  markBg();
+});
+markBg();
 document.getElementById('btn-open-create').addEventListener('click', () => setSheet('create'));
 createDim.addEventListener('click', () => setSheet(null));
 document.getElementById('btn-dice').addEventListener('click', rollRoomCode);
