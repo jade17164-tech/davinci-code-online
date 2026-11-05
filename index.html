@@ -645,7 +645,11 @@ body.in-lobby .game-container { max-width: 440px; }
 .lb-tabs { display: flex; gap: 4px; margin-bottom: 12px; padding: 4px; border-radius: 14px; background: rgba(0,0,0,.35); }
 .lb-tabs button { flex: 1; margin: 0; padding: 9px; border: 0; border-radius: 10px; background: none; box-shadow: none; font-size: 15px; font-weight: 900; color: #c9b48f; }
 .lb-tabs button.on { background: var(--gold); color: var(--wood-dark); text-shadow: none; }
-#auth-sheet input { width: 100%; margin: 0 0 10px; padding: 14px 16px; border-radius: 14px; border-width: 3px; font-size: 16px; text-align: left; }
+.lb-field { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; padding: 0 14px; border-radius: 14px; background: var(--parchment);
+  border: 3px solid var(--wood-dark); box-shadow: inset 0 2px 4px rgba(0,0,0,.25); }
+.lb-field:focus-within { box-shadow: inset 0 2px 4px rgba(0,0,0,.25), 0 0 0 3px rgba(212,175,55,.45); }
+.lb-field i { font-style: normal; font-size: 18px; }
+.lb-field input { flex: 1; min-width: 0; width: auto; margin: 0; padding: 14px 0; border: 0; background: none; box-shadow: none; font-size: 16px; text-align: left; }
 .room-choice-list { display: flex; flex-direction: column; gap: 10px; margin: 10px 0; }
 /* 프로필 카드: 승률 원 */
 .pf-ring { --p: 0; position: relative; width: 130px; height: 130px; margin: 10px auto; border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -703,9 +707,9 @@ body.in-lobby .game-container { max-width: 440px; }
     <div id="auth-sheet" class="lb-sheet" role="dialog" aria-label="로그인">
       <div class="lb-grab"></div>
       <div id="auth-tabs" class="lb-tabs"><button type="button" data-m="login">로그인</button><button type="button" data-m="register">회원가입</button></div>
-      <input type="text" id="auth-username-input" placeholder="아이디 (영문/숫자/밑줄 3~16자)" maxlength="16" autocomplete="username">
-      <input type="password" id="auth-password-input" placeholder="비밀번호 (6자 이상)" autocomplete="current-password">
-      <input type="text" id="auth-nickname-input" placeholder="닉네임" maxlength="12" class="hidden">
+      <label class="lb-field"><i aria-hidden="true">👤</i><input type="text" id="auth-username-input" placeholder="아이디 (영문/숫자/밑줄 3~16자)" maxlength="16" autocomplete="username"></label>
+      <label class="lb-field"><i aria-hidden="true">🔒</i><input type="password" id="auth-password-input" placeholder="비밀번호 (6자 이상)" autocomplete="current-password"></label>
+      <label class="lb-field hidden" id="auth-nickname-field"><i aria-hidden="true">✏️</i><input type="text" id="auth-nickname-input" placeholder="닉네임" maxlength="12"></label>
       <button id="btn-auth-submit" class="lb-big gold">로그인</button>
     </div>
   </div>
@@ -1216,7 +1220,7 @@ const authSheet = document.getElementById('auth-sheet');
 const authDim = document.getElementById('auth-dim');
 function renderAuthMode() {
   const nicknameField = document.getElementById('auth-nickname-input');
-  nicknameField.classList.toggle('hidden', authMode === 'login');
+  document.getElementById('auth-nickname-field').classList.toggle('hidden', authMode === 'login');
   if (authMode !== 'login' && !nicknameField.value.trim()) nicknameField.value = getSuggestedNickname();
   document.getElementById('btn-auth-submit').innerText = authMode === 'login' ? '로그인' : '가입하기';
   document.querySelectorAll('#auth-tabs button').forEach(b => b.classList.toggle('on', b.dataset.m === authMode));
