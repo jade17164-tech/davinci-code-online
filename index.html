@@ -699,12 +699,20 @@ body.in-lobby .game-container { max-width: 440px; }
       <div class="lb-logo">DA VINCI<small>CODE</small></div>
     </div>
     <div class="lb-menu">
-      <div class="lb-code4" data-target="room-input" data-label="방 코드"></div>
-      <input type="hidden" id="room-input">
-      <button id="btn-join-room" class="lb-big green">방 참가하기<small>방 코드 4자리를 넣고 눌러요</small></button>
-      <label class="lb-check"><input type="checkbox" id="spectator-mode-checkbox"> 관전으로 참가</label>
+      <button id="btn-open-join" class="lb-big green">방 참가하기<small>친구에게 받은 방 코드로 들어가요</small></button>
       <button id="btn-open-create" class="lb-big gold">방 만들기</button>
       <button id="btn-open-room-list" class="lb-big wood">방 목록</button>
+    </div>
+
+    <!-- 방 참가하기: 코드 네 칸을 넣는 창 -->
+    <div id="join-sheet" class="lb-sheet" role="dialog" aria-label="방 참가하기">
+      <div class="lb-grab"></div>
+      <h3>방 참가하기</h3>
+      <div class="lb-label">친구에게 받은 방 코드</div>
+      <div class="lb-code4" data-target="room-input" data-label="방 코드"></div>
+      <input type="hidden" id="room-input">
+      <label class="lb-check"><input type="checkbox" id="spectator-mode-checkbox"> 관전으로 참가</label>
+      <button id="btn-join-room" class="lb-big green" style="margin-top:12px;">참가하기</button>
     </div>
 
     <!-- 방 만들기: 아래에서 올라오는 설정 창. 칩은 숨겨 둔 select의 값을 바꾼다 -->
@@ -1815,7 +1823,7 @@ const lobbyScreenEl = document.getElementById('lobby-screen');
 new MutationObserver(() => {
   const shown = !lobbyScreenEl.classList.contains('hidden');
   document.body.classList.toggle('in-lobby', shown);
-  if (!shown) setCreateSheet(false);
+  if (!shown) setSheet(null);
 }).observe(lobbyScreenEl, { attributes: true, attributeFilter: ['class'] });
 document.getElementById('chat-input-game').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendChatMessage(); });
 
@@ -1829,14 +1837,23 @@ document.getElementById('close-rules-btn').addEventListener('click', () => modal
 const createSheet = document.getElementById('create-sheet');
 const createDim = document.getElementById('create-dim');
 const createCodeInput = document.getElementById('create-room-input');
-function setCreateSheet(open) {
-  createSheet.classList.toggle('open', open);
-  createDim.classList.toggle('open', open);
-  if (open && !/^\d{4}$/.test(createCodeInput.value)) rollRoomCode();
+const joinSheet = document.getElementById('join-sheet');
+// which: 'join' | 'create' | null(닫기). 두 창이 어두운 배경 하나를 같이 쓴다.
+function setSheet(which) {
+  joinSheet.classList.toggle('open', which === 'join');
+  createSheet.classList.toggle('open', which === 'create');
+  createDim.classList.toggle('open', !!which);
+  if (which === 'create' && !/^\d{4}$/.test(createCodeInput.value)) rollRoomCode();
+  // 폰 키보드가 뜨려면 누른 그 순간에 바로 포커스해야 한다
+  if (which === 'join') {
+    const boxes = [...joinSheet.querySelectorAll('.lb-code4 input')];
+    (boxes.find(b => !b.value) || boxes[3]).focus({ preventScroll: true });
+  }
 }
 function rollRoomCode() { createCodeInput.value = String(Math.floor(Math.random() * 10000)).padStart(4, '0'); codeBoxRender['create-room-input'](); }
-document.getElementById('btn-open-create').addEventListener('click', () => setCreateSheet(true));
-createDim.addEventListener('click', () => setCreateSheet(false));
+document.getElementById('btn-open-join').addEventListener('click', () => setSheet('join'));
+document.getElementById('btn-open-create').addEventListener('click', () => setSheet('create'));
+createDim.addEventListener('click', () => setSheet(null));
 document.getElementById('btn-dice').addEventListener('click', rollRoomCode);
 // 방 코드 네 칸. 화면은 칸 네 개, 값은 숨긴 input(room-input 등)에 모아 둔다 — 나머지 코드는 그 값을 읽는다.
 // 숫자를 넣으면 다음 칸, 빈칸에서 지우면 앞 칸, 네 자리를 붙여 넣으면 한 번에 채운다.
