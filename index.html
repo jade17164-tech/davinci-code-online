@@ -588,11 +588,11 @@ body.in-lobby .game-container { max-width: 440px; }
 .lb-tile.w { background: #f6f0e2; color: #1c1c20; border: 1px solid #c9bd9c; }
 @keyframes lbBob { 50% { transform: translateY(-8px) rotate(var(--r)); } }
 .lb-menu { display: flex; flex-direction: column; gap: 12px; }
-.lb-code { width: 100%; margin: 0; padding: 10px 0 10px 22px; border-radius: 14px; text-align: center; letter-spacing: 22px;
-  font: 900 30px Georgia, serif; color: var(--wood-dark); background: var(--parchment); border: 3px solid var(--wood-dark);
-  box-shadow: inset 0 3px 6px rgba(0,0,0,.2); user-select: text; -webkit-user-select: text; }
-.lb-code:focus { outline: none; border-color: var(--gold); }
-.lb-code::placeholder { color: #b5a27a; }
+.lb-code4 { display: flex; gap: 10px; justify-content: center; flex: 1; }
+.lb-code4 input { width: 58px; height: 68px; margin: 0; padding: 0; border-radius: 14px; text-align: center; font: 900 32px Georgia, serif;
+  color: var(--wood-dark); background: var(--parchment); border: 3px solid var(--wood-dark); box-shadow: inset 0 3px 6px rgba(0,0,0,.2);
+  user-select: text; -webkit-user-select: text; caret-color: transparent; }
+.lb-code4 input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212,175,55,.35), inset 0 3px 6px rgba(0,0,0,.2); }
 .lb-big { width: 100%; margin: 0; padding: 15px; border-radius: 16px; font-size: 18px; font-weight: 900; letter-spacing: .5px; color: #fff; border: 0; }
 .lb-big:active { transform: translateY(3px); }
 .lb-big small { display: block; font-size: 12px; font-weight: 700; opacity: .85; }
@@ -699,7 +699,8 @@ body.in-lobby .game-container { max-width: 440px; }
       <div class="lb-logo">DA VINCI<small>CODE</small></div>
     </div>
     <div class="lb-menu">
-      <input type="text" id="room-input" class="lb-code" placeholder="····" maxlength="4" inputmode="numeric" pattern="[0-9]*" aria-label="방 코드 4자리" autocomplete="off">
+      <div class="lb-code4" data-target="room-input" data-label="방 코드"></div>
+      <input type="hidden" id="room-input">
       <button id="btn-join-room" class="lb-big green">방 참가하기<small>방 코드 4자리를 넣고 눌러요</small></button>
       <label class="lb-check"><input type="checkbox" id="spectator-mode-checkbox"> 관전으로 참가</label>
       <button id="btn-open-create" class="lb-big gold">방 만들기</button>
@@ -713,7 +714,8 @@ body.in-lobby .game-container { max-width: 440px; }
       <h3>새 방 만들기</h3>
       <div class="lb-label">방 코드 · 친구에게 알려 줄 번호</div>
       <div class="lb-coderow">
-        <input type="text" id="create-room-input" class="lb-code" maxlength="4" inputmode="numeric" pattern="[0-9]*" aria-label="새 방 코드 4자리" autocomplete="off">
+        <div class="lb-code4" data-target="create-room-input" data-label="새 방 코드"></div>
+        <input type="hidden" id="create-room-input">
         <button id="btn-dice" type="button" class="lb-icon lb-dice" title="아무 번호나" aria-label="아무 번호나 넣기">🎲</button>
       </div>
       <div class="lb-label">게임 모드</div>
@@ -1832,14 +1834,43 @@ function setCreateSheet(open) {
   createDim.classList.toggle('open', open);
   if (open && !/^\d{4}$/.test(createCodeInput.value)) rollRoomCode();
 }
-function rollRoomCode() { createCodeInput.value = String(Math.floor(Math.random() * 10000)).padStart(4, '0'); }
+function rollRoomCode() { createCodeInput.value = String(Math.floor(Math.random() * 10000)).padStart(4, '0'); codeBoxRender['create-room-input'](); }
 document.getElementById('btn-open-create').addEventListener('click', () => setCreateSheet(true));
 createDim.addEventListener('click', () => setCreateSheet(false));
 document.getElementById('btn-dice').addEventListener('click', rollRoomCode);
-// 숫자만 남긴다 (폰 키보드에 따라 다른 글자가 들어올 수 있다)
-['room-input', 'create-room-input'].forEach(id => document.getElementById(id).addEventListener('input', e => {
-  e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4);
-}));
+// 방 코드 네 칸. 화면은 칸 네 개, 값은 숨긴 input(room-input 등)에 모아 둔다 — 나머지 코드는 그 값을 읽는다.
+// 숫자를 넣으면 다음 칸, 빈칸에서 지우면 앞 칸, 네 자리를 붙여 넣으면 한 번에 채운다.
+const codeBoxRender = {};
+document.querySelectorAll('.lb-code4').forEach(wrap => {
+  const hidden = document.getElementById(wrap.dataset.target);
+  const boxes = [0, 1, 2, 3].map(i => {
+    const b = document.createElement('input');
+    b.type = 'text'; b.inputMode = 'numeric'; b.maxLength = 4; b.autocomplete = 'off';
+    b.setAttribute('aria-label', `${wrap.dataset.label} ${i + 1}번째 자리`);
+    wrap.appendChild(b);
+    return b;
+  });
+  const collect = () => { hidden.value = boxes.map(b => b.value).join(''); };
+  boxes.forEach((b, i) => {
+    b.addEventListener('input', () => {
+      const digits = b.value.replace(/\D/g, '');
+      if (digits.length > 1) {   // 붙여 넣기나 자동 입력
+        digits.slice(0, 4 - i).split('').forEach((d, k) => { boxes[i + k].value = d; });
+        boxes[Math.min(i + digits.length, 3)].focus();
+      } else {
+        b.value = digits;
+        if (digits && boxes[i + 1]) boxes[i + 1].focus();
+      }
+      collect();
+    });
+    b.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !b.value && boxes[i - 1]) { boxes[i - 1].value = ''; boxes[i - 1].focus(); collect(); e.preventDefault(); }
+      if (e.key === 'Enter' && wrap.dataset.target === 'room-input') joinByCode();
+    });
+    b.addEventListener('focus', () => b.select());
+  });
+  codeBoxRender[wrap.dataset.target] = () => boxes.forEach((b, i) => { b.value = hidden.value[i] || ''; });
+});
 // 칩은 숨겨 둔 select 값을 바꾼다. 나머지 코드는 지금처럼 select를 읽는다.
 document.querySelectorAll('.lb-chips').forEach(group => {
   const sel = document.getElementById(group.dataset.for);
