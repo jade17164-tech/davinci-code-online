@@ -572,8 +572,8 @@ body.in-game.board3d #btn-return-lobby { position: fixed; left: 50%; bottom: 70p
 /* ---- 로비 (A: 메인 메뉴형) ---- */
 body.in-lobby h1 { display: none; }
 body.in-lobby .game-container { max-width: 440px; }
-#lobby-screen { display: flex; flex-direction: column; min-height: calc(100dvh - 20px); padding: 14px 18px 22px; overflow: hidden; }
-#lobby-screen.hidden { display: none; }
+#lobby-screen, #auth-screen { display: flex; flex-direction: column; min-height: calc(100dvh - 20px); padding: 14px 18px 22px; overflow: hidden; }
+#lobby-screen.hidden, #auth-screen.hidden { display: none; }
 .lb-top { display: flex; align-items: center; gap: 8px; }
 .lb-prof { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; border-radius: 999px; cursor: pointer;
   background: rgba(0,0,0,.35); border: 1px solid rgba(240,215,140,.25); text-align: left; font-size: 14px; font-weight: 900; color: var(--gold-light); }
@@ -638,6 +638,14 @@ body.in-lobby .game-container { max-width: 440px; }
 .lb-chips button small { display: block; font-size: 10px; font-weight: 700; opacity: .8; }
 .lb-chips button.on { background: linear-gradient(180deg, #ffe9a6, var(--gold)); color: var(--wood-dark); border-color: #fff3c4; box-shadow: 0 3px 0 #8a6a1a; }
 .lb-sheet .lb-check { margin-top: 12px; }
+.lb-big.btn-google { display: flex; color: #3c4043; text-shadow: none; box-shadow: 0 5px 0 #b9b2a3, 0 10px 18px rgba(0,0,0,.35); }
+.lb-big.btn-google svg { width: 22px; height: 22px; }
+.lb-link { margin: 14px 0 0; text-align: center; font-size: 14px; font-weight: 800; color: #e8d6ae; }
+.lb-link b { color: var(--gold); text-decoration: underline; cursor: pointer; }
+.lb-tabs { display: flex; gap: 4px; margin-bottom: 12px; padding: 4px; border-radius: 14px; background: rgba(0,0,0,.35); }
+.lb-tabs button { flex: 1; margin: 0; padding: 9px; border: 0; border-radius: 10px; background: none; box-shadow: none; font-size: 15px; font-weight: 900; color: #c9b48f; }
+.lb-tabs button.on { background: var(--gold); color: var(--wood-dark); text-shadow: none; }
+#auth-sheet input { width: 100%; margin: 0 0 10px; padding: 14px 16px; border-radius: 14px; border-width: 3px; font-size: 16px; text-align: left; }
 .room-choice-list { display: flex; flex-direction: column; gap: 10px; margin: 10px 0; }
 /* 프로필 카드: 승률 원 */
 .pf-ring { --p: 0; position: relative; width: 130px; height: 130px; margin: 10px auto; border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -670,27 +678,35 @@ body.in-lobby .game-container { max-width: 440px; }
 
   <!-- 0. 로그인 / 회원가입 화면 -->
   <div id="auth-screen" class="card">
-    <h3 id="auth-title" style="margin-top:0;">로그인</h3>
-    <input type="text" id="auth-username-input" placeholder="아이디 (영문/숫자/밑줄 3~16자)" maxlength="16" autocomplete="username">
-    <input type="password" id="auth-password-input" placeholder="비밀번호 (6자 이상)" autocomplete="current-password">
-    <input type="text" id="auth-nickname-input" placeholder="닉네임" maxlength="12" class="hidden">
-    <div class="btn-group">
-      <button id="btn-auth-submit" class="btn-start" style="margin-top:0;">로그인</button>
+    <div class="lb-hero" aria-hidden="true">
+      <span class="lb-tile b" style="left:8%;top:12%;--r:-12deg">7</span>
+      <span class="lb-tile w" style="right:10%;top:6%;--r:10deg;animation-delay:-1s">3</span>
+      <span class="lb-tile w" style="left:14%;bottom:4%;--r:8deg;animation-delay:-2s">-</span>
+      <span class="lb-tile b" style="right:12%;bottom:8%;--r:-8deg;animation-delay:-.5s">11</span>
+      <div class="lb-logo"><div class="main">DA VINCI</div><div class="sub">CODE</div><span class="gem"></span></div>
     </div>
-    <p id="auth-toggle-text" style="font-size:12px; color:#ccc; margin-top:10px; cursor:pointer; text-decoration:underline;">계정이 없으신가요? 회원가입</p>
-
-    <div class="auth-divider">또는</div>
-
-    <div class="btn-group">
-      <button id="btn-google-login" class="btn-google">
+    <div class="lb-menu">
+      <button id="btn-google-login" class="lb-big btn-google">
         <svg viewBox="0 0 48 48" aria-hidden="true">
           <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
           <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
           <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z"/>
           <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
         </svg>
-        Google 계정으로 계속하기
+        Google로 시작하기
       </button>
+      <button id="btn-open-idlogin" class="lb-big green">아이디로 로그인</button>
+    </div>
+    <p class="lb-link">처음이신가요? <b id="auth-join-link" role="button" tabindex="0">회원가입</b></p>
+
+    <div id="auth-dim" class="lb-dim"></div>
+    <div id="auth-sheet" class="lb-sheet" role="dialog" aria-label="로그인">
+      <div class="lb-grab"></div>
+      <div id="auth-tabs" class="lb-tabs"><button type="button" data-m="login">로그인</button><button type="button" data-m="register">회원가입</button></div>
+      <input type="text" id="auth-username-input" placeholder="아이디 (영문/숫자/밑줄 3~16자)" maxlength="16" autocomplete="username">
+      <input type="password" id="auth-password-input" placeholder="비밀번호 (6자 이상)" autocomplete="current-password">
+      <input type="text" id="auth-nickname-input" placeholder="닉네임" maxlength="12" class="hidden">
+      <button id="btn-auth-submit" class="lb-big gold">로그인</button>
     </div>
   </div>
 
@@ -1195,31 +1211,29 @@ const profileCache = {};
 const subscribedProfileIds = new Set();
 let lastRoomSnapshotData = null;
 
+// 로그인 화면: 첫 화면은 버튼 둘, 아이디 입력은 아래에서 올라오는 창(로그인/회원가입 탭)
+const authSheet = document.getElementById('auth-sheet');
+const authDim = document.getElementById('auth-dim');
 function renderAuthMode() {
   const nicknameField = document.getElementById('auth-nickname-input');
-  const title = document.getElementById('auth-title');
-  const submitBtn = document.getElementById('btn-auth-submit');
-  const toggleText = document.getElementById('auth-toggle-text');
-
-  if (authMode === 'login') {
-    nicknameField.classList.add('hidden');
-    title.innerText = '로그인';
-    submitBtn.innerText = '로그인';
-    toggleText.innerText = '계정이 없으신가요? 회원가입';
-  } else {
-    nicknameField.classList.remove('hidden');
-    if (!nicknameField.value.trim()) nicknameField.value = getSuggestedNickname();
-    title.innerText = '회원가입';
-    submitBtn.innerText = '회원가입';
-    toggleText.innerText = '이미 계정이 있으신가요? 로그인';
-  }
+  nicknameField.classList.toggle('hidden', authMode === 'login');
+  if (authMode !== 'login' && !nicknameField.value.trim()) nicknameField.value = getSuggestedNickname();
+  document.getElementById('btn-auth-submit').innerText = authMode === 'login' ? '로그인' : '가입하기';
+  document.querySelectorAll('#auth-tabs button').forEach(b => b.classList.toggle('on', b.dataset.m === authMode));
+}
+// mode: 'login' | 'register' | null(닫기)
+function openAuthSheet(mode) {
+  if (mode) { authMode = mode; renderAuthMode(); }
+  authSheet.classList.toggle('open', !!mode);
+  authDim.classList.toggle('open', !!mode);
+  if (mode) document.getElementById('auth-username-input').focus({ preventScroll: true });   // 폰 키보드는 누른 순간에 포커스해야 뜬다
 }
 renderAuthMode();
-
-document.getElementById('auth-toggle-text').addEventListener('click', () => {
-  authMode = authMode === 'login' ? 'register' : 'login';
-  renderAuthMode();
-});
+document.getElementById('btn-open-idlogin').addEventListener('click', () => openAuthSheet('login'));
+document.getElementById('auth-join-link').addEventListener('click', () => openAuthSheet('register'));
+document.getElementById('auth-tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { authMode = b.dataset.m; renderAuthMode(); } });
+authDim.addEventListener('click', () => openAuthSheet(null));
+authSheet.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') document.getElementById('btn-auth-submit').click(); });
 
 function loginErrorMessage(err) {
   const code = err && err.code ? err.code : '';
@@ -1859,9 +1873,14 @@ new MutationObserver(() => {
 const lobbyScreenEl = document.getElementById('lobby-screen');
 new MutationObserver(() => {
   const shown = !lobbyScreenEl.classList.contains('hidden');
-  document.body.classList.toggle('in-lobby', shown);
+  syncMenuScreen();
   if (!shown) setSheet(null);
 }).observe(lobbyScreenEl, { attributes: true, attributeFilter: ['class'] });
+const authScreenEl = document.getElementById('auth-screen');
+function syncMenuScreen() { document.body.classList.toggle('in-lobby', !lobbyScreenEl.classList.contains('hidden') || !authScreenEl.classList.contains('hidden')); }
+new MutationObserver(() => { syncMenuScreen(); if (authScreenEl.classList.contains('hidden')) openAuthSheet(null); })
+  .observe(authScreenEl, { attributes: true, attributeFilter: ['class'] });
+syncMenuScreen();
 document.getElementById('chat-input-game').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendChatMessage(); });
 
 const modal = document.getElementById('rules-modal');

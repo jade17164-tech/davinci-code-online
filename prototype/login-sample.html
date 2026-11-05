@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>로그인 화면 샘플</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&display=swap" rel="stylesheet">
+<style>
+  :root { --gold:#d4af37; --gold-light:#f0e3c8; --parchment:#f3e9d2; --wood:#5c3319; --wood-mid:#6b4226; --wood-dark:#2b1810; --felt:#5e1420; --felt-light:#8a2433; --felt-dark:#2e070d; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:16px; background:linear-gradient(165deg, var(--wood-mid), var(--wood-dark) 85%); background-attachment:fixed; color:var(--gold-light);
+    font:14px/1.5 system-ui, "Malgun Gothic", sans-serif; }
+  h1 { font-size:18px; margin:0 0 4px; } .hint { margin:0 0 14px; color:#c9b48f; }
+  .row { display:flex; flex-wrap:wrap; gap:18px; justify-content:center; }
+  .col h2 { font-size:15px; margin:0 0 6px; color:var(--gold); text-align:center; }
+  .col p { margin:6px 0 0; width:330px; font-size:12px; color:#c9b48f; }
+  .phone { position:relative; width:330px; height:640px; display:flex; flex-direction:column; padding:18px 20px 22px; border-radius:10px; overflow:hidden; text-align:center;
+    background:radial-gradient(ellipse at 50% -15%, var(--felt-light), var(--felt) 55%, var(--felt-dark)); border:5px solid var(--wood); box-shadow:0 10px 24px rgba(0,0,0,.5), 0 0 0 2px var(--wood-dark); }
+
+  /* 로비와 같은 로고·타일 */
+  .hero { position:relative; flex:1; min-height:150px; display:flex; align-items:center; justify-content:center; container-type:size; }
+  .logo .main { font:900 38px 'Cinzel', serif; font-size:clamp(28px, min(15cqw, 25cqh), 72px); letter-spacing:3px; line-height:1;
+    background:linear-gradient(180deg, #fff6d0 0%, #f3d77a 38%, #b8862a 52%, #f6e3a1 70%, #a8781f 100%); -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 2px 0 #4a3206) drop-shadow(0 0 14px rgba(212,175,55,.45)); }
+  .logo .sub { display:flex; align-items:center; justify-content:center; gap:10px; margin-top:10px; padding-left:12px; font:900 14px 'Cinzel', serif; font-size:clamp(12px, min(5cqw, 8cqh), 22px); letter-spacing:12px; color:var(--gold); }
+  .logo .sub::before, .logo .sub::after { content:''; width:clamp(26px, 16cqw, 80px); height:2px; background:linear-gradient(90deg, transparent, var(--gold)); }
+  .logo .sub::after { transform:scaleX(-1); }
+  .logo .gem { display:block; width:11px; height:11px; margin:12px auto 0; transform:rotate(45deg); background:var(--gold); box-shadow:0 0 10px var(--gold); }
+  .t { position:absolute; display:flex; align-items:center; justify-content:center; width:var(--w, 54px); height:calc(var(--w, 54px) * 1.41); border-radius:calc(var(--w, 54px) * .18);
+    font:900 calc(var(--w, 54px) * .65) Georgia, serif; transform:rotate(var(--r)); animation:bob 3.2s ease-in-out infinite; box-shadow:0 4px 0 rgba(0,0,0,.45), 0 8px 14px rgba(0,0,0,.4); }
+  .t.b { background:#1c1c20; color:#f6f0e2; border:1px solid #444; } .t.w { background:#f6f0e2; color:#1c1c20; border:1px solid #c9bd9c; }
+  @keyframes bob { 50% { transform:translateY(-8px) rotate(var(--r)); } }
+
+  /* 공통 부품 */
+  .field { display:flex; align-items:center; gap:10px; height:52px; padding:0 16px; border-radius:16px; background:var(--parchment); border:3px solid var(--wood-dark);
+    box-shadow:inset 0 3px 6px rgba(0,0,0,.18); color:#8a7454; font-weight:800; text-align:left; }
+  .field i { font-style:normal; font-size:18px; }
+  .field input { flex:1; min-width:0; border:0; background:none; font:inherit; font-weight:800; color:var(--wood-dark); outline:none; }
+  .field input::placeholder { color:#a08b68; }
+  .btn { display:block; width:100%; border:0; border-radius:16px; padding:14px; font:inherit; font-size:16px; font-weight:900; cursor:pointer; }
+  .btn:active { transform:translateY(2px); }
+  .gold { background:linear-gradient(180deg, #f8e389, #d4af37 60%, #b48a1c); color:var(--wood-dark); box-shadow:0 5px 0 #7a5a10, 0 8px 16px rgba(0,0,0,.35); }
+  .green { background:linear-gradient(180deg, #34c77b, #178a4c); color:#fff; box-shadow:0 5px 0 #0c5530, 0 8px 16px rgba(0,0,0,.35); }
+  .google { display:flex; align-items:center; justify-content:center; gap:10px; background:#fff; color:#222; box-shadow:0 5px 0 #b9b2a3, 0 8px 16px rgba(0,0,0,.3); }
+  .google svg { width:20px; height:20px; }
+  .link { margin-top:12px; font-size:13px; font-weight:800; color:#e8d6ae; }
+  .link b { color:var(--gold); text-decoration:underline; cursor:pointer; }
+  .or { display:flex; align-items:center; gap:10px; margin:12px 0; font-size:12px; color:#c9b48f; }
+  .or::before, .or::after { content:''; flex:1; height:1px; background:rgba(240,215,140,.25); }
+  .stack { display:flex; flex-direction:column; gap:10px; }
+  [hidden] { display:none !important; }
+
+  /* B: 아래에서 올라오는 창 */
+  .dim { position:absolute; inset:0; background:rgba(0,0,0,.5); opacity:0; pointer-events:none; transition:opacity .2s; }
+  .sheet { position:absolute; left:0; right:0; bottom:0; padding:10px 18px 22px; border-radius:22px 22px 0 0; background:linear-gradient(180deg, #4a2c17, #2b1810);
+    border-top:2px solid var(--gold); transform:translateY(105%); transition:transform .25s; text-align:center; }
+  .sheet .grab { width:44px; height:5px; border-radius:3px; background:rgba(240,215,140,.35); margin:0 auto 10px; }
+  .sheet h3 { margin:0 0 12px; font-size:18px; color:var(--gold-light); }
+  .phone.open .dim { opacity:1; pointer-events:auto; } .phone.open .sheet { transform:none; }
+
+  /* C: 탭 패널 */
+  .panel { padding:14px 14px 16px; border-radius:20px; background:linear-gradient(180deg, rgba(43,24,16,.92), rgba(28,15,8,.95)); border:2px solid var(--gold);
+    box-shadow:0 10px 24px rgba(0,0,0,.45); }
+  .tabs { display:flex; margin:-2px -2px 12px; padding:4px; border-radius:14px; background:rgba(0,0,0,.35); }
+  .tabs span { flex:1; padding:8px; border-radius:10px; font-weight:900; color:#c9b48f; cursor:pointer; }
+  .tabs .on { background:var(--gold); color:var(--wood-dark); }
+</style>
+</head>
+<body>
+<h1>로그인 화면 샘플</h1>
+<p class="hint">배경은 와인 레드로 했습니다(설정에서 고른 색이 로그인 화면에도 나옵니다). B는 "아이디로 로그인"을, C는 회원가입 탭을 눌러 보세요.</p>
+<div class="row">
+
+  <div class="col"><h2>A · 타이틀 + 바로 입력</h2>
+    <div class="phone">
+      <div class="hero" style="--w:44px">
+        <span class="t b" style="left:4%;top:8%;--r:-12deg">7</span><span class="t w" style="right:6%;top:4%;--r:10deg;animation-delay:-1s">3</span>
+        <span class="t w" style="left:8%;bottom:4%;--r:8deg;animation-delay:-2s">-</span><span class="t b" style="right:6%;bottom:6%;--r:-8deg;animation-delay:-.5s">11</span>
+        <div class="logo"><div class="main">DA VINCI</div><div class="sub">CODE</div><span class="gem"></span></div>
+      </div>
+      <div class="stack">
+        <label class="field"><i>👤</i><input placeholder="아이디"></label>
+        <label class="field"><i>🔒</i><input type="password" placeholder="비밀번호"></label>
+        <button class="btn gold">로그인</button>
+      </div>
+      <div class="or">또는</div>
+      <button class="btn google">G<span>Google로 계속하기</span></button>
+      <div class="link">처음이신가요? <b>회원가입</b></div>
+    </div>
+    <p>한 화면에 다 있습니다. 지금과 하는 일은 같고 모양만 게임풍입니다.</p>
+  </div>
+
+  <div class="col"><h2>B · 시작 화면 + 올라오는 창</h2>
+    <div class="phone" id="pb">
+      <div class="hero">
+        <span class="t b" style="left:8%;top:10%;--r:-12deg">7</span><span class="t w" style="right:10%;top:5%;--r:10deg;animation-delay:-1s">3</span>
+        <span class="t w" style="left:14%;bottom:6%;--r:8deg;animation-delay:-2s">-</span><span class="t b" style="right:12%;bottom:9%;--r:-8deg;animation-delay:-.5s">11</span>
+        <div class="logo"><div class="main">DA VINCI</div><div class="sub">CODE</div><span class="gem"></span></div>
+      </div>
+      <div class="stack">
+        <button class="btn google">G<span>Google로 시작하기</span></button>
+        <button class="btn green" id="open-b">아이디로 로그인</button>
+      </div>
+      <div class="link">처음이신가요? <b id="join-b">회원가입</b></div>
+      <div class="dim" id="dim-b"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <div class="tabs" id="tabs-b"><span class="on" data-m="login">로그인</span><span data-m="join">회원가입</span></div>
+        <div class="stack">
+          <label class="field"><i>👤</i><input placeholder="아이디"></label>
+          <label class="field"><i>🔒</i><input type="password" placeholder="비밀번호"></label>
+          <label class="field" id="nick-b" hidden><i>✏️</i><input placeholder="닉네임"></label>
+          <button class="btn gold" id="go-b">로그인</button>
+        </div>
+      </div>
+    </div>
+    <p>첫 화면은 로비처럼 로고와 큰 버튼 두 개뿐입니다. 입력칸은 방 만들기처럼 아래에서 올라옵니다.</p>
+  </div>
+
+  <div class="col"><h2>C · 로고 + 탭 패널</h2>
+    <div class="phone" id="pc">
+      <div class="hero">
+        <div class="logo"><div class="main">DA VINCI</div><div class="sub">CODE</div><span class="gem"></span></div>
+      </div>
+      <div class="panel">
+        <div class="tabs" id="tabs-c"><span class="on" data-m="login">로그인</span><span data-m="join">회원가입</span></div>
+        <div class="stack">
+          <label class="field"><i>👤</i><input placeholder="아이디"></label>
+          <label class="field"><i>🔒</i><input type="password" placeholder="비밀번호"></label>
+          <label class="field" id="nick-c" hidden><i>✏️</i><input placeholder="닉네임"></label>
+          <button class="btn gold" id="go-c">로그인</button>
+        </div>
+        <div class="or">또는</div>
+        <button class="btn google">G<span>Google로 계속하기</span></button>
+      </div>
+    </div>
+    <p>로그인/회원가입을 위쪽 탭으로 바꿉니다. 회원가입을 누르면 닉네임 칸이 생깁니다.</p>
+  </div>
+
+</div>
+<script>
+const G = '<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
+document.querySelectorAll('.google').forEach(b => b.firstChild.replaceWith(document.createRange().createContextualFragment(G)));
+function tabs(k, m) {
+  document.querySelectorAll('#tabs-' + k + ' span').forEach(x => x.classList.toggle('on', x.dataset.m === m));
+  document.getElementById('nick-' + k).hidden = m !== 'join';
+  document.getElementById('go-' + k).textContent = m === 'join' ? '가입하기' : '로그인';
+}
+['b', 'c'].forEach(k => document.getElementById('tabs-' + k).onclick = e => { const s = e.target.closest('span'); if (s) tabs(k, s.dataset.m); });
+const pb = document.getElementById('pb');
+document.getElementById('open-b').onclick = () => { tabs('b', 'login'); pb.classList.add('open'); };
+document.getElementById('join-b').onclick = () => { tabs('b', 'join'); pb.classList.add('open'); };
+document.getElementById('dim-b').onclick = () => pb.classList.remove('open');
+</script>
+</body>
+</html>
