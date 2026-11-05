@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>로비 타일 크기 샘플</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&display=swap" rel="stylesheet">
+<style>
+  :root { --gold:#d4af37; --gold-light:#f0e3c8; --wood:#5c3319; --wood-mid:#6b4226; --wood-dark:#2b1810; --felt:#1f6b45; --felt-light:#2d8a5a; --felt-dark:#0f3b24; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:16px; background:linear-gradient(165deg, var(--wood-mid), var(--wood-dark) 85%); background-attachment:fixed; color:var(--gold-light);
+    font:14px/1.5 system-ui, "Malgun Gothic", sans-serif; }
+  h1 { font-size:18px; margin:0 0 4px; } p { margin:0 0 14px; color:#c9b48f; }
+  .row { display:flex; flex-wrap:wrap; gap:18px; justify-content:center; }
+  .col { text-align:center; }
+  .col h2 { font-size:15px; margin:0 0 6px; color:var(--gold); }
+  .phone { width:330px; height:600px; display:flex; flex-direction:column; padding:14px 18px 22px; border-radius:10px; overflow:hidden;
+    background:radial-gradient(ellipse at 50% -15%, var(--felt-light), var(--felt) 55%, var(--felt-dark)); border:5px solid var(--wood); box-shadow:0 10px 24px rgba(0,0,0,.5), 0 0 0 2px var(--wood-dark); }
+  .hero { position:relative; flex:1; display:flex; align-items:center; justify-content:center; container-type:size; }
+  .logo { text-align:center; }
+  .logo .main { font:900 38px 'Cinzel', serif; font-size:clamp(30px, min(15cqw, 25cqh), 72px); letter-spacing:3px; line-height:1;
+    background:linear-gradient(180deg, #fff6d0 0%, #f3d77a 38%, #b8862a 52%, #f6e3a1 70%, #a8781f 100%); -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 2px 0 #4a3206) drop-shadow(0 0 14px rgba(212,175,55,.45)); }
+  .logo .sub { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:12px; padding-left:12px; font:900 14px 'Cinzel', serif; font-size:clamp(12px, min(5cqw, 7cqh), 24px); letter-spacing:12px; color:var(--gold); }
+  .logo .sub::before, .logo .sub::after { content:''; width:clamp(30px, 16cqw, 90px); height:2px; background:linear-gradient(90deg, transparent, var(--gold)); }
+  .logo .sub::after { transform:scaleX(-1); }
+  .logo .gem { display:block; width:12px; height:12px; margin:14px auto 0; transform:rotate(45deg); background:var(--gold); box-shadow:0 0 10px var(--gold); }
+  .t { position:absolute; display:flex; align-items:center; justify-content:center; width:var(--w); height:calc(var(--w) * 1.41); border-radius:calc(var(--w) * .18);
+    font:900 calc(var(--w) * .65) Georgia, serif; transform:rotate(var(--r)); animation:bob 3.2s ease-in-out infinite;
+    box-shadow:0 4px 0 rgba(0,0,0,.45), 0 8px 14px rgba(0,0,0,.4); }
+  .t.b { background:#1c1c20; color:#f6f0e2; border:1px solid #444; }
+  .t.w { background:#f6f0e2; color:#1c1c20; border:1px solid #c9bd9c; }
+  @keyframes bob { 50% { transform:translateY(-8px) rotate(var(--r)); } }
+  .menu { display:flex; flex-direction:column; gap:10px; }
+  .menu div { border-radius:14px; padding:12px; font-weight:900; color:#fff; }
+  .menu .j { background:linear-gradient(180deg, #2fbf71, #178a4c); }
+  .menu .c { background:linear-gradient(180deg, #f6dd7a, #d4af37); color:var(--wood-dark); }
+  .menu .l { background:linear-gradient(180deg, #8a5a32, #5c3319); }
+</style>
+</head>
+<body>
+<h1>로비 타일 크기 샘플</h1>
+<p>떠 있는 타일 크기만 다릅니다. 로고와 버튼은 지금과 같습니다.</p>
+<div class="row" id="row"></div>
+<script>
+const sizes = [['지금 (34)', 34], ['A · 조금 크게 (44)', 44], ['B · 크게 (54)', 54], ['C · 아주 크게 (64)', 64]];
+const tiles = [['b', '7', 'left:8%;top:12%;--r:-12deg'], ['w', '3', 'right:10%;top:6%;--r:10deg;animation-delay:-1s'],
+               ['w', '-', 'left:14%;bottom:4%;--r:8deg;animation-delay:-2s'], ['b', '11', 'right:12%;bottom:8%;--r:-8deg;animation-delay:-.5s']];
+document.getElementById('row').innerHTML = sizes.map(([name, w]) => `
+  <div class="col"><h2>${name}</h2>
+    <div class="phone">
+      <div class="hero" style="--w:${w}px">
+        ${tiles.map(([c, n, s]) => `<span class="t ${c}" style="${s}">${n}</span>`).join('')}
+        <div class="logo"><div class="main">DA VINCI</div><div class="sub">CODE</div><span class="gem"></span></div>
+      </div>
+      <div class="menu"><div class="j">방 참가하기</div><div class="c">방 만들기</div><div class="l">방 목록</div></div>
+    </div>
+  </div>`).join('');
+</script>
+</body>
+</html>

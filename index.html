@@ -586,7 +586,7 @@ body.in-lobby .game-container { max-width: 440px; }
   background: rgba(0,0,0,.35); border: 1px solid rgba(240,215,140,.25); color: var(--gold-light); }
 .lb-hero { position: relative; flex: 1; min-height: 190px; display: flex; align-items: center; justify-content: center; container-type: size; }
 /* 로고가 들어갈 자리가 낮으면(가로 화면) 떠 있는 타일을 양옆으로 비킨다 */
-@container (max-height: 300px) { .lb-tile { top: auto !important; bottom: auto !important; } .lb-tile:nth-child(odd) { left: 3% !important; } .lb-tile:nth-child(even) { right: 3% !important; }
+@container (max-height: 300px) { .lb-tile { top: auto !important; bottom: auto !important; width: 38px !important; height: 54px !important; border-radius: 7px !important; font-size: 24px !important; } .lb-tile:nth-child(odd) { left: 3% !important; } .lb-tile:nth-child(even) { right: 3% !important; }
   .lb-tile:nth-child(1), .lb-tile:nth-child(2) { top: 8% !important; } .lb-tile:nth-child(3), .lb-tile:nth-child(4) { bottom: 8% !important; } }
 .lb-logo { text-align: center; }
 .lb-logo .main { font: 900 38px 'Cinzel', serif; font-size: clamp(30px, min(15cqw, 25cqh), 72px); letter-spacing: 3px; line-height: 1;
@@ -601,8 +601,8 @@ body.in-lobby .game-container { max-width: 440px; }
   background: rgba(0,0,0,.28); border: 2px solid rgba(240,215,140,.18); display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .lb-swatches button i { width: 100%; height: 44px; border-radius: 9px; border: 1px solid rgba(255,255,255,.2); }
 .lb-swatches button.on { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(212,175,55,.35); }
-.lb-tile { position: absolute; display: flex; align-items: center; justify-content: center; width: 34px; height: 48px; border-radius: 6px;
-  font: 900 22px Georgia, serif; transform: rotate(var(--r)); animation: lbBob 3.2s ease-in-out infinite;
+.lb-tile { position: absolute; display: flex; align-items: center; justify-content: center; width: 54px; height: 76px; border-radius: 10px;
+  font: 900 35px Georgia, serif; transform: rotate(var(--r)); animation: lbBob 3.2s ease-in-out infinite;
   box-shadow: 0 4px 0 rgba(0,0,0,.45), 0 8px 14px rgba(0,0,0,.4); }
 .lb-tile.b { background: #1c1c20; color: #f6f0e2; border: 1px solid #444; }
 .lb-tile.w { background: #f6f0e2; color: #1c1c20; border: 1px solid #c9bd9c; }
@@ -714,10 +714,10 @@ body.in-lobby .game-container { max-width: 440px; }
       <button id="btn-logout" class="lb-icon" title="로그아웃" aria-label="로그아웃">⎋</button>
     </div>
     <div class="lb-hero" aria-hidden="true">
-      <span class="lb-tile b" style="left:12%;top:16%;--r:-12deg">7</span>
-      <span class="lb-tile w" style="right:14%;top:10%;--r:10deg;animation-delay:-1s">3</span>
-      <span class="lb-tile w" style="left:20%;bottom:8%;--r:8deg;animation-delay:-2s">-</span>
-      <span class="lb-tile b" style="right:18%;bottom:12%;--r:-8deg;animation-delay:-.5s">11</span>
+      <span class="lb-tile b" style="left:8%;top:12%;--r:-12deg">7</span>
+      <span class="lb-tile w" style="right:10%;top:6%;--r:10deg;animation-delay:-1s">3</span>
+      <span class="lb-tile w" style="left:14%;bottom:4%;--r:8deg;animation-delay:-2s">-</span>
+      <span class="lb-tile b" style="right:12%;bottom:8%;--r:-8deg;animation-delay:-.5s">11</span>
       <div class="lb-logo"><div class="main">DA VINCI</div><div class="sub">CODE</div><span class="gem"></span></div>
     </div>
     <div class="lb-menu">
