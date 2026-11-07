@@ -421,6 +421,8 @@ window.Board3D = (() => {
       e.preventDefault(); zoom = THREE.MathUtils.clamp(zoom * (e.deltaY > 0 ? 1.08 : 0.92), 0.55, 1.5); fitCamera();
     }, { passive: false });
     window.addEventListener('resize', resize);
+    // 아이폰은 화면을 돌릴 때 resize를 화면이 다 바뀌기 전에 보내 판이 예전 크기로 남았다. 판 영역 크기가 실제로 바뀌면 다시 잰다.
+    if (window.ResizeObserver) new ResizeObserver(() => resize()).observe(appEl);
   }
 
   /* ---------- 공개 API ---------- */

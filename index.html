@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <!-- 홈 화면에 추가하면 주소창 없이 앱처럼 연다. 아이폰은 상태줄을 검은 띠로 두어(black) 시계·배터리 밑으로 내용이 숨지 않게 한다 -->
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#1b0f07">
@@ -508,7 +508,8 @@ body.board3d #other-players, body.board3d #my-section-container, body.board3d #d
 #turn-steps .hint i { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 32px; margin: 0 6px; vertical-align: middle;
   border-radius: 5px; font-style: normal; font-size: 17px; border: 1px solid #c9a84a; }
 #turn-steps .hint i.white { background: #f6f0e2; color: #1c1c20; } #turn-steps .hint i.black { background: #1c1c20; color: #f6f0e2; }
-#turn-steps .hint { flex-basis: 100%; text-align: center; white-space: normal; margin-bottom: 2px; padding-bottom: 6px;
+#turn-steps .hint:only-child { margin: 0; padding: 0; border: 0; }
+#turn-steps .hint { flex-basis: 100%; text-align: center; white-space: normal; word-break: keep-all; margin-bottom: 2px; padding-bottom: 6px;
   border-bottom: 1px solid rgba(240,227,200,.15); font-size: clamp(14px, 3.6vw, 17px); font-weight: 900; color: #ffe39a; }
 #turn-edge { position: fixed; inset: 0; z-index: 15; pointer-events: none; display: none; }
 body.in-game.my-turn #turn-edge { display: block; animation: turnEdge 1.8s ease-in-out infinite; }
@@ -581,7 +582,7 @@ body.in-game.board3d #status-message, body.in-game.board3d #turn-steps { positio
   width: max-content; max-width: min(640px, calc(100vw - 24px)); }
 body.in-game.board3d #turn-steps { flex-wrap: nowrap; white-space: nowrap; }
 body.in-game.board3d #turn-steps.mine { flex-wrap: wrap; }
-body.in-game.board3d.my-turn #drawn-preview-container { display: none; }   /* 뽑은 타일은 안내 줄 안에 나온다. 상자가 판 위 + 자리를 가렸다 */
+body.in-game.board3d.hint-on #drawn-preview-container { display: none; }   /* 뽑은 타일은 안내 줄 안에 나온다. 상자가 판 위 + 자리를 가렸다 */
 body.in-game.board3d #drawn-preview-container { position: fixed; left: 50%; bottom: 64px; transform: translateX(-50%); z-index: 20; }
 body.in-game.board3d #action-buttons-container { position: fixed; right: 12px; bottom: 12px; z-index: 20; margin: 0 !important; }
 body.in-game.board3d #end-turn-btn { width: auto !important; padding: 10px 18px !important; }
@@ -736,6 +737,10 @@ body.in-lobby .game-container { max-width: 440px; }
   body.in-game.board3d #feed #log-history, body.in-game.board3d #feed #game-chat .chat-messages { max-height: 34vh; }
   body.in-game.board3d .b3d-sb { top: 46px; }
   body.in-game.board3d #turn-steps { bottom: 8px; padding: 4px 8px; }
+  /* 가로는 높이가 짧아 가운데 아래에 두면 내 패를 가린다. 패가 없는 왼쪽 아래 구석으로 */
+  body.in-game.board3d #turn-steps, body.in-game.board3d #status-message { left: 10px; transform: none; max-width: min(300px, 32vw); white-space: normal; }
+  body.in-game.board3d #turn-steps { flex-wrap: wrap; }
+  body.in-game.board3d #turn-steps .step:not(.now), body.in-game.board3d #turn-steps .arrow { display: none; }
   body.in-game.board3d #turn-steps .step { padding: 2px 8px; font-size: 12px; }
   body.in-game.board3d #action-buttons-container { bottom: 8px; }
   body.in-game.board3d #drawn-preview-container { bottom: 52px; }
@@ -1137,7 +1142,7 @@ body.in-lobby .game-container { max-width: 440px; }
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="board3d.js?v=esc1"></script>
+<script src="board3d.js?v=rot1"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getDatabase, ref, set, onValue, update, get, remove, push, onDisconnect, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -3137,10 +3142,16 @@ function playTableFx(data) {
 
 // 단계 안내 바. 내 차례는 내 상태로, 남의 차례는 차례가 시작될 때와 비교해 몇 단계인지 짐작한다.
 const TURN_STEPS = ['뽑기', '배치', '추리', '계속 / 넘기기'];
-const TURN_HINTS = ['검은 더미나 흰 더미를 눌러 한 장 뽑으세요', '빛나는 자리를 눌러 뽑은 타일을 놓으세요',
+const TURN_HINTS = ['검은 더미나 흰 더미를 눌러 한 장 뽑으세요', '뽑은 타일을 내 패 사이 + 자리에 놓아 주세요',
   '상대 타일을 눌러 숫자를 맞혀 보세요', '맞혔어요! 한 번 더 맞히거나 "턴 넘기기"를 누르세요'];
 const BASE_TITLE = document.title;
 let turnBase = null;
+function tileChip(t) {   // 안내 줄 안의 작은 타일. 뒤에 조사가 바로 붙으므로 오른쪽 여백은 좁게
+  const i = document.createElement('i'); i.className = t.color === 'black' ? 'black' : 'white';
+  i.textContent = t.num === -1 ? '-' : t.num; i.style.marginRight = '1px'; return i;
+}
+// 숫자를 읽는 소리에 맞춘 을/를: 이(2)·사(4)·오(5)·구(9)·조커는 '를', 나머지(영·일·삼·육·칠·팔·십·십일)는 '을'
+const objJosa = t => [2, 4, 5, 9, -1].includes(t.num) ? '를' : '을';
 function renderTurnSteps(data) {
   const bar = document.getElementById('turn-steps');
   const status = document.getElementById('status-message');
@@ -3151,14 +3162,25 @@ function renderTurnSteps(data) {
   const myDead = me && (me.hand || []).length > 0 && me.hand.every(t => t.revealed);
   const pool = (me && me.unplacedPool) || [];
   const placingStart = pool.length > 0 && !(me.turn && pool[0].id === me.turn.drawnId);   // 뽑은 타일 배치는 시작 배치가 아니다
-  // 관전·탈락·시작 타일 배치·게임 끝은 기존 안내문이 더 많은 걸 알려준다
-  const show = data.gameState === 'playing' && !data.isGameOver && !!p && !!me && !myDead && !placingStart;
-  bar.classList.toggle('hidden', !show);
-  status.classList.toggle('hidden', show);
+  // 관전·탈락·게임 끝은 기존 안내문이 더 많은 걸 알려준다
+  const playing = data.gameState === 'playing' && !data.isGameOver;
+  const show = playing && !!p && !!me && !myDead && !placingStart;
+  // 시작 타일 배치도 안내 한 줄로. 긴 안내문과 미리보기 상자가 가로 화면에서 내 패를 가렸다
+  const placing = playing && placingStart && !!pendingPlacementTile;
+  bar.classList.toggle('hidden', !show && !placing);
+  status.classList.toggle('hidden', show || placing);
   const myTurn = show && pid === myPlayerId;
   document.body.classList.toggle('my-turn', myTurn);
-  bar.classList.toggle('mine', myTurn);
+  document.body.classList.toggle('hint-on', myTurn || placing);
+  bar.classList.toggle('mine', myTurn || placing);
   document.title = myTurn ? '🔔 내 차례 - 다빈치 코드' : BASE_TITLE;   // 다른 탭에 가 있어도 보이게
+  if (placing) {
+    bar.textContent = '';
+    const h = document.createElement('div'); h.className = 'hint';
+    h.append(tileChip(pendingPlacementTile), `${objJosa(pendingPlacementTile)} 내 패 사이 + 자리에 놓아 주세요`);
+    bar.appendChild(h);
+    return;
+  }
   if (!show) return;
 
   const deck = (data.blackDeck || []).length + (data.whiteDeck || []).length;
@@ -3178,9 +3200,7 @@ function renderTurnSteps(data) {
   if (mine) {
     const h = document.createElement('div'); h.className = 'hint'; h.textContent = TURN_HINTS[now];
     if (now === 1 && pendingPlacementTile) {
-      const t = document.createElement('i'); t.className = pendingPlacementTile.color === 'black' ? 'black' : 'white';
-      t.textContent = pendingPlacementTile.num === -1 ? '-' : pendingPlacementTile.num;
-      h.textContent = '뽑은 타일'; h.append(t, '빛나는 자리를 눌러 놓으세요');
+      h.textContent = '뽑은'; h.append(tileChip(pendingPlacementTile), `${objJosa(pendingPlacementTile)} 내 패 사이 + 자리에 놓아 주세요`);
     }
     bar.appendChild(h);
   }
