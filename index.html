@@ -222,6 +222,9 @@ button:disabled { background: #4a4a4a !important; color: #8a8a8a !important; bor
   background: rgba(30,18,8,.85); border: 1px solid var(--wood-mid); border-radius: 999px;
   padding: 3px 9px; font-size: 12px; font-weight: 700; color: var(--gold-light);
   display: flex; gap: 6px; align-items: center; }
+/* 판 위 이름표는 받침대 끝의 색 칩(이름 첫 글자). 이름은 현황판에 같은 색 점과 함께 나온다 */
+.b3d-pl { width: 26px; height: 26px; padding: 0; justify-content: center; border-radius: 50%; border: 2px solid #fff8e0; color: #1b0f07; font-weight: 900; box-shadow: 0 2px 6px rgba(0,0,0,.5); }
+.b3d-dot { display: inline-block; width: 9px; height: 9px; margin-right: 5px; border-radius: 50%; vertical-align: middle; box-shadow: 0 0 0 1px rgba(255,255,255,.5); }
 .b3d-pl.turn { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(212,175,55,.35); }
 .b3d-pl.dead { opacity: .5; }
 .b3d-tag { background: var(--wood); border-radius: 6px; padding: 1px 5px; font-size: 10px; }
@@ -1072,7 +1075,7 @@ body.in-lobby .game-container { max-width: 440px; }
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="board3d.js"></script>
+<script src="board3d.js?v=chip2"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getDatabase, ref, set, onValue, update, get, remove, push, onDisconnect, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -2899,6 +2902,7 @@ function renderBoard3D(data, ctx) {
       name: mine ? '나' : (p.name || '?'),
       team: isTeamMode ? p.team : null,
       peek: isTeamMode && !isSpectator && !mine && p.team === myTeam,
+      open: isSpectator,   // 관전자는 모든 패의 숫자를 본다(예전 2D 화면과 같게)
       hand,
       pending: (mine && pendingPlacementTile) ? {
         id: pendingPlacementTile.id, color: pendingPlacementTile.color, num: pendingPlacementTile.num,

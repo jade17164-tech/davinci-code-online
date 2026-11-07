@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>이름표 위치 샘플</title>
+<style>
+  :root { --gold:#d4af37; --gold-light:#f0e3c8; --wood:#5c3319; --wood-mid:#6b4226; --wood-dark:#2b1810; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; }
+  body { background:#1b0f07; color:var(--gold-light); font:14px/1.5 system-ui, "Malgun Gothic", sans-serif; }
+  #board3d-wrap { position:fixed; inset:0; }
+  #board3d-gl { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+  #board3d-labels { position:absolute; inset:0; pointer-events:none; }
+  /* index.html과 같은 이름표 모양 */
+  .b3d-pl, .b3d-dl { position:absolute; transform:translate(-50%, -50%); white-space:nowrap; background:rgba(30,18,8,.85); border:1px solid var(--wood-mid);
+    border-radius:999px; padding:3px 9px; font-size:12px; font-weight:700; color:var(--gold-light); display:flex; gap:6px; align-items:center; }
+  .b3d-pl.turn { border-color:var(--gold); box-shadow:0 0 0 2px rgba(212,175,55,.35); }
+  .b3d-tag { background:var(--wood); border-radius:6px; padding:1px 5px; font-size:10px; }
+  .b3d-sb { position:absolute; right:10px; top:52px; background:rgba(30,18,8,.72); border:1px solid var(--wood-mid); border-radius:8px;
+    padding:4px 9px; font-size:11px; line-height:1.6; color:#c3b89f; text-align:left; }
+  .b3d-sb b { color:var(--gold-light); } .b3d-sb .turn b { color:var(--gold); } .b3d-sb .turn::before { content:'▶ '; color:var(--gold); }
+  /* C: 판 위 이름표는 없앤다 / D: 이름표 대신 색 칩 */
+  #board3d-labels[data-mode=rack] .b3d-pl { display:none; }
+  #board3d-labels[data-mode=chip] .b3d-pl { width:26px; height:26px; padding:0; justify-content:center; border-radius:50%; border:2px solid #fff8e0;
+    color:#1b0f07; font-weight:900; box-shadow:0 2px 6px rgba(0,0,0,.5); }
+  .b3d-dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:middle; box-shadow:0 0 0 1px rgba(255,255,255,.5); }
+
+  /* 샘플 고르는 버튼 (게임에는 없음) */
+  #pick { position:fixed; left:50%; top:8px; transform:translateX(-50%); z-index:50; display:flex; flex-wrap:wrap; justify-content:center; gap:6px; }
+  .seg { display:flex; border:2px solid #fff; border-radius:999px; overflow:hidden; box-shadow:0 4px 16px rgba(0,0,0,.6); }
+  .seg button { border:0; background:#222; color:#ddd; padding:6px 12px; font:inherit; font-size:13px; font-weight:800; cursor:pointer; }
+  .seg button.on { background:#e74c3c; color:#fff; }
+  #desc { position:fixed; left:50%; bottom:10px; transform:translateX(-50%); z-index:50; max-width:min(560px, 92vw); padding:8px 12px; border-radius:10px;
+    background:rgba(0,0,0,.75); font-size:13px; text-align:center; }
+</style>
+</head>
+<body>
+<div id="board3d-wrap"><canvas id="board3d-gl"></canvas><div id="board3d-labels"></div></div>
+<div id="pick">
+  <div class="seg" id="mode"><button data-v="top" class="on">지금</button><button data-v="rack">C · 받침대 색</button><button data-v="chip">D · 바닥 칩</button></div>
+  <div class="seg" id="n"><button data-v="2">2인</button><button data-v="4" class="on">4인</button></div>
+</div>
+<div id="desc"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../board3d.js?v=labels4"></script>
+<script>
+const $ = id => document.getElementById(id);
+const DESC = {
+  top: '지금: 상대 이름은 패 바로 위, 더미 수는 더미 위에 떠서 타일 윗부분을 가립니다.',
+  rack: 'C: 판 위 이름표를 없애고, 각자 타일 받침대를 그 사람 색으로 칠합니다. 오른쪽 위 현황판 이름 앞에 같은 색 점. 더미 수는 더미 앞 탁자로.',
+  chip: 'D: 판 위 이름표 대신 받침대 끝에 그 사람 색 칩(이름 첫 글자)을 놓습니다. 현황판에 같은 색 점. 더미 수는 더미 앞 탁자로.',
+};
+const T = (id, color, num, revealed) => ({ id, color, num, revealed: !!revealed });
+const P = [
+  { name: '나', hand: [T('a1', 'black', 1), T('a2', 'white', 3), T('a3', 'black', 6, true), T('a4', 'white', 9)] },
+  { name: '명관', hand: [T('b1', 'white', 0), T('b2', 'black', 4, true), T('b3', 'white', 7), T('b4', 'black', 10)] },
+  { name: '지민', hand: [T('d1', 'white', 1), T('d2', 'black', 5), T('d3', 'white', 8), T('d4', 'black', 9)] },
+  { name: '코딩하는 고래', hand: [T('c1', 'black', 2), T('c2', 'white', 5), T('c3', 'black', 8), T('c4', 'white', 11)] },
+];
+let n = 4;
+function draw() {
+  Board3D.update({ n, mode: 'solo', over: false, turn: 1, phase: '', players: P.slice(0, n), decks: { black: 4, white: 2 }, slots: [], targets: [], canDraw: false });
+}
+Board3D.mount({ canvas: $('board3d-gl'), app: $('board3d-wrap'), labels: $('board3d-labels') });
+Board3D.setFit(0.88); Board3D.setGlyph(0.84);
+draw();
+function pick(seg, fn) {
+  $(seg).addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $(seg).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); fn(b.dataset.v);
+  });
+}
+pick('mode', m => { Board3D.setLabelMode(m); $('desc').textContent = DESC[m]; });
+pick('n', v => { n = +v; draw(); });
+$('desc').textContent = DESC.top;
+</script>
+</body>
+</html>

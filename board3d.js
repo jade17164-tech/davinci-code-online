@@ -11,7 +11,7 @@
  *
  * state = {
  *   n, mode, over, turn, phase,                       // phase: init|draw|place|guess|reveal
- *   players: [{ name, team, hand:[{id,color,num,revealed}], pending, peek }],   // 0번이 나
+ *   players: [{ name, team, hand:[{id,color,num,revealed}], pending, peek, open }],   // 0번이 나. open: 관전자에게 숫자 공개
  *   decks: { black:수, white:수 },
  *   slots:   [idx...],          // 내 손패에 띄울 [+] 자리
  *   targets: [{pi,idx}...],     // 지목할 수 있는 상대 타일
@@ -29,6 +29,10 @@ window.Board3D = (() => {
   const cam = { az: 0, pol: 0.92, rad: 20, tgt: new V3(0, 0, 0.4) };
   const tileMeshes = new Map();
   let seats = [], racks = [], deckMeshes = {}, slotSprites = [], builtN = 0;
+  // 누가 누구인지: 'top' 이름표를 타일 위에 / 'rack' 받침대를 그 사람 색으로 / 'chip' 받침대 끝에 색 칩.
+  // top이 아니면 이름은 구석 현황판(색 점)에만 두고, 더미 수는 더미 앞 탁자로 내린다 — 둘 다 타일을 가리지 않게.
+  let labelMode = 'chip';
+  const SEAT_COLORS = ['#d4af37', '#e05a4f', '#4f8fd6', '#4fbf7a', '#b36fd6', '#e08a3c'];
   let myRowX = {}, myRowSc = 1;   // 내 줄에서 자리표시가 들어갈 x 좌표
 
   /* ---------- 타일 면 텍스처 ---------- */
@@ -243,8 +247,9 @@ window.Board3D = (() => {
         m.rotation.y = st.th;
 
         const mine = pi === 0, reveal = t.revealed || s.over;
-        const kind = reveal ? (t.revealed ? 'rev' : 'face') : (mine ? 'face' : (p.peek ? 'peek' : 'cover'));
-        setFaces(m, t, mine || reveal ? kind : 'cover', kind);
+        // open: 관전자처럼 모든 패를 보는 사람에게는 상대 패 뒷면에도 숫자를 크게 그린다
+        const kind = reveal ? (t.revealed ? 'rev' : 'face') : (mine || p.open ? 'face' : (p.peek ? 'peek' : 'cover'));
+        setFaces(m, t, mine || reveal || p.open ? kind : 'cover', kind);
 
         if (targetKey.has(pi + ':' + i)) m.userData.pick = { type: 'target', pi, idx: i };
         if (m.userData.pick) picks.push(m);
@@ -265,6 +270,7 @@ window.Board3D = (() => {
         m.rotation.y = st.th;
         setFaces(m, t, pi === 0 ? 'face' : 'cover', 'cover');
       }
+      rack.material.color.set(labelMode === 'rack' ? SEAT_COLORS[pi % 6] : 0x6b4226);
       rack.material.emissive.setHex(!s.over && s.turn === pi ? 0x8a6a10 : 0x000000);
     });
 
@@ -316,6 +322,8 @@ window.Board3D = (() => {
       const el = document.getElementById('b3d-pl-' + pi); if (!el) return;
       const dead = isDead(p), turn = !S.over && S.turn === pi;
       el.className = 'b3d-pl' + (turn ? ' turn' : '') + (dead ? ' dead' : '');
+      el.style.background = labelMode === 'chip' ? SEAT_COLORS[pi % 6] : '';
+      if (labelMode === 'chip') { el.textContent = [...(p.name || '?')][0]; return; }
       const team = p.team ? `<span class="b3d-tag t${p.team}">팀 ${p.team}</span>` : '';
       el.innerHTML = `<span>${p.name || '?'}</span>${team}`
         + (dead ? '<span class="b3d-tag">탈락</span>' : '');
@@ -323,7 +331,9 @@ window.Board3D = (() => {
     const sb = document.getElementById('b3d-sb');
     if (sb) sb.innerHTML = S.players.map((p, pi) => {
       const dead = isDead(p), turn = !S.over && S.turn === pi;
-      return `<div class="${turn ? 'turn' : ''}${dead ? ' dead' : ''}"><b>${p.name || '?'}</b> `
+      const dot = labelMode === 'top' ? '' : `<i class="b3d-dot" style="background:${SEAT_COLORS[pi % 6]}"></i>`;
+      const team = p.team ? `<span class="b3d-tag t${p.team}">${p.team}</span> ` : '';   // 판 위 이름표가 없으니 팀은 여기서 보인다
+      return `<div class="${turn ? 'turn' : ''}${dead ? ' dead' : ''}">${dot}<b>${p.name || '?'}</b> ${team}`
         + (dead ? '탈락' : `미공개 ${hiddenCount(p)}/${(p.hand || []).length}`) + '</div>';
     }).join('');
   }
@@ -333,14 +343,19 @@ window.Board3D = (() => {
       const el = document.getElementById('b3d-pl-' + pi); if (!el) return;
       const st = seats[pi];
       // 내 이름표는 패 위가 아니라 패 앞(화면 아래)에 둔다. 위에 두면 내 타일 숫자를 가린다.
-      const a = st.d.clone().multiplyScalar(pi === 0 ? st.Rs + 1.6 : st.Rs + 1.15);
-      a.y = pi === 0 ? 0.35 : 1.15;
+      let a;
+      if (labelMode === 'chip') {   // 받침대 오른쪽 끝(그 사람 기준) 탁자 위
+        a = st.d.clone().multiplyScalar(st.Rs).addScaledVector(st.r, racks[pi].scale.x / 2 + 0.55); a.y = 0.1;
+      } else {
+        a = st.d.clone().multiplyScalar(pi === 0 ? st.Rs + 1.6 : st.Rs + 1.15);
+        a.y = pi === 0 ? 0.35 : 1.15;
+      }
       const q = project(a), W = appEl.clientWidth, hw = el.offsetWidth / 2 + 4;
       el.style.left = Math.min(Math.max(q.x, hw), W - hw) + 'px'; el.style.top = q.y + 'px';
     });
     ['black', 'white'].forEach(c => {
       const m = deckMeshes[c]; if (!m) return;
-      const q = project(new V3(m.position.x, m.position.y + m.scale.y / 2 + 0.55, 0.9));
+      const q = project(labelMode === 'top' ? new V3(m.position.x, m.position.y + m.scale.y / 2 + 0.55, 0.9) : new V3(m.position.x, 0.02, 1.25));
       const el = document.getElementById('b3d-dl-' + c);
       if (el) { el.style.left = q.x + 'px'; el.style.top = q.y + 'px'; }
     });
@@ -432,6 +447,7 @@ window.Board3D = (() => {
     onPick(fn) { pickCb = fn; },
     resetCam() { cam.az = 0; cam.pol = 0.92; zoom = 1; fitCamera(); },
     setFit(f) { fit = f; fitCamera(); },
+    setLabelMode(m) { labelMode = m; if (labelsEl) labelsEl.dataset.mode = m; if (S) sync3D(); },
     setGlyph(g) {
       glyph = g;
       // 면 머티리얼은 캐시되고 타일은 '바뀐 게 없으면 넘어간다'로 판단하므로 둘 다 풀어줘야 다시 그려진다
