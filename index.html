@@ -1137,7 +1137,7 @@ body.in-lobby .game-container { max-width: 440px; }
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="board3d.js?v=chip2"></script>
+<script src="board3d.js?v=esc1"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getDatabase, ref, set, onValue, update, get, remove, push, onDisconnect, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -1540,6 +1540,12 @@ const TITLE_STYLE = {
 };
 
 // 칭호 배지: 방장 배지처럼 한눈에 띄도록 칭호마다 고유한 색/아이콘/움직임을 준다
+// 이름·채팅·타일·승수는 방에 들어온 누구나(또는 프로필 주인이) 써넣을 수 있는 값이다. HTML에 넣기 전에 반드시 거친다.
+const esc = t => String(t ?? '').replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+const safeId = id => /^[\w-]+$/.test(String(id ?? '')) ? String(id) : '';   // onclick="f('...')" 안에 넣는 아이디
+const tileCls = t => t && t.color === 'black' ? 'black' : 'white';
+const tileVal = t => esc(t.num === -1 ? '-' : t.num);
+
 function titleBadgeHtml(equippedTitleId, extraClass) {
   if (!equippedTitleId || !TITLES[equippedTitleId]) return '';
   const style = TITLE_STYLE[equippedTitleId] || { icon: '🏅', colors: ['#8e44ad', '#a35ee0'], anim: 'shine', dur: '3s' };
@@ -1557,7 +1563,7 @@ function updateAccountBar() {
   const prof = (myAccountId && profileCache[myAccountId]) || myProfile;
   if (!prof) { bar.innerHTML = ''; return; }
   // 닉네임은 사용자가 정한 값이라 textContent로, 칭호 배지만 HTML로 넣는다
-  bar.innerHTML = `<span class="lb-ava"></span><span><span class="nm"></span> ${titleBadgeHtml(prof.equippedTitle)}<span class="st">승 ${prof.wins || 0} · ${prof.totalGames || 0}판</span></span>`;
+  bar.innerHTML = `<span class="lb-ava"></span><span><span class="nm"></span> ${titleBadgeHtml(prof.equippedTitle)}<span class="st">승 ${Number(prof.wins) || 0} · ${Number(prof.totalGames) || 0}판</span></span>`;
   bar.querySelector('.lb-ava').textContent = (prof.nickname || '?').slice(0, 1);
   bar.querySelector('.nm').textContent = prof.nickname || '';
 }
@@ -1582,7 +1588,7 @@ function ensureProfileSubscribed(accountId) {
 
 // 대기실/인게임 표시 순서: 닉네임 - 칭호 - 승수
 function profileLineFor(accountId, displayName) {
-  const nameSpan = `<span onclick="window.showProfile('${accountId || ''}')" style="cursor:pointer; text-decoration:underline dotted;">${displayName}</span>`;
+  const nameSpan = `<span onclick="window.showProfile('${safeId(accountId)}')" style="cursor:pointer; text-decoration:underline dotted;">${esc(displayName)}</span>`;
   if (!accountId) return nameSpan;
   ensureProfileSubscribed(accountId);
   const prof = profileCache[accountId];
@@ -1591,7 +1597,7 @@ function profileLineFor(accountId, displayName) {
   const parts = [nameSpan];
   const titleBadge = titleBadgeHtml(prof.equippedTitle, 'badge-title-sm');
   if (titleBadge) parts.push(titleBadge);
-  parts.push(`<span style="font-size:10px; color:#f1c40f;">승 ${prof.wins || 0}</span>`);
+  parts.push(`<span style="font-size:10px; color:#f1c40f;">승 ${Number(prof.wins) || 0}</span>`);
   return parts.join(' <span style="color:#888;">-</span> ');
 }
 
@@ -2457,7 +2463,7 @@ function updateChatUI(data) {
       const prof = profileCache[c.accountId];
       titleBadge = prof ? titleBadgeHtml(prof.equippedTitle, 'badge-title-sm') : '';
     }
-    return `<div class="${msgClass}">${isTeamMsg ? '<span style="color:#3498db; font-size:10px;">[팀채팅]</span> ' : ''}${specTag}<b>${c.sender}</b>${titleBadge ? ' ' + titleBadge + ' ' : ''}: ${c.text}</div>`;
+    return `<div class="${msgClass}">${isTeamMsg ? '<span style="color:#3498db; font-size:10px;">[팀채팅]</span> ' : ''}${specTag}<b>${esc(c.sender)}</b>${titleBadge ? ' ' + titleBadge + ' ' : ''}: ${esc(c.text)}</div>`;
   }).join('');
 
   const boxW = document.getElementById('chat-messages-waiting');
@@ -2545,7 +2551,6 @@ function updateWaitingRoomUI(data) {
   document.getElementById('btn-toggle-spectator').innerText = isSpectator ? "선수로 참가하기" : "관전으로 바꾸기";
 
   // 자리 카드. 이름은 사용자가 정한 글이라 이스케이프한다
-  const esc = t => String(t).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
   const seat = (id, team) => {
     if (!id) return `<div class="wr-seat empty ${team || ''}">빈자리</div>`;
     const p = players[id];
@@ -2574,7 +2579,7 @@ function updateWaitingRoomUI(data) {
     specContainer.classList.remove('hidden');
     specListEl.innerHTML = spectatorIds.map(id => {
       const s = spectators[id];
-      const kickBtn = isHost ? `<button class="btn-kick" onclick="window.kickPlayer('${id}', true)">강퇴</button>` : '';
+      const kickBtn = isHost ? `<button class="btn-kick" onclick="window.kickPlayer('${safeId(id)}', true)">강퇴</button>` : '';
       return `${profileLineFor(s.accountId, s.name)} ${id === myPlayerId ? '(나)' : ''}${kickBtn}`;
     }).join(', ');
   } else {
@@ -2634,6 +2639,7 @@ function handleStartGame() {
         ...data.players[pId],
         hand: [firstTile],
         unplacedPool: initialPool,
+        turn: null,
         drewBlackJoker: false,
         drewWhiteJoker: false,
         startHadJoker: dealtTiles.some(t => t.num === -1),
@@ -2724,6 +2730,11 @@ function updateGameUI(data) {
     const myHandNow = players[myPlayerId].hand || [];
     if (myUnplaced.length > 0) pendingPlacementTile = myUnplaced[0];
     else if (pendingPlacementTile && myHandNow.some(t => t.id === pendingPlacementTile.id)) pendingPlacementTile = null;
+    const myTurnState = players[myPlayerId].turn;
+    if (myTurnState && playerIds[data.turnIndex] === myPlayerId) {
+      if (myTurnState.drawnId) { hasDrawnThisTurn = true; lastDrawnTileId = myTurnState.drawnId; }
+      if (myTurnState.hit) hasGuessedSuccessThisTurn = true;
+    }
   }
 
   let currentTurnPlayerId = playerIds[data.turnIndex];
@@ -2759,8 +2770,7 @@ function updateGameUI(data) {
   if (pendingPlacementTile !== null) {
     previewContainer.classList.remove('hidden');
     previewLabel.innerText = isInitialPlacing ? "시작 타일 배치:" : "뽑은 타일:";
-    let displayVal = pendingPlacementTile.num === -1 ? '-' : pendingPlacementTile.num;
-    previewTileEl.innerHTML = `<div class="tile ${pendingPlacementTile.color}">${displayVal}</div>`;
+    previewTileEl.innerHTML = `<div class="tile ${tileCls(pendingPlacementTile)}">${tileVal(pendingPlacementTile)}</div>`;
   } else {
     previewContainer.classList.add('hidden');
   }
@@ -2803,6 +2813,9 @@ function updateGameUI(data) {
     hasGuessedSuccessThisTurn = false;
     lastDrawnTileId = null;
     pendingPlacementTile = null;
+    if (!isSpectator && players[myPlayerId] && players[myPlayerId].turn && !data.isGameOver) {
+      set(ref(db, `rooms/${currentRoomKey}/players/${myPlayerId}/turn`), null);
+    }
     const turnName = players[currentTurnPlayerId] ? players[currentTurnPlayerId].name : "상대방";
     statusEl.innerText = `${turnName} 님의 턴 진행 중...`;
     statusEl.style.color = "#f39c12";
@@ -2824,11 +2837,9 @@ function updateGameUI(data) {
     handHtml += myHand.map((t, idx) => {
       const revClass = t.revealed ? 'revealed' : '';
       const badge = t.revealed ? '<span class="revealed-badge"></span>' : '';
-      const displayVal = t.num === -1 ? '-' : t.num;
-
       let itemHtml = `
         <div class="tile-wrapper">
-          <div class="tile ${t.color} ${revClass}">${displayVal}${badge}</div>
+          <div class="tile ${tileCls(t)} ${revClass}">${tileVal(t)}${badge}</div>
         </div>
       `;
 
@@ -2860,24 +2871,23 @@ function updateGameUI(data) {
     // 5. 최종 타일 HTML 생성
   let tilesHTML = sortedHand.map((t, displayIdx) => {
     if (isSpectator || t.revealed || isTeammate || data.isGameOver || isMyAllRevealed) {
-      const displayVal = t.num === -1 ? '-' : t.num;
       const sharedRevClass = t.revealed ? 'revealed' : '';
       const sharedBadge = t.revealed ? '<span class="revealed-badge"></span>' : (isTeammate ? '<span style="font-size:9px; position:absolute; bottom:2px; left:4px; color:#3498db;">(아군)</span>' : '');
-      return `<div class="tile ${t.color} ${sharedRevClass}" style="${isTeammate && !t.revealed ? 'border:2px dashed #3498db;' : ''}">${displayVal}${sharedBadge}</div>`;
+      return `<div class="tile ${tileCls(t)} ${sharedRevClass}" style="${isTeammate && !t.revealed ? 'border:2px dashed #3498db;' : ''}">${tileVal(t)}${sharedBadge}</div>`;
     } else {
       const coverClass = t.color === 'black' ? 'cover-black' : 'cover-white';
       const canClickGuess = isMyTurn && pendingPlacementTile === null && !isMyAllRevealed && (hasDrawnThisTurn || (blackLen === 0 && whiteLen === 0));
 
       // t.originalIdx 대신 화면에 보이는 위치인 displayIdx 전달
-      const clickAttr = canClickGuess ? `onclick="guessOtherTile('${pId}', ${displayIdx})"` : `onclick="alert('${!isMyTurn ? "내 턴일 때만 추리할 수 있습니다!" : "먼저 타일을 뽑거나 배치를 완료해주세요!"}')"`;
+      const clickAttr = canClickGuess ? `onclick="guessOtherTile('${safeId(pId)}', ${displayIdx})"` : `onclick="alert('${!isMyTurn ? "내 턴일 때만 추리할 수 있습니다!" : "먼저 타일을 뽑거나 배치를 완료해주세요!"}')"`;
       return `<div class="tile ${coverClass}" ${clickAttr} style="cursor: ${canClickGuess ? 'pointer' : 'not-allowed'};">?</div>`;
     }
   }).join('');
 
-    let kickBtn = (isHost && pId !== myPlayerId) ? `<button class="btn-kick" onclick="window.kickPlayer('${pId}', false)">강퇴</button>` : '';
+    let kickBtn = (isHost && pId !== myPlayerId) ? `<button class="btn-kick" onclick="window.kickPlayer('${safeId(pId)}', false)">강퇴</button>` : '';
     let crown = (pId === data.hostId) ? '<span class="badge badge-host">방장</span> ' : '';
     let meText = (pId === myPlayerId) ? ' (나)' : '';
-    let teamBadge = isTeamMode ? ` <b style="color:${p.team === 'A' ? '#3498db' : '#e74c3c'}">[팀 ${p.team}]</b>` : '';
+    let teamBadge = isTeamMode ? ` <b style="color:${p.team === 'A' ? '#3498db' : '#e74c3c'}">[팀 ${esc(p.team)}]</b>` : '';
     let deadBadge = p.left ? '<span class="badge badge-dead">나감</span>' : (isAllRev ? '<span class="badge badge-dead">탈락</span>' : '');
 
     return `
@@ -3139,7 +3149,8 @@ function renderTurnSteps(data) {
   const p = players[pid];
   const me = !isSpectator ? players[myPlayerId] : null;
   const myDead = me && (me.hand || []).length > 0 && me.hand.every(t => t.revealed);
-  const placingStart = me && (me.unplacedPool || []).length > 0;
+  const pool = (me && me.unplacedPool) || [];
+  const placingStart = pool.length > 0 && !(me.turn && pool[0].id === me.turn.drawnId);   // 뽑은 타일 배치는 시작 배치가 아니다
   // 관전·탈락·시작 타일 배치·게임 끝은 기존 안내문이 더 많은 걸 알려준다
   const show = data.gameState === 'playing' && !data.isGameOver && !!p && !!me && !myDead && !placingStart;
   bar.classList.toggle('hidden', !show);
@@ -3224,7 +3235,9 @@ window.insertTileAt = function(insertIdx) {
     let updates = {};
     updates[`rooms/${currentRoomKey}/players/${myPlayerId}/hand`] = myHand;
     updates[`rooms/${currentRoomKey}/players/${myPlayerId}/unplacedPool`] = unplacedPool;
-    updates[`rooms/${currentRoomKey}/lastLog`] = pendingPlacementTile === null
+    const wasDrawn = !!(myData.turn && myData.turn.drawnId === tile.id);
+    updates[`rooms/${currentRoomKey}/lastLog`] = wasDrawn ? `${myNickname} 님이 뽑은 타일을 배치했습니다.`
+      : pendingPlacementTile === null
       ? `${myNickname} 님이 모든 초기 타일 배치를 완료하고 게임에 참여했습니다!`
       : `${myNickname} 님이 타일 배치 완료! 다음 타일을 배치하세요.`;
 
@@ -3265,6 +3278,9 @@ function handleDrawTile(colorType) {
     let updates = {};
     updates[`rooms/${currentRoomKey}/blackDeck`] = blackDeck;
     updates[`rooms/${currentRoomKey}/whiteDeck`] = whiteDeck;
+    // 손에 든 타일과 '이미 뽑음'을 화면 메모리에만 두면 새로고침할 때 타일이 사라지고 다시 뽑을 수 있었다
+    updates[`rooms/${currentRoomKey}/players/${myPlayerId}/unplacedPool`] = [drawn];
+    updates[`rooms/${currentRoomKey}/players/${myPlayerId}/turn`] = { drawnId: drawn.id };
     if (drawn.num === -1) {
       updates[`rooms/${currentRoomKey}/players/${myPlayerId}/${colorType === 'black' ? 'drewBlackJoker' : 'drewWhiteJoker'}`] = true;
     }
@@ -3312,6 +3328,7 @@ function executeGuess(targetPlayerId, tileIdx, guessedNum) {
       updates[`players/${myPlayerId}/correctStreak`] = newCorrectStreak;
       updates[`players/${myPlayerId}/bestCorrectStreak`] = newBestStreak;
       updates[`players/${myPlayerId}/correctGuessCount`] = (myGuessData.correctGuessCount || 0) + 1;
+      updates[`players/${myPlayerId}/turn/hit`] = true;
       updates[`lastLog`] = logMsg;
       updates[`lastGuess`] = { by: myPlayerId, target: targetPlayerId, idx: tileIdx, num: guessedNum, color: targetHand[tileIdx]?.color || 'white', right: true, at: Date.now() };
 
@@ -3323,8 +3340,9 @@ function executeGuess(targetPlayerId, tileIdx, guessedNum) {
     } else {
       // [버그 수정] 내 손패에서 방금 뽑은 타일(lastDrawnTileId)을 정확히 찾아 revealed: true로 변경
       let myHand = data.players[myPlayerId]?.hand || [];
-      if (lastDrawnTileId) {
-        myHand = myHand.map(t => t.id === lastDrawnTileId ? { ...t, revealed: true } : t);
+      const drawnId = (data.players[myPlayerId]?.turn || {}).drawnId || lastDrawnTileId;
+      if (drawnId) {
+        myHand = myHand.map(t => t.id === drawnId ? { ...t, revealed: true } : t);
       } else if (myHand.length > 0) {
         myHand[myHand.length - 1].revealed = true;
       }
@@ -3342,6 +3360,7 @@ function executeGuess(targetPlayerId, tileIdx, guessedNum) {
       let updates = {};
       updates[`rooms/${currentRoomKey}/players/${myPlayerId}/hand`] = myHand;
       updates[`rooms/${currentRoomKey}/players/${myPlayerId}/correctStreak`] = 0;
+      updates[`rooms/${currentRoomKey}/players/${myPlayerId}/turn`] = null;
       updates[`rooms/${currentRoomKey}/players/${myPlayerId}/wrongGuessCount`] = (myGuessData.wrongGuessCount || 0) + 1;
       updates[`rooms/${currentRoomKey}/turnIndex`] = nextTurnIndex;
       updates[`rooms/${currentRoomKey}/lastLog`] = logMsg;
@@ -3365,6 +3384,7 @@ function handlePassTurn() {
 
     let updates = {};
     updates[`rooms/${currentRoomKey}/turnIndex`] = nextTurnIndex;
+    updates[`rooms/${currentRoomKey}/players/${myPlayerId}/turn`] = null;
     updates[`rooms/${currentRoomKey}/lastLog`]= `${myNickname} 님이 턴을 종료했습니다.`;
     update(ref(db), updates);
   });

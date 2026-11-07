@@ -32,6 +32,7 @@ window.Board3D = (() => {
   // 누가 누구인지: 'top' 이름표를 타일 위에 / 'rack' 받침대를 그 사람 색으로 / 'chip' 받침대 끝에 색 칩.
   // top이 아니면 이름은 구석 현황판(색 점)에만 두고, 더미 수는 더미 앞 탁자로 내린다 — 둘 다 타일을 가리지 않게.
   let labelMode = 'chip';
+  const esc = t => String(t ?? '').replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');   // 이름은 사용자가 정한 값
   const SEAT_COLORS = ['#d4af37', '#e05a4f', '#4f8fd6', '#4fbf7a', '#b36fd6', '#e08a3c'];
   let myRowX = {}, myRowSc = 1;   // 내 줄에서 자리표시가 들어갈 x 좌표
 
@@ -324,16 +325,16 @@ window.Board3D = (() => {
       el.className = 'b3d-pl' + (turn ? ' turn' : '') + (dead ? ' dead' : '');
       el.style.background = labelMode === 'chip' ? SEAT_COLORS[pi % 6] : '';
       if (labelMode === 'chip') { el.textContent = [...(p.name || '?')][0]; return; }
-      const team = p.team ? `<span class="b3d-tag t${p.team}">팀 ${p.team}</span>` : '';
-      el.innerHTML = `<span>${p.name || '?'}</span>${team}`
+      const team = p.team ? `<span class="b3d-tag t${esc(p.team)}">팀 ${esc(p.team)}</span>` : '';
+      el.innerHTML = `<span>${esc(p.name || '?')}</span>${team}`
         + (dead ? '<span class="b3d-tag">탈락</span>' : '');
     });
     const sb = document.getElementById('b3d-sb');
     if (sb) sb.innerHTML = S.players.map((p, pi) => {
       const dead = isDead(p), turn = !S.over && S.turn === pi;
       const dot = labelMode === 'top' ? '' : `<i class="b3d-dot" style="background:${SEAT_COLORS[pi % 6]}"></i>`;
-      const team = p.team ? `<span class="b3d-tag t${p.team}">${p.team}</span> ` : '';   // 판 위 이름표가 없으니 팀은 여기서 보인다
-      return `<div class="${turn ? 'turn' : ''}${dead ? ' dead' : ''}">${dot}<b>${p.name || '?'}</b> ${team}`
+      const team = p.team ? `<span class="b3d-tag t${esc(p.team)}">${esc(p.team)}</span> ` : '';   // 판 위 이름표가 없으니 팀은 여기서 보인다
+      return `<div class="${turn ? 'turn' : ''}${dead ? ' dead' : ''}">${dot}<b>${esc(p.name || '?')}</b> ${team}`
         + (dead ? '탈락' : `미공개 ${hiddenCount(p)}/${(p.hand || []).length}`) + '</div>';
     }).join('');
   }
