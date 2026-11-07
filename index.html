@@ -494,6 +494,17 @@ body.board3d #other-players, body.board3d #my-section-container, body.board3d #d
 #turn-steps .step.done::before { content: '✓ '; }
 #turn-steps .step.now { background: var(--gold); color: var(--wood-dark); transform: scale(1.06); box-shadow: 0 0 0 3px rgba(212,175,55,.3); }
 #turn-steps .arrow { color: #6b5a40; }
+/* 내 차례: 단계 바 위에 지금 할 일 한 줄, 화면 테두리가 금빛으로 숨쉰다 (배너는 잠깐이라 놓치기 쉽다) */
+#turn-steps.mine { flex-wrap: wrap; justify-content: center; border-color: var(--gold); }
+#turn-steps .hint i { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 32px; margin: 0 6px; vertical-align: middle;
+  border-radius: 5px; font-style: normal; font-size: 17px; border: 1px solid #c9a84a; }
+#turn-steps .hint i.white { background: #f6f0e2; color: #1c1c20; } #turn-steps .hint i.black { background: #1c1c20; color: #f6f0e2; }
+#turn-steps .hint { flex-basis: 100%; text-align: center; white-space: normal; margin-bottom: 2px; padding-bottom: 6px;
+  border-bottom: 1px solid rgba(240,227,200,.15); font-size: clamp(14px, 3.6vw, 17px); font-weight: 900; color: #ffe39a; }
+#turn-edge { position: fixed; inset: 0; z-index: 15; pointer-events: none; display: none; }
+body.in-game.my-turn #turn-edge { display: block; animation: turnEdge 1.8s ease-in-out infinite; }
+@keyframes turnEdge { 0%,100% { box-shadow: inset 0 0 0 4px rgba(212,175,55,.85), inset 0 0 40px rgba(212,175,55,.35); }
+  50% { box-shadow: inset 0 0 0 6px rgba(255,220,120,1), inset 0 0 80px rgba(212,175,55,.6); } }
 .fx-banner { position: absolute; left: 50%; top: 42%; z-index: 5; pointer-events: none; white-space: nowrap;
   padding: 14px 34px; border-radius: 14px; font-weight: 900; font-size: clamp(20px, 5vw, 26px);
   background: rgba(30,18,8,.9); border: 2px solid var(--wood-mid); color: var(--gold-light); animation: fxBanner 1.6s ease forwards; }
@@ -560,6 +571,8 @@ body.in-game.board3d .b3d-sb { left: auto; right: 10px; top: 52px; }
 body.in-game.board3d #status-message, body.in-game.board3d #turn-steps { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 20; margin: 0;
   width: max-content; max-width: min(640px, calc(100vw - 24px)); }
 body.in-game.board3d #turn-steps { flex-wrap: nowrap; white-space: nowrap; }
+body.in-game.board3d #turn-steps.mine { flex-wrap: wrap; }
+body.in-game.board3d.my-turn #drawn-preview-container { display: none; }   /* 뽑은 타일은 안내 줄 안에 나온다. 상자가 판 위 + 자리를 가렸다 */
 body.in-game.board3d #drawn-preview-container { position: fixed; left: 50%; bottom: 64px; transform: translateX(-50%); z-index: 20; }
 body.in-game.board3d #action-buttons-container { position: fixed; right: 12px; bottom: 12px; z-index: 20; margin: 0 !important; }
 body.in-game.board3d #end-turn-btn { width: auto !important; padding: 10px 18px !important; }
@@ -933,6 +946,7 @@ body.in-lobby .game-container { max-width: 440px; }
         </div>
 
         <div id="turn-steps" class="hidden"></div>
+        <div id="turn-edge"></div>
 
         <div id="board3d-wrap">
           <canvas id="board3d-gl"></canvas>
@@ -2988,6 +3002,7 @@ function fxTurnBanner(data) {
   b.textContent = mine ? '내 차례!' : `${data.players[pid].name}의 차례`;
   fxOverlay(b);
   mine ? Sfx.myturn() : Sfx.turn();
+  if (mine && navigator.vibrate) navigator.vibrate([120, 60, 120]);   // 아이폰 사파리는 진동이 없다
 }
 function fxGuessResult(g, data) {
   const target = (data.players || {})[g.target];
@@ -3066,6 +3081,9 @@ function playTableFx(data) {
 
 // 단계 안내 바. 내 차례는 내 상태로, 남의 차례는 차례가 시작될 때와 비교해 몇 단계인지 짐작한다.
 const TURN_STEPS = ['뽑기', '배치', '추리', '계속 / 넘기기'];
+const TURN_HINTS = ['검은 더미나 흰 더미를 눌러 한 장 뽑으세요', '빛나는 자리를 눌러 뽑은 타일을 놓으세요',
+  '상대 타일을 눌러 숫자를 맞혀 보세요', '맞혔어요! 한 번 더 맞히거나 "턴 넘기기"를 누르세요'];
+const BASE_TITLE = document.title;
 let turnBase = null;
 function renderTurnSteps(data) {
   const bar = document.getElementById('turn-steps');
@@ -3080,6 +3098,10 @@ function renderTurnSteps(data) {
   const show = data.gameState === 'playing' && !data.isGameOver && !!p && !!me && !myDead && !placingStart;
   bar.classList.toggle('hidden', !show);
   status.classList.toggle('hidden', show);
+  const myTurn = show && pid === myPlayerId;
+  document.body.classList.toggle('my-turn', myTurn);
+  bar.classList.toggle('mine', myTurn);
+  document.title = myTurn ? '🔔 내 차례 - 다빈치 코드' : BASE_TITLE;   // 다른 탭에 가 있어도 보이게
   if (!show) return;
 
   const deck = (data.blackDeck || []).length + (data.whiteDeck || []).length;
@@ -3096,6 +3118,15 @@ function renderTurnSteps(data) {
     now = hit ? 3 : (placed || turnBase.deck === 0) ? 2 : deck < turnBase.deck ? 1 : 0;
   }
   bar.textContent = '';
+  if (mine) {
+    const h = document.createElement('div'); h.className = 'hint'; h.textContent = TURN_HINTS[now];
+    if (now === 1 && pendingPlacementTile) {
+      const t = document.createElement('i'); t.className = pendingPlacementTile.color === 'black' ? 'black' : 'white';
+      t.textContent = pendingPlacementTile.num === -1 ? '-' : pendingPlacementTile.num;
+      h.textContent = '뽑은 타일'; h.append(t, '빛나는 자리를 눌러 놓으세요');
+    }
+    bar.appendChild(h);
+  }
   const who = document.createElement('span');
   who.className = 'who' + (mine ? ' me' : '');
   who.textContent = mine ? '내 차례' : `${p.name} 차례`;

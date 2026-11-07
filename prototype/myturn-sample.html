@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>다빈치 코드</title>
+<style>
+  :root { --gold:#d4af37; --gold-light:#f0e3c8; --wood:#5c3319; --wood-mid:#6b4226; --wood-dark:#2b1810; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; }
+  body { background:#1b0f07; color:var(--gold-light); font:14px/1.5 system-ui, "Malgun Gothic", sans-serif; overflow:hidden; }
+  #board3d-wrap { position:fixed; inset:0; transition:filter .4s; }
+  #board3d-gl { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+  #board3d-labels { position:absolute; inset:0; pointer-events:none; }
+  .b3d-pl, .b3d-dl { position:absolute; transform:translate(-50%, -50%); white-space:nowrap; background:rgba(30,18,8,.85); border:1px solid var(--wood-mid);
+    border-radius:999px; padding:3px 9px; font-size:12px; font-weight:700; color:var(--gold-light); display:flex; gap:6px; align-items:center; }
+  .b3d-pl { width:26px; height:26px; padding:0; justify-content:center; border-radius:50%; border:2px solid #fff8e0; color:#1b0f07; font-weight:900; }
+  .b3d-pl.turn { box-shadow:0 0 0 2px rgba(212,175,55,.35); }
+  .b3d-sb { position:absolute; right:10px; top:10px; background:rgba(30,18,8,.72); border:1px solid var(--wood-mid); border-radius:8px; padding:4px 9px; font-size:11px; line-height:1.6; color:#c3b89f; }
+  .b3d-sb b { color:var(--gold-light); } .b3d-sb .turn b { color:var(--gold); } .b3d-sb .turn::before { content:'▶ '; color:var(--gold); }
+  .b3d-dot { display:inline-block; width:9px; height:9px; margin-right:5px; border-radius:50%; vertical-align:middle; }
+
+  /* 지금 있는 단계 바 */
+  #turnbox { position:fixed; left:50%; bottom:12px; transform:translateX(-50%); z-index:20; max-width:96vw; padding:8px 10px; text-align:center;
+    background:linear-gradient(180deg, #3a2414, #24150b); border:2px solid var(--wood-mid); border-radius:10px; transition:border-color .3s; }
+  #turn-steps { display:flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap; }
+  #turn-steps .who { font-weight:800; margin-right:6px; } #turn-steps .who.me { color:var(--gold); }
+  #turn-steps .step { padding:4px 10px; border-radius:999px; background:rgba(255,255,255,.06); color:#9c8a6c; font-weight:700; font-size:13px; }
+  #turn-steps .step.done { color:#7fb08f; } #turn-steps .step.done::before { content:'✓ '; }
+  #turn-steps .step.now { background:var(--gold); color:var(--wood-dark); }
+  #turn-steps .arrow { color:#6b5a40; }
+  @media (max-width:640px) { #turn-steps .step:not(.now), #turn-steps .arrow { display:none; } }
+
+  /* 지금 있는 "내 차례!" 배너 (잠깐 떴다 사라짐) */
+  .fx-banner { position:fixed; left:50%; top:42%; z-index:30; transform:translate(-50%,-50%); padding:10px 26px; border-radius:14px; font-size:clamp(28px, 8vw, 40px); font-weight:900;
+    color:var(--wood-dark); background:linear-gradient(180deg, #ffe9a6, var(--gold)); box-shadow:0 10px 30px rgba(0,0,0,.6); animation:ban 1.6s ease forwards; pointer-events:none; }
+  @keyframes ban { 0% { opacity:0; transform:translate(-50%,-50%) scale(.6); } 15% { opacity:1; transform:translate(-50%,-50%) scale(1.05); } 75% { opacity:1; } 100% { opacity:0; } }
+
+  /* A: 내 차례인 동안 화면 테두리가 금빛으로 숨쉰다 */
+  #edge { position:fixed; inset:0; z-index:10; pointer-events:none; opacity:0; transition:opacity .4s; }
+  body.A.mine #edge { opacity:1; animation:breathe 1.8s ease-in-out infinite; }
+  @keyframes breathe { 0%,100% { box-shadow:inset 0 0 0 4px rgba(212,175,55,.85), inset 0 0 40px rgba(212,175,55,.35); }
+                       50% { box-shadow:inset 0 0 0 6px rgba(255,220,120,1), inset 0 0 80px rgba(212,175,55,.6); } }
+
+  /* B: 지금 할 일을 단계 바 안에 한 줄로 (판 위에 따로 띄우면 내 타일을 가린다) */
+  #hint { display:none; margin-bottom:6px; padding-bottom:6px; border-bottom:1px solid rgba(240,227,200,.15); font-size:clamp(14px, 3.6vw, 17px); font-weight:900; color:#ffe39a; }
+  body.B.mine #hint { display:block; }
+  body.B.mine #turnbox { border-color:var(--gold); }
+
+  /* C: 남의 차례에는 판을 살짝 어둡게, 내 차례에 확 밝아진다 */
+  body.C:not(.mine) #board3d-wrap { filter:brightness(.6) saturate(.7); }
+  body.C:not(.mine) #turn-steps::after { content:'기다리는 중…'; margin-left:6px; color:#9c8a6c; font-weight:800; }
+
+  /* 샘플 조작 (게임에는 없음) */
+  #ctl { position:fixed; left:10px; top:10px; z-index:50; display:flex; flex-direction:column; gap:6px; padding:8px 10px; border-radius:10px; background:rgba(0,0,0,.78); font-size:13px; max-width:250px; }
+  #ctl label { display:flex; gap:6px; align-items:flex-start; cursor:pointer; } #ctl label b { color:#ffd76a; }
+  #ctl .row { display:flex; gap:6px; flex-wrap:wrap; }
+  #ctl button { border:0; border-radius:8px; padding:6px 10px; font:inherit; font-weight:800; cursor:pointer; background:#e74c3c; color:#fff; }
+  #ctl button.alt { background:#555; }
+</style>
+</head>
+<body class="A B C D">
+<div id="board3d-wrap"><canvas id="board3d-gl"></canvas><div id="board3d-labels"></div></div>
+<div id="edge"></div>
+<div id="turnbox"><div id="hint"></div><div id="turn-steps"></div></div>
+<div id="ctl">
+  <label><input type="checkbox" data-k="A" checked><span><b>A</b> 화면 테두리가 금빛으로 숨쉬기</span></label>
+  <label><input type="checkbox" data-k="B" checked><span><b>B</b> 지금 할 일 한 줄 (단계마다 바뀜)</span></label>
+  <label><input type="checkbox" data-k="C" checked><span><b>C</b> 남의 차례엔 판을 어둡게</span></label>
+  <label><input type="checkbox" data-k="D" checked><span><b>D</b> 폰 진동 + 탭 제목 "🔔 내 차례"</span></label>
+  <div class="row"><button id="go-me">내 차례 시작</button><button id="go-next" class="alt">다음 단계</button><button id="go-other" class="alt">남의 차례로</button></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../board3d.js?v=myturn1"></script>
+<script>
+const $ = id => document.getElementById(id);
+const STEPS = ['뽑기', '배치', '추리', '계속 / 넘기기'];
+const HINTS = ['🂠 검은 더미나 흰 더미를 눌러 한 장 뽑으세요', '👇 빛나는 자리를 눌러 뽑은 타일을 놓으세요', '🎯 상대 타일을 눌러 숫자를 맞혀 보세요', '맞혔어요! 한 번 더 맞히거나 "턴 넘기기"를 누르세요'];
+let mine = false, step = 0;
+const T = (id, color, num, revealed) => ({ id, color, num, revealed: !!revealed });
+const P = [
+  { name: '나', hand: [T('a1', 'black', 1), T('a2', 'white', 3), T('a3', 'black', 6, true), T('a4', 'white', 9)] },
+  { name: '명관', hand: [T('b1', 'white', 0), T('b2', 'black', 4, true), T('b3', 'white', 7), T('b4', 'black', 10)] },
+  { name: '지민', hand: [T('d1', 'white', 1), T('d2', 'black', 5), T('d3', 'white', 8), T('d4', 'black', 9)] },
+];
+Board3D.mount({ canvas: $('board3d-gl'), app: $('board3d-wrap'), labels: $('board3d-labels') });
+Board3D.setFit(0.88); Board3D.setGlyph(0.84);
+
+function render() {
+  document.body.classList.toggle('mine', mine);
+  const targets = mine && step === 2 ? [1, 2].flatMap(pi => P[pi].hand.map((t, i) => t.revealed ? null : { pi, idx: i }).filter(Boolean)) : [];
+  Board3D.update({ n: 3, mode: 'solo', over: false, turn: mine ? 0 : 1, phase: '', players: P, decks: { black: 7, white: 6 }, slots: [], targets, canDraw: mine && step === 0 });
+  const bar = $('turn-steps'); bar.textContent = '';
+  const who = document.createElement('span'); who.className = 'who' + (mine ? ' me' : ''); who.textContent = mine ? '내 차례' : '명관 차례'; bar.appendChild(who);
+  STEPS.forEach((n, i) => {
+    if (i) { const a = document.createElement('span'); a.className = 'arrow'; a.textContent = '›'; bar.appendChild(a); }
+    const s = document.createElement('span'); s.className = 'step' + (mine ? (i < step ? ' done' : i === step ? ' now' : '') : (i === 0 ? ' now' : '')); s.textContent = `${i + 1} ${n}`; bar.appendChild(s);
+  });
+  $('hint').textContent = HINTS[step];
+  document.title = mine && document.body.classList.contains('D') ? '🔔 내 차례 - 다빈치 코드' : '다빈치 코드';
+}
+$('go-me').onclick = () => {
+  mine = true; step = 0; render();
+  const b = document.createElement('div'); b.className = 'fx-banner'; b.textContent = '내 차례!'; document.body.appendChild(b);
+  b.addEventListener('animationend', () => b.remove());
+  if (document.body.classList.contains('D') && navigator.vibrate) navigator.vibrate([120, 60, 120]);
+};
+$('go-next').onclick = () => { if (mine) { step = (step + 1) % 4; render(); } };
+$('go-other').onclick = () => { mine = false; render(); };
+document.querySelectorAll('#ctl input').forEach(c => c.onchange = () => { document.body.classList.toggle(c.dataset.k, c.checked); render(); });
+render();
+</script>
+</body>
+</html>
