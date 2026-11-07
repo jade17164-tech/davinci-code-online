@@ -730,6 +730,45 @@ body.in-lobby .game-container { max-width: 440px; }
   body.in-game.board3d #turn-steps .step { padding: 2px 8px; font-size: 12px; }
   body.in-game.board3d #action-buttons-container { bottom: 8px; }
   body.in-game.board3d #drawn-preview-container { bottom: 52px; }
+
+  /* 로그인·로비·대기실도 가로에서 스크롤 없이 한 화면에: 왼쪽 로고(자리), 오른쪽 버튼 */
+  body.in-lobby { padding: 6px 10px; }
+  body.in-lobby .game-container { max-width: 860px; min-height: 0; }
+  #auth-screen, #lobby-screen, #waiting-screen { height: calc(100dvh - 12px); min-height: 0; margin: 0; padding: 10px 16px; gap: 8px 18px;
+    display: grid; grid-template-columns: 1.15fr 1fr; align-content: stretch; }
+  #auth-screen.hidden, #lobby-screen.hidden, #waiting-screen.hidden { display: none; }
+  #auth-screen { grid-template-areas: "hero menu" "hero link"; grid-template-rows: 1fr auto; }
+  #lobby-screen { grid-template-areas: "top top" "hero menu"; grid-template-rows: auto 1fr; }
+  #auth-screen .lb-hero, #lobby-screen .lb-hero { grid-area: hero; min-height: 0; }
+  #auth-screen .lb-menu, #lobby-screen .lb-menu { grid-area: menu; align-self: end; }
+  #lobby-screen .lb-menu { align-self: center; }
+  #lobby-screen .lb-top { grid-area: top; }
+  #auth-screen .lb-link { grid-area: link; margin: 0; }
+  #waiting-screen { grid-template-areas: "top top" "tags side" "seats side"; grid-template-rows: auto auto 1fr; }
+  #waiting-screen .lb-top { grid-area: top; }
+  #waiting-screen .wr-tags { grid-area: tags; }
+  #waiting-screen .wr-seats { grid-area: seats; align-content: start; overflow-y: auto; min-height: 0; }
+  #waiting-screen .wr-seat { min-height: 54px; padding: 6px 8px; }
+  #waiting-screen .wr-bottom { grid-area: side; margin-top: 0; min-height: 0; gap: 8px; }
+  #waiting-screen .lb-big { padding: 11px; }
+  #waiting-screen .wr-wait { padding: 10px; }
+  #waiting-screen .chat-container { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  #waiting-screen .chat-messages { flex: 1; min-height: 40px; max-height: none; }
+  #waiting-screen .chat-input-row input { padding: 8px 10px; } #waiting-screen .chat-input-row button { white-space: nowrap; padding: 8px 12px; }
+  .lb-sheet { width: min(640px, 100%); max-height: 96dvh; padding: 8px 18px 12px; }
+  .lb-sheet .lb-grab { display: none; }
+  /* 방 만들기: 왼쪽 코드·모드, 오른쪽 시작 타일·기록, 맨 아래 관전 체크와 만들기 버튼 */
+  #create-sheet { display: grid; grid-template-columns: 1fr 1.2fr; column-gap: 18px; align-items: start; }
+  #create-sheet > h3 { grid-column: 1 / -1; }
+  /* 자식 순서: 1 손잡이(숨김) 2 제목 3~6 코드·모드 7~10 시작 타일·기록 */
+  #create-sheet > :nth-child(3) { grid-area: 2 / 1; } #create-sheet > :nth-child(4) { grid-area: 3 / 1; } #create-sheet > :nth-child(5) { grid-area: 4 / 1; } #create-sheet > :nth-child(6) { grid-area: 5 / 1; }
+  #create-sheet > :nth-child(7) { grid-area: 2 / 2; } #create-sheet > :nth-child(8) { grid-area: 3 / 2; } #create-sheet > :nth-child(9) { grid-area: 4 / 2; } #create-sheet > :nth-child(10) { grid-area: 5 / 2; }
+  #create-sheet > .lb-check { grid-area: 6 / 1; align-self: center; } #create-sheet > #btn-create-room { grid-area: 6 / 2; }
+  /* 방 참가: 왼쪽 코드·참가 버튼, 오른쪽 열린 방 목록. 자식 순서: 1 손잡이 2 제목 3 라벨 4 코드칸 5 숨은 값 6 관전 7 버튼 8 라벨 9 목록 */
+  #join-sheet { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto auto auto 1fr; column-gap: 18px; align-items: start; }
+  #join-sheet > h3 { grid-column: 1 / -1; }
+  #join-sheet > :nth-child(3) { grid-area: 2 / 1; } #join-sheet > :nth-child(4) { grid-area: 3 / 1; } #join-sheet > :nth-child(6) { grid-area: 4 / 1; } #join-sheet > :nth-child(7) { grid-area: 5 / 1; }
+  #join-sheet > :nth-child(8) { grid-area: 2 / 2; margin-top: 0; } #join-sheet > :nth-child(9) { grid-area: 3 / 2 / 6 / 3; max-height: 62dvh; }
 }
 </style>
 </head>
@@ -2243,7 +2282,7 @@ function listenToRoom() {
       : (data.players && data.players[myPlayerId]);
     if (myCurrentRecord) {
       myLastKnownRecord = myCurrentRecord;
-    } else if (myLastKnownRecord && !isKickedHandled) {
+    } else if (myLastKnownRecord && !myLastKnownRecord.left && !isKickedHandled) {   // 게임 중 나간 기록은 되살리지 않는다 (판이 끝나 지워진 뒤 이름 없는 유령 자리가 생겼다)
       const restorePath = isSpectator
         ? `rooms/${currentRoomKey}/spectators/${myPlayerId}`
         : `rooms/${currentRoomKey}/players/${myPlayerId}`;
@@ -2351,17 +2390,15 @@ function handleHostDelegationIfNeeded(data) {
   const players = data.players || {};
   const playerIds = Object.keys(players);
 
-  if (playerIds.length > 0) {
-    let hostExists = playerIds.includes(data.hostId);
-    if (!hostExists) {
-      let randomNewHostId = playerIds[Math.floor(Math.random() * playerIds.length)];
-
-      if (myPlayerId === randomNewHostId) {
-        update(roomRef, {
-          hostId: randomNewHostId,
-          lastLog: `방장이 나가서 [${players[randomNewHostId].name}] 님에게 방장 권한이 위임되었습니다.`
-        });
-      }
+  // 게임 중에 끊겨 나간(left) 방장도 없는 것으로 본다. 아니면 탈락자 차례를 넘겨 줄 사람이 없어 판이 멈춘다.
+  const activeIds = playerIds.filter(id => !players[id].left);
+  if (activeIds.length > 0 && !activeIds.includes(data.hostId)) {
+    const newHostId = activeIds[0];   // 모두 같은 사람을 고르게 (무작위면 둘이 동시에 쓰거나 아무도 안 쓴다)
+    if (myPlayerId === newHostId) {
+      update(roomRef, {
+        hostId: newHostId,
+        lastLog: `방장이 나가서 [${players[newHostId].name || '?'}] 님에게 방장 권한이 위임되었습니다.`
+      });
     }
   }
 }
@@ -3513,21 +3550,26 @@ function forceReturnToWaitingRoom() {
   get(roomRef).then((snapshot) => {
     if (!snapshot.exists()) { location.reload(); return; }
     const data = snapshot.val();
-    const playerIds = Object.keys(data.players || {});
+    // 나간(left) 사람은 대기실에 데려가지 않는다. 끊겨 나간 사람 기록은 이름 등이 빠져 있을 수 있는데,
+    // 값이 undefined면 set이 통째로 거부돼 버튼이 아무 반응 없던 원인이었다.
+    const playerIds = Object.keys(data.players || {}).filter(pId => !data.players[pId].left);
+    const hostId = playerIds.includes(data.hostId) ? data.hostId : (playerIds[0] || data.hostId);
 
     let resetPlayers = {};
     playerIds.forEach(pId => {
+      const p = data.players[pId];
       resetPlayers[pId] = {
-        name: data.players[pId].name,
-        isHost: data.players[pId].isHost,
-        team: data.players[pId].team,
-        accountId: data.players[pId].accountId,
+        name: p.name || '?',
+        isHost: pId === hostId,
+        team: p.team || 'A',
+        accountId: p.accountId || null,
         hand: []
       };
     });
 
     set(roomRef, {
       ...data,
+      hostId,
       gameState: "waiting",
       isGameOver: false,
       turnIndex: 0,
@@ -3535,7 +3577,7 @@ function forceReturnToWaitingRoom() {
       players: resetPlayers,
       spectators: data.spectators || {},
       chats: {}
-    });
+    }).catch(e => alert('[오류] 대기실로 돌아가지 못했습니다: ' + (e && e.message)));
   });
 }
 </script>
