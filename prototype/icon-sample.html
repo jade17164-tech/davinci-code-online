@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>홈 화면 아이콘 샘플</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  html, body { background: #1d2a44; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font: 14px/1.5 system-ui, "Malgun Gothic", sans-serif; color: #fff;
+    background: radial-gradient(120% 90% at 20% 0%, #4a6fa5, transparent 60%), radial-gradient(100% 80% at 100% 100%, #b5735a, transparent 60%), #2b2f52; padding: 20px 16px 40px; }
+  h1 { margin: 0 0 4px; font-size: 18px; } p.lead { margin: 0 0 22px; opacity: .85; font-size: 13px; }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 26px 18px; max-width: 1000px; margin: 0 auto; }
+  .opt { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .big { width: 180px; height: 180px; border-radius: 40px; box-shadow: 0 12px 34px rgba(0,0,0,.45); }
+  .home { display: flex; gap: 14px; padding: 12px 14px; border-radius: 22px; background: rgba(255,255,255,.16); backdrop-filter: blur(6px); }
+  .app { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 60px; font-size: 11px; text-align: center; }
+  .app canvas { width: 60px; height: 60px; border-radius: 14px; display: block; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+  .app canvas.android { border-radius: 50%; }
+  .tag { font-size: 15px; font-weight: 800; } .desc { font-size: 12px; opacity: .8; text-align: center; max-width: 220px; margin-top: -6px; }
+</style>
+</head>
+<body>
+<h1>홈 화면 아이콘 샘플</h1>
+<p class="lead">큰 것은 모양 확인용 · 아래 왼쪽은 아이폰 홈 화면 실제 크기 · 오른쪽 동그란 것은 갤럭시 모양</p>
+<div class="row" id="row"></div>
+<script>
+const EXP = new URLSearchParams(location.search);   // ?export=hand&size=512[&pad=.8] → 아이콘 한 장만 꽉 차게 (PNG로 찍을 때)
+// ---- 공통 재료 ----
+function rng(seed) { return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
+function grain(g, S, alpha, seed) {   // 종이·펠트 결
+  const r = rng(seed || 7), n = Math.round(S * S / 90);
+  for (let i = 0; i < n; i++) {
+    g.fillStyle = r() < .5 ? `rgba(0,0,0,${alpha * r()})` : `rgba(255,255,255,${alpha * .7 * r()})`;
+    g.fillRect(r() * S, r() * S, S / 400 + r() * S / 300, S / 400 + r() * S / 300);
+  }
+}
+function vignette(g, S, a) {
+  const v = g.createRadialGradient(S / 2, S / 2, S * .3, S / 2, S / 2, S * .78);
+  v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, `rgba(0,0,0,${a})`); g.fillStyle = v; g.fillRect(0, 0, S, S);
+}
+function radial(g, S, cx, cy, c1, c2, r1) {
+  const r = g.createRadialGradient(S * cx, S * cy, S * .02, S * cx, S * cy, S * (r1 || .8));
+  r.addColorStop(0, c1); r.addColorStop(1, c2); g.fillStyle = r; g.fillRect(0, 0, S, S);
+}
+function gold(g, y0, y1) {   // 금박: 위는 밝고 가운데 띠가 번쩍, 아래는 짙게
+  const l = g.createLinearGradient(0, y0, 0, y1);
+  l.addColorStop(0, '#fff6d0'); l.addColorStop(.35, '#f2d06a'); l.addColorStop(.5, '#fff1b8'); l.addColorStop(.62, '#c99a2e'); l.addColorStop(1, '#7a5508');
+  return l;
+}
+// 타일 한 장: 두께(옆면), 위 가장자리 하이라이트, 각인된 숫자
+function tile(g, S, o) {
+  const { x, y, w, h, rot = 0, dark = true, text = '', font, ink } = o;
+  const rad = w * .15, depth = w * .07;
+  g.save(); g.translate(x, y); g.rotate(rot);
+  g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = w * .22; g.shadowOffsetY = w * .12;
+  g.fillStyle = dark ? '#0b0b0e' : '#b9ab8c';                        // 옆면
+  g.beginPath(); g.roundRect(-w / 2, -h / 2 + depth, w, h, rad); g.fill();
+  g.shadowColor = 'transparent';
+  const face = g.createLinearGradient(0, -h / 2, 0, h / 2);
+  if (dark) { face.addColorStop(0, '#34343c'); face.addColorStop(.18, '#1d1d23'); face.addColorStop(1, '#141418'); }
+  else { face.addColorStop(0, '#fffdf6'); face.addColorStop(.2, '#f6efdd'); face.addColorStop(1, '#e6dcc4'); }
+  g.fillStyle = face; g.beginPath(); g.roundRect(-w / 2, -h / 2, w, h, rad); g.fill();
+  g.lineWidth = w * .018; g.strokeStyle = dark ? 'rgba(255,255,255,.14)' : 'rgba(120,95,50,.35)'; g.stroke();
+  if (text) {
+    g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = dark ? 'rgba(0,0,0,.6)' : 'rgba(255,255,255,.8)'; g.fillText(text, w * .012, h * .045 + w * .02);  // 각인 그림자
+    g.fillStyle = ink || (dark ? '#f4ecd8' : '#18181c'); g.fillText(text, 0, h * .045);
+  }
+  g.restore();
+}
+function gem(g, x, y, s) {
+  g.save(); g.translate(x, y); g.rotate(Math.PI / 4);
+  g.shadowColor = 'rgba(255,215,110,.8)'; g.shadowBlur = s * 1.6;
+  g.fillStyle = gold(g, -s, s); g.fillRect(-s / 2, -s / 2, s, s); g.restore();
+}
+
+// ---- 1. 르네상스 설계도: 양피지 위 레오나르도식 원·정사각형 설계선, 가운데 물음표 타일 ----
+function drawCodex(g, S) {
+  radial(g, S, .45, .38, '#f4e6c4', '#b98d4f', .85);
+  grain(g, S, .09, 11);
+  g.strokeStyle = 'rgba(92,52,18,.42)'; g.lineWidth = S * .005;
+  const c = S / 2;
+  g.beginPath(); g.arc(c, c, S * .4, 0, Math.PI * 2); g.stroke();
+  g.strokeRect(c - S * .3, c - S * .3, S * .6, S * .6);
+  g.beginPath(); g.moveTo(c - S * .4, c); g.lineTo(c + S * .4, c); g.moveTo(c, c - S * .4); g.lineTo(c, c + S * .4);
+  g.moveTo(c - S * .28, c - S * .28); g.lineTo(c + S * .28, c + S * .28); g.moveTo(c + S * .28, c - S * .28); g.lineTo(c - S * .28, c + S * .28); g.stroke();
+  for (let i = 0; i < 48; i++) {   // 눈금
+    const a = i / 48 * Math.PI * 2, r0 = S * (i % 4 ? .385 : .37);
+    g.beginPath(); g.moveTo(c + Math.cos(a) * r0, c + Math.sin(a) * r0); g.lineTo(c + Math.cos(a) * S * .4, c + Math.sin(a) * S * .4); g.stroke();
+  }
+  vignette(g, S, .35);
+  tile(g, S, { x: c, y: c - S * .01, w: S * .41, h: S * .56, rot: -.07, dark: true, text: '?', font: `900 ${S * .38}px Cinzel, serif`, ink: gold(g, -S * .16, S * .18) });
+}
+
+// ---- 2. 금빛 봉인: 녹색 펠트, 눈금 박힌 금 고리 안의 DV 모노그램 ----
+function drawSeal(g, S) {
+  radial(g, S, .5, .35, '#1f9466', '#03281a', .8);
+  grain(g, S, .07, 3);
+  vignette(g, S, .45);
+  const c = S / 2;
+  g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = S * .03; g.shadowOffsetY = S * .012;
+  g.strokeStyle = gold(g, c - S * .38, c + S * .38); g.lineWidth = S * .028;
+  g.beginPath(); g.arc(c, c, S * .36, 0, Math.PI * 2); g.stroke(); g.restore();
+  g.strokeStyle = 'rgba(240,207,98,.75)'; g.lineWidth = S * .006;
+  g.beginPath(); g.arc(c, c, S * .315, 0, Math.PI * 2); g.stroke();
+  for (let i = 0; i < 60; i++) {
+    const a = i / 60 * Math.PI * 2, r0 = S * (i % 5 ? .322 : .33);
+    g.beginPath(); g.moveTo(c + Math.cos(a) * r0, c + Math.sin(a) * r0); g.lineTo(c + Math.cos(a) * S * .343, c + Math.sin(a) * S * .343); g.stroke();
+  }
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `900 ${S * .27}px Cinzel, serif`;
+  g.fillStyle = 'rgba(0,0,0,.45)'; g.fillText('DV', c + S * .006, c - S * .006 + S * .014);
+  g.fillStyle = gold(g, c - S * .14, c + S * .1); g.fillText('DV', c, c - S * .006);
+  gem(g, c, c + S * .2, S * .045);
+}
+
+// ---- 3. 반반 타일: 대각선으로 갈린 검은·흰 타일 한 장, 금 물음표 ----
+function drawHalf(g, S) {
+  radial(g, S, .5, .3, '#2c4f86', '#060d1f', .85);
+  grain(g, S, .06, 5);
+  const c = S / 2, w = S * .44, h = S * .6, rad = w * .15;
+  const halo = g.createRadialGradient(c, c, S * .05, c, c, S * .42); halo.addColorStop(0, 'rgba(240,200,90,.35)'); halo.addColorStop(1, 'rgba(240,200,90,0)');
+  g.fillStyle = halo; g.fillRect(0, 0, S, S);
+  g.save(); g.translate(c, c); g.rotate(-.1);
+  g.shadowColor = 'rgba(0,0,0,.7)'; g.shadowBlur = S * .08; g.shadowOffsetY = S * .04;
+  g.fillStyle = '#000'; g.beginPath(); g.roundRect(-w / 2, -h / 2 + w * .06, w, h, rad); g.fill(); g.shadowColor = 'transparent';
+  g.save(); g.beginPath(); g.roundRect(-w / 2, -h / 2, w, h, rad); g.clip();
+  const dk = g.createLinearGradient(0, -h / 2, 0, h / 2); dk.addColorStop(0, '#36363e'); dk.addColorStop(1, '#141418');
+  g.fillStyle = dk; g.fillRect(-w / 2, -h / 2, w, h);
+  const lt = g.createLinearGradient(0, -h / 2, 0, h / 2); lt.addColorStop(0, '#fffdf6'); lt.addColorStop(1, '#e3d8bf');
+  g.fillStyle = lt; g.beginPath(); g.moveTo(w / 2 + 1, -h / 2 - 1); g.lineTo(w / 2 + 1, h / 2 + 1); g.lineTo(-w / 2 - 1, h / 2 + 1); g.closePath(); g.fill();
+  g.strokeStyle = 'rgba(212,175,55,.9)'; g.lineWidth = S * .008;   // 갈라진 금선
+  g.beginPath(); g.moveTo(w / 2, -h / 2); g.lineTo(-w / 2, h / 2); g.stroke();
+  g.restore();
+  g.lineWidth = S * .007; g.strokeStyle = 'rgba(212,175,55,.6)'; g.beginPath(); g.roundRect(-w / 2, -h / 2, w, h, rad); g.stroke();
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `900 ${S * .38}px Cinzel, serif`;
+  g.lineJoin = 'round'; g.lineWidth = S * .03; g.strokeStyle = '#1a1206'; g.strokeText('?', 0, h * .04);
+  g.fillStyle = gold(g, -S * .15, S * .17); g.fillText('?', 0, h * .04);
+  g.restore();
+  vignette(g, S, .3);
+}
+
+// ---- 4. 손에 쥔 패: 와인 펠트 위 부채꼴 세 장, 가운데만 금 물음표 ----
+function drawHand(g, S) {
+  radial(g, S, .5, .3, '#9a2c3f', '#2a050c', .85);
+  grain(g, S, .07, 9);
+  vignette(g, S, .4);
+  const c = S / 2, w = S * .27, h = S * .38, f = `900 ${S * .2}px Georgia, serif`;
+  const k = +(EXP.get('pad') || 1);   // 갤럭시(동그랗게 잘림)용은 타일만 줄여 안쪽에 모은다
+  g.save(); g.translate(c, c); g.scale(k, k); g.translate(-c, -c);
+  tile(g, S, { x: c - S * .2, y: c + S * .06, w, h, rot: -.36, dark: true, text: '3', font: f });
+  tile(g, S, { x: c + S * .2, y: c + S * .06, w, h, rot: .36, dark: false, text: '8', font: f });
+  tile(g, S, { x: c, y: c - S * .03, w: w * .92, h: h * .92, rot: 0, dark: true, text: '?', font: `900 ${S * .2}px Cinzel, serif`, ink: gold(g, -S * .09, S * .11) });
+  g.restore();
+}
+
+const OPTS = {
+  codex: { label: '① 르네상스 설계도', desc: '양피지에 다빈치 노트식 원·정사각형 설계선, 가운데 금 물음표 타일', draw: drawCodex },
+  seal:  { label: '② 금빛 봉인', desc: '녹색 펠트, 눈금 새긴 금 고리 안에 DV 모노그램', draw: drawSeal },
+  half:  { label: '③ 반반 타일', desc: '검은·흰 반쪽이 금선으로 갈린 타일 한 장과 물음표', draw: drawHalf },
+  hand:  { label: '④ 손에 쥔 패', desc: '와인 펠트 위 부채꼴 세 장, 가운데 숨긴 숫자', draw: drawHand },
+};
+function render(k, S) { const cv = document.createElement('canvas'); cv.width = cv.height = S; OPTS[k].draw(cv.getContext('2d'), S); return cv; }
+window.iconPNG = (k, S) => render(k, S).toDataURL('image/png');
+
+document.fonts.load('900 40px Cinzel').then(() => {
+  if (EXP.get('export')) {
+    const n = +EXP.get('size') || 512; const cv = render(EXP.get('export'), n);
+    document.body.style.cssText = 'margin:0;padding:0;background:#000;overflow:hidden'; document.body.textContent = ''; cv.style.display = 'block'; document.body.appendChild(cv); return;
+  }
+  const row = document.getElementById('row');
+  for (const k of Object.keys(OPTS)) {
+    const o = document.createElement('div'); o.className = 'opt';
+    const big = render(k, 512); big.className = 'big'; o.appendChild(big);
+    const home = document.createElement('div'); home.className = 'home';
+    const ios = document.createElement('div'); ios.className = 'app'; ios.appendChild(render(k, 512)); ios.append('다빈치 코드');
+    const and = document.createElement('div'); and.className = 'app'; const r = render(k, 512); r.className = 'android'; and.appendChild(r); and.append('갤럭시');
+    home.append(ios, and); o.appendChild(home);
+    const t = document.createElement('div'); t.className = 'tag'; t.textContent = OPTS[k].label;
+    const d = document.createElement('div'); d.className = 'desc'; d.textContent = OPTS[k].desc;
+    o.append(t, d); row.appendChild(o);
+  }
+});
+</script>
+</body>
+</html>

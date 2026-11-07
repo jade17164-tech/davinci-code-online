@@ -3,6 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <!-- 홈 화면에 추가하면 주소창 없이 앱처럼 연다. 아이폰은 상태줄을 검은 띠로 두어(black) 시계·배터리 밑으로 내용이 숨지 않게 한다 -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#1b0f07">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="다빈치 코드">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <title>다빈치 코드 온라인 (모드 및 타일 분배 방식별 방 분리)</title>
   <style>
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap');
